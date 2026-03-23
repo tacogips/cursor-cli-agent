@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "cursor-cli-agent",
   "type": "module",
+  "bin": {
+    "cursor-cli-agent": "src/main.ts"
+  },
   "main": "dist/main.js",
   "module": "dist/main.js",
   "types": "dist/main.d.ts",
@@ -26,10 +29,10 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "clean": "rm -rf dist"
   },
-  "homepage": "https://github.com/user/repo",
+  "homepage": "https://github.com/tacogips/cursor-cli-agent",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/repo"
+    "url": "https://github.com/tacogips/cursor-cli-agent.git"
   },
 
   "license": "MIT",

@@ -28,6 +28,7 @@ Status labels:
 | Session detail and transcript read | Implemented | Planned | transcript schema is simpler, but directly usable |
 | Live session watch | Implemented | Planned | combine transcript watch with stdout event stream |
 | New session execution | Implemented | Planned | use `cursor-agent --print` |
+| Pre-materialized chat creation | Not needed | Planned | persist pending `cursorChatId` before transcript materialization |
 | Resume existing session | Implemented | Planned | support both session ID and chat ID |
 | Continue latest session | Implemented in spirit | Planned | use Cursor `--continue` |
 | Session metadata enrichment | rollout/state DB native | Planned | use `ai-code-tracking.db` when present |
@@ -50,6 +51,7 @@ Status labels:
 - Cursor transcript reader
 - Cursor stream normalizer
 - Local session index
+- Pending chat-only records for `session create`
 - AI tracking DB enrichment
 - Headless process manager
 - `session list/show/watch/run/create/resume/continue/attach`
@@ -90,6 +92,12 @@ The tool must accept:
 
 - transcript-backed `localSessionId`
 - pre-materialized `cursorChatId`
+
+This flexibility also applies to:
+
+- `session show`
+- `session attach`
+- session index deduplication during transcript materialization
 
 ## Delivery Strategy
 

@@ -1,14 +1,13 @@
+#!/usr/bin/env bun
 /**
- * cursor-cli-agent - Main entry point
- *
- * cursor-cli-agent
+ * cursor-cli-agent CLI entry point.
  */
 
-import { greet } from "./lib";
+import { runCli } from "./cli/cli";
 
-function main(): void {
-  const message = greet("World");
-  console.log(message);
+async function main(): Promise<void> {
+  const code = await runCli(process.argv);
+  process.exitCode = code;
 }
 
-main();
+void main();

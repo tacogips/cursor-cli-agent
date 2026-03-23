@@ -80,6 +80,26 @@ Example:
 - transcript files preserve user/assistant content
 - transcripts do not, in the observed format, embed cwd, model, token usage, or timing metadata
 - transcripts are append-only session logs and are good for history playback, but insufficient as a complete metadata source
+- transcript text may contain wrapper markup such as `<user_query>...</user_query>` inside `message.content[].text`
+
+### Message Extraction Strategy
+
+`cursor-cli-agent` should distinguish three layers when reading transcript messages:
+
+1. `rawText`: exact text stored in the transcript content block
+2. `displayText`: human-oriented text after unwrapping known wrapper tags when safe
+3. `structured`: optional semantic extraction such as `userQueryText`
+
+Initial phase-1 rules:
+
+- preserve `rawText` exactly as stored
+- when a text block is fully wrapped by `<user_query>...</user_query>`, set:
+  - `displayText` to the inner text
+  - `structured.userQueryText` to the same inner text
+- otherwise, keep `displayText == rawText`
+- never discard the original wrapper-marked text from machine-readable output
+- unknown wrapper tags must not fail parsing; they remain raw text until explicitly supported
+- unknown non-text content blocks must be preserved as opaque metadata and ignored for summary extraction
 
 ### Confirmed Use
 
@@ -159,6 +179,24 @@ Therefore `cursor-cli-agent` must model:
 
 In many cases they will become equal, but the design must not assume they always start equal.
 
+### Design Response
+
+`cursor-cli-agent` must persist a local session record even before transcript materialization.
+
+Required lifecycle states:
+
+- `chat_only`: created by `session create`; has `cursorChatId`, no transcript yet
+- `transcript_only`: created by direct headless execution; has `localSessionId`
+- `linked`: chat-backed record after transcript materialization; may have both IDs
+
+Required record behavior:
+
+1. `session create` stores a pending record keyed by a local repository ID
+2. `session list` and `session show` must surface pending `chat_only` records clearly
+3. `session resume <chatId>` must link transcript materialization back to the existing pending record
+4. imported transcript sessions may exist without any `cursorChatId`
+5. message retrieval for transcript-backed sessions must preserve both `rawText` and `displayText`
+
 ## 6. Workspace Trust Behavior
 
 Confirmed locally:
@@ -200,6 +238,11 @@ Workspace resolution order:
 2. explicit `--workspace` from caller
 3. latest `workspacePath=` entry in `worker.log`
 4. best-effort registry lookup in local index
+
+The explicit caller workspace is preferred over `worker.log` because:
+
+- `session create` needs a stable workspace association before any transcript exists
+- `worker.log` is an inferred fallback, not an authoritative command input
 
 ## 7.5 Skill Sources
 
@@ -347,6 +390,7 @@ Responsibilities:
 - read transcript files
 - parse `role`/`message.content[]`
 - extract first user prompt and latest assistant reply
+- derive `rawText`, `displayText`, and optional `structured.userQueryText`
 - tolerate unknown content block types
 
 ### 9.2 `CursorStreamNormalizer`
@@ -355,6 +399,7 @@ Responsibilities:
 
 - parse `stream-json` events
 - normalize to internal `AgentEvent`
+- derive the same message view model as transcript replay
 - deduplicate repeated assistant terminal payloads
 - retain usage stats from final `result`
 
@@ -416,8 +461,8 @@ After local inspection on 2026-03-23, question 3 is partially resolved:
 | P0 | Transcript reader | foundation for imported sessions |
 | P0 | Stream normalizer | foundation for managed sessions |
 | P0 | Session index | required because Cursor lacks a public local index |
-| P1 | Process manager | enables run/resume/continue |
-| P1 | CLI session commands | minimal usable product |
-| P2 | Group/queue managers | parity path with `codex-agent` |
-| P2 | Watchers/activity | live monitoring |
+| P1 | Process manager | enables run/resume/continue/create |
+| P1 | CLI session commands | minimal usable product including show/watch/attach |
+| P1 | Watchers/activity | required for phase-1 `session watch` behavior |
+| P1 | Group/queue managers | included in phase-1 foundational orchestration |
 | P3 | Server/daemon | integration layer after core stabilizes |

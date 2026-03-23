@@ -24,7 +24,7 @@ cursor-cli-agent version
 
 ### `session list`
 
-List known sessions from the local index.
+List known sessions from the local index, including pending chat-only records created by `session create`.
 
 Example:
 
@@ -32,13 +32,28 @@ Example:
 cursor-cli-agent session list --workspace /repo/path --limit 20
 ```
 
-### `session show <session-id>`
+### `session show <session-id-or-chat-id>`
 
 Show transcript summary and metadata.
 
-### `session watch <session-id>`
+For pending chat-only records, return the persisted chat/workspace metadata and surface that the transcript has not materialized yet.
+
+Message presentation rules:
+
+- human-readable output defaults to `displayText`
+- JSON output must include both `rawText` and `displayText`
+- when available, JSON output should expose semantic extraction such as `structured.userQueryText`
+
+### `session watch <session-id-or-chat-id>`
 
 Follow transcript updates and normalized live events.
+
+Behavior rules:
+
+- transcript-backed sessions begin streaming immediately
+- pending chat-only records are valid watch targets
+- when watching a pending chat-only record, the command should emit pending state, wait for transcript materialization, then continue with normal transcript/live event streaming
+- normalized message events must preserve both `rawText` and `displayText` in JSON mode
 
 ### `session run`
 
@@ -62,7 +77,12 @@ Primary flags:
 
 ### `session create`
 
-Wrap `cursor-agent create-chat` and persist the returned `cursorChatId`.
+Wrap `cursor-agent create-chat` and persist the returned `cursorChatId` as a pending chat-only session record.
+
+Primary flags:
+
+- `--workspace <path>` defaults to current working directory
+- `--json`
 
 ### `session resume <session-id-or-chat-id>`
 
@@ -71,16 +91,30 @@ Resume a known session and optionally send a prompt.
 Flags:
 
 - `--prompt <text>`
-- `--workspace <path>`
+- `--workspace <path>` (when omitted, use the indexed workspace for a known session if available; otherwise current working directory)
 - `--stream <text|json|events>`
 
 ### `session continue`
 
-Continue the latest session for the current or specified workspace.
+Continue the latest session for the current or specified workspace (most recently updated in the local index, matching `workspace_slug` or `workspace_path`).
+
+Flags:
+
+- `--workspace <path>`
+- `--stream <text|json|events>` (same semantics as `session run` / `session resume`; `--json` is an alias for `--stream json`)
 
 ### `session attach <session-id-or-chat-id>`
 
 Open interactive Cursor Agent attached to the requested session.
+
+When `--workspace` is omitted, use the indexed workspace for a known session if available; otherwise current working directory.
+
+## Session Identity Semantics
+
+- `session create` creates a local pending record before any transcript exists
+- `session run` creates a transcript-backed session immediately
+- `session show`, `session watch`, `session resume`, and `session attach` must resolve both transcript-backed `localSessionId` and pre-materialized `cursorChatId`
+- `session list` must label pending chat-only records so users can distinguish them from transcript-backed sessions
 
 ## Group Commands
 
@@ -106,7 +140,7 @@ Phase-1 scope:
 
 ## Skill Commands
 
-Phase-1.5 scope:
+Phase-1 scope (read-only discovery):
 
 - `skill list`
 - `skill show <name>`
@@ -123,6 +157,8 @@ Phase-2 scope:
 
 - `server start --host <host> --port <port>`
 
+Phase-1 behavior: invoking `server` prints a short message and exits with a non-zero code (feature not yet implemented).
+
 ## Daemon Commands
 
 Phase-2 scope:
@@ -130,6 +166,8 @@ Phase-2 scope:
 - `daemon start`
 - `daemon stop`
 - `daemon status`
+
+Phase-1 behavior: invoking `daemon` prints a short message and exits with a non-zero code (feature not yet implemented).
 
 ## Shared Flags and Options
 
@@ -143,8 +181,8 @@ Phase-2 scope:
 | `--yolo` | boolean | false | Cursor alias for run-everything mode |
 | `--sandbox` | enum | Cursor default | `enabled` or `disabled` |
 | `--approve-mcps` | boolean | false | Auto-approve MCP servers |
-| `--stream` | enum | `events` | Output projection for users of this wrapper |
-| `--json` | boolean | false | Emit structured command results |
+| `--stream` | enum | `events` | Output projection for users of this wrapper (`text`, `json`, or `events`; invalid values are rejected) |
+| `--json` | boolean | false | For list/show/create-style commands: emit structured command results. For `session run`, `session resume`, `session continue`, `group run`, and `queue run`: alias for `--stream json` (after explicit `--stream` if both are set, `--stream` wins) |
 
 ## Environment Variables
 

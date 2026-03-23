@@ -131,6 +131,16 @@ feat: implement user authentication system
 
 This is cursor-cli-agent - a TypeScript project with Bun runtime and Nix flake development environment support.
 
+## Project-Specific Tacit Knowledge
+
+- Phase 1 implementation lives under `src/` (CLI in `src/cli/`, Cursor adapters in `src/cursor/`, persistence in `src/persistence/`). The architecture doc still describes long-term service boundaries; orchestration is currently colocated in the CLI module until those services are extracted.
+- For feature work, treat `design-docs/specs/*.md` and `impl-plans/active/*.md` as the primary source of truth, and use `/g/gits/tacogips/codex-agent` only as a structural reference.
+- The product boundary is local Cursor state on this machine. Prefer validating behavior against `~/.cursor/projects/*/agent-transcripts/*.jsonl`, `~/.cursor/projects/*/worker.log`, `~/.cursor/ai-tracking/ai-code-tracking.db`, and local skill directories instead of assuming undocumented APIs.
+- Keep Cursor-specific behavior isolated behind adapter modules. Domain and persistence layers should not depend directly on raw Cursor CLI payload shapes.
+- `~/.cursor/skills-cursor/` is Cursor-managed internal state. Read it for discovery only; never write to it. User-authored skills belong under `~/.cursor/skills/` or project `.cursor/skills/`.
+- Before implementing non-trivial features, confirm the corresponding design doc and active implementation plan exist and are aligned. If they drift, fix the documents first or explicitly note the mismatch.
+- Prefer project automation entry points over ad hoc commands: `task ci`, `task test`, `task typecheck`, and Bun package scripts. If you touch test infrastructure, align the repository on one test runner instead of mixing conventions further.
+
 ## Development Environment
 - **Language**: TypeScript
 - **Runtime**: Bun
@@ -144,13 +154,16 @@ This is cursor-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 ├── flake.nix          # Nix flake configuration for TypeScript/Bun development
 ├── flake.lock         # Locked flake dependencies
 ├── package.json       # Package manifest
-├── bun.lockb          # Bun lock file
+├── bun.lock           # Bun lock file (text; `bun.lockb` is gitignored)
 ├── tsconfig.json      # TypeScript configuration (maximum strictness)
 ├── .envrc             # direnv configuration
 ├── src/               # Source code
-│   ├── main.ts        # Entry point
-│   ├── lib.ts         # Library code
-│   └── lib.test.ts    # Test files
+│   ├── main.ts        # Entry point (bin)
+│   ├── cli/           # Command dispatcher and session/group/queue/skill flows
+│   ├── cursor/        # Cursor CLI adapters (process, transcripts, stream, skills, ai-tracking)
+│   ├── persistence/   # SQLite session index, JSON group/queue stores
+│   ├── config/        # Paths and environment overrides
+│   └── types/         # Domain event and record types
 └── .gitignore         # Git ignore patterns
 ```
 

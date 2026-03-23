@@ -62,6 +62,10 @@ External Users / Automation
    +- ProcessSupervisor
 ```
 
+### Phase 1 implementation note
+
+The diagram shows Application Services as a distinct layer. In phase 1, the CLI module (`src/cli/`) orchestrates repositories and Cursor adapters directly. Extracting `SessionService`, `GroupService`, and related facades remains a follow-on refactor once the command surface and persistence APIs stabilize; adapter and persistence boundaries already match the diagram.
+
 ## Core Module Boundaries
 
 ### 1. Cursor Adapter Layer
@@ -70,8 +74,7 @@ This is the only layer that knows Cursor-specific CLI flags, transcript layout, 
 
 Primary modules:
 
-- `cursor/process-runner`
-- `cursor/command-builder`
+- `cursor/process-runner` (includes `cursor-agent` argv construction for phase 1; a separate `cursor/command-builder` module is optional if argument assembly grows)
 - `cursor/transcript-reader`
 - `cursor/stream-normalizer`
 - `cursor/workspace-resolver`
@@ -84,9 +87,7 @@ Owns stable application semantics that should remain valid even if Cursor change
 
 Primary modules:
 
-- `session`
-- `group`
-- `queue`
+- `session` / `group` / `queue` (phase 1: orchestrated in `src/cli/` with types in `src/types/`)
 - `activity`
 - `types`
 
@@ -103,12 +104,16 @@ Primary storage:
 
 ## Session Identity Model
 
-Cursor requires a dual-ID model.
+Cursor requires a dual-ID model plus a repository-owned record identity.
 
 ### Confirmed IDs
 
 - `localSessionId`: the transcript filename and the `session_id` emitted by `--print`
 - `cursorChatId`: the identifier returned by `cursor-agent create-chat`
+
+### Repository-Owned ID
+
+- `recordId`: a stable local primary key stored in `state.db`
 
 ### Observed Behavior
 
@@ -120,14 +125,17 @@ Cursor requires a dual-ID model.
 
 ```ts
 interface CursorSessionRecord {
-  readonly localSessionId: string;
+  readonly recordId: string;
+  readonly localSessionId?: string;
   readonly cursorChatId?: string;
+  readonly identityState: "chat_only" | "transcript_only" | "linked";
   readonly workspaceSlug: string;
   readonly workspacePath?: string;
-  readonly transcriptPath: string;
+  readonly transcriptPath?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
-  readonly source: "headless" | "interactive" | "unknown";
+  readonly materializedAt?: string;
+  readonly source: "create-chat" | "headless" | "interactive" | "unknown";
   readonly model?: string;
   readonly mode?: "default" | "plan" | "ask";
   readonly status: "pending" | "active" | "completed" | "failed" | "unknown";
@@ -135,6 +143,14 @@ interface CursorSessionRecord {
   readonly lastAssistantText?: string;
 }
 ```
+
+Record invariants:
+
+1. at least one of `localSessionId` or `cursorChatId` must be present
+2. `transcriptPath` is required only after transcript materialization
+3. `session create` persists a `chat_only` record before any transcript exists
+4. `session run` without `create-chat` persists a `transcript_only` record
+5. `session resume <chatId>` upgrades a matching `chat_only` record to `linked` when the transcript appears
 
 ## Workspace Resolution Strategy
 
@@ -147,8 +163,8 @@ Cursor project directories are stored under slugged paths such as:
 Transcript files do not contain the workspace path in the observed JSONL format, so `cursor-cli-agent` must resolve workspace context using:
 
 1. `system.init.cwd` from headless `stream-json` when sessions are spawned by this tool
-2. `worker.log`, which contains `workspacePath=...` entries
-3. the current workspace passed explicitly by the caller
+2. the current workspace passed explicitly by the caller
+3. `worker.log`, which contains `workspacePath=...` entries
 4. a best-effort local registry in `state.db`
 
 ## AI Tracking Enrichment Strategy
@@ -222,21 +238,49 @@ Used when `cursor-cli-agent` itself starts a run.
 5. Merge optional `ai-tracking` enrichment keyed by `session_id`
 6. Persist durable session metadata into local index
 
+### C. Pre-Materialized Chat Creation
+
+Used when `cursor-cli-agent` wraps `cursor-agent create-chat`.
+
+1. Invoke `cursor-agent create-chat`
+2. Persist a `chat_only` session record keyed by local `recordId`
+3. Store returned `cursorChatId`, caller workspace, and `pending` status
+4. Resolve later `resume <chatId>` materialization to the existing record instead of creating a duplicate
+
 ## Event Normalization Model
 
 Cursor stream-json should be normalized into stable internal events:
 
 ```ts
+interface NormalizedMessage {
+  readonly role: "user" | "assistant";
+  readonly rawText: string;
+  readonly displayText: string;
+  readonly structured?: {
+    readonly userQueryText?: string;
+  };
+}
+
 type AgentEvent =
   | { type: "session.started"; sessionId: string; cwd: string; model?: string }
-  | { type: "session.user_message"; sessionId: string; text: string }
+  | { type: "session.pending"; recordId: string; cursorChatId: string; workspacePath?: string }
+  | { type: "session.materialized"; recordId: string; sessionId: string; cursorChatId?: string }
+  | { type: "session.user_message"; sessionId: string; message: NormalizedMessage }
   | { type: "session.thinking"; sessionId: string; state: "delta" | "completed" }
-  | { type: "session.assistant_message"; sessionId: string; text: string }
+  | { type: "session.assistant_message"; sessionId: string; message: NormalizedMessage }
   | { type: "session.completed"; sessionId: string; result: string; usage?: UsageStats }
   | { type: "session.error"; sessionId?: string; message: string };
 ```
 
 This keeps Cursor-specific payloads out of higher layers.
+
+Normalization rules:
+
+1. transcript replay and live `stream-json` events must produce the same `NormalizedMessage` shape
+2. `rawText` preserves Cursor-stored content verbatim
+3. `displayText` may unwrap recognized wrapper tags such as `<user_query>...</user_query>`
+4. machine-readable outputs must retain both raw and display forms to avoid information loss
+5. pending chat-only records may emit `session.pending` before any transcript-backed `sessionId` exists
 
 ## Orchestration Model
 
@@ -283,6 +327,7 @@ Reason:
 
 - transcripts only show persisted messages
 - stream-json contains startup metadata, thinking events, and result usage
+- both must converge on the same normalized message model for replay and live watch
 
 ### Decision 2.5: Use `ai-code-tracking.db` as enrichment only
 
