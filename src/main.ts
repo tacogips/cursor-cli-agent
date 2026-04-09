@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * cursor-cli-agent CLI entry point.
+ * curort-cli-agent CLI entry point.
  */
 
 import { runCli } from "./cli/cli";

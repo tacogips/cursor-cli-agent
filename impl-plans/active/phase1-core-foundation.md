@@ -11,7 +11,7 @@
 
 ## Goal
 
-Deliver a usable first version of `cursor-cli-agent` that can discover sessions, create and materialize chat-backed sessions, run/resume Cursor Agent headlessly, expose stable normalized events, and support foundational group/queue orchestration.
+Deliver a usable first version of `curort-cli-agent` that can discover sessions, create and materialize chat-backed sessions, run/resume Cursor Agent headlessly, expose stable normalized events, and support foundational group/queue orchestration.
 
 ## Scope
 

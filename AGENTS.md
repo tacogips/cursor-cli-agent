@@ -129,7 +129,7 @@ feat: implement user authentication system
 
 ## Project Overview
 
-This is cursor-cli-agent - a TypeScript project with Bun runtime and Nix flake development environment support.
+This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake development environment support.
 
 ## Project-Specific Tacit Knowledge
 

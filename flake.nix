@@ -1,6 +1,6 @@
 {
 
-  description = "cursor-cli-agent";
+  description = "curort-cli-agent";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";

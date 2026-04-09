@@ -240,27 +240,27 @@ export async function runCli(argv: string[]): Promise<number> {
   const [, , cmd, ...tail] = argv;
   if (cmd === undefined || cmd === "-h" || cmd === "--help") {
     console.log(`Usage:
-  cursor-cli-agent version
-  cursor-cli-agent session list [--workspace <path>] [--limit N] [--json]
-  cursor-cli-agent session show <id> [--workspace <path>] [--json]
-  cursor-cli-agent session watch <id> [--workspace <path>] [--json]
-  cursor-cli-agent session run --prompt <text> [options]
-  cursor-cli-agent session create [--workspace <path>] [--json]
-  cursor-cli-agent session resume <id> [--prompt <text>] [options]
-  cursor-cli-agent session continue [--workspace <path>] [--stream <text|json|events>] [--json]
-  cursor-cli-agent session attach <id> [--workspace <path>]
-  cursor-cli-agent group <subcommand> ...
-  cursor-cli-agent queue <subcommand> ...
-  cursor-cli-agent skill list [--workspace <path>] [--json]
-  cursor-cli-agent skill show <name> [--workspace <path>] [--json]
-  cursor-cli-agent server ...  (phase 2; not implemented yet)
-  cursor-cli-agent daemon ...  (phase 2; not implemented yet)
+  curort-cli-agent version
+  curort-cli-agent session list [--workspace <path>] [--limit N] [--json]
+  curort-cli-agent session show <id> [--workspace <path>] [--json]
+  curort-cli-agent session watch <id> [--workspace <path>] [--json]
+  curort-cli-agent session run --prompt <text> [options]
+  curort-cli-agent session create [--workspace <path>] [--json]
+  curort-cli-agent session resume <id> [--prompt <text>] [options]
+  curort-cli-agent session continue [--workspace <path>] [--stream <text|json|events>] [--json]
+  curort-cli-agent session attach <id> [--workspace <path>]
+  curort-cli-agent group <subcommand> ...
+  curort-cli-agent queue <subcommand> ...
+  curort-cli-agent skill list [--workspace <path>] [--json]
+  curort-cli-agent skill show <name> [--workspace <path>] [--json]
+  curort-cli-agent server ...  (phase 2; not implemented yet)
+  curort-cli-agent daemon ...  (phase 2; not implemented yet)
 `);
     return EXIT.USAGE;
   }
 
   if (cmd === "version") {
-    console.log(`cursor-cli-agent ${pkg.version}`);
+    console.log(`curort-cli-agent ${pkg.version}`);
     return EXIT.OK;
   }
 
@@ -606,7 +606,8 @@ async function runSession(argv: string[]): Promise<number> {
     const stream = headlessStreamMode!;
     const sid = resumeSessionId!;
     const known = repo.resolveSessionKey(sid);
-    const resumeWorkspace = explicitWorkspace ?? known?.workspacePath ?? workspace;
+    const resumeWorkspace =
+      explicitWorkspace ?? known?.workspacePath ?? workspace;
     const norm = new StreamNormalizerState();
     const textState: TextStreamRenderState = {
       lastAssistantBySession: new Map(),

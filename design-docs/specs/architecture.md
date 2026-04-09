@@ -1,6 +1,6 @@
 # Architecture Design
 
-This document defines the target architecture for `cursor-cli-agent`.
+This document defines the target architecture for `curort-cli-agent`.
 
 ## Goals
 
@@ -20,7 +20,7 @@ This document defines the target architecture for `cursor-cli-agent`.
 
 ## Design Drivers
 
-`cursor-cli-agent` differs from `codex-agent` in three structural ways:
+`curort-cli-agent` differs from `codex-agent` in three structural ways:
 
 1. Cursor persists local transcripts under `~/.cursor/projects/<workspace-slug>/agent-transcripts/*.jsonl`, not under a date hierarchy.
 2. Local transcript files are minimal message logs, while richer machine-readable state appears on stdout in `--print --output-format stream-json`.
@@ -36,9 +36,14 @@ External Users / Automation
         |
   Application Services
    |- SessionService
+   |- SearchService
    |- GroupService
    |- QueueService
+   |- BookmarkService
    |- ActivityService
+   |- FileIntelligenceService
+   |- SkillService
+   |- AuthService
    +- ProcessService
         |
    Cursor Adapters
@@ -52,14 +57,23 @@ External Users / Automation
         |
  Persistence and Index
    |- SessionIndexRepository   (SQLite)
+   |- SearchIndexRepository    (SQLite/FTS, later phase)
    |- GroupRepository          (JSON/SQLite)
    |- QueueRepository          (JSON/SQLite)
-   +- BookmarkRepository       (later phase)
+   |- BookmarkRepository       (JSON/SQLite, later phase)
+   |- FileIndexRepository      (SQLite, later phase)
+   +- TokenRepository          (SQLite/JSON, later phase)
         |
    File/Process Watchers
    |- TranscriptWatcher
    |- WorkspaceWatcher
    +- ProcessSupervisor
+        |
+   Server / SDK
+   |- RestServer
+   |- EventStreamGateway
+   |- DaemonManager
+   +- PublicPackageExports
 ```
 
 ### Phase 1 implementation note
@@ -88,7 +102,12 @@ Owns stable application semantics that should remain valid even if Cursor change
 Primary modules:
 
 - `session` / `group` / `queue` (phase 1: orchestrated in `src/cli/` with types in `src/types/`)
+- `search`
+- `bookmark`
 - `activity`
+- `file-intelligence`
+- `auth`
+- `sdk`
 - `types`
 
 ### 3. Persistence Layer
@@ -97,10 +116,13 @@ Owns durable metadata that Cursor does not provide natively.
 
 Primary storage:
 
-- `~/.config/cursor-cli-agent/config.toml`
-- `~/.local/share/cursor-cli-agent/state.db`
-- `~/.local/share/cursor-cli-agent/groups.json`
-- `~/.local/share/cursor-cli-agent/queues.json`
+- `~/.config/curort-cli-agent/config.toml`
+- `~/.local/share/curort-cli-agent/state.db`
+- `~/.local/share/curort-cli-agent/groups.json`
+- `~/.local/share/curort-cli-agent/queues.json`
+- `~/.local/share/curort-cli-agent/bookmarks.json` (or SQLite tables in later phases)
+- `~/.local/share/curort-cli-agent/file-index.db` (later phase)
+- `~/.local/share/curort-cli-agent/tokens.db` (later phase)
 
 ## Session Identity Model
 
@@ -160,7 +182,7 @@ Cursor project directories are stored under slugged paths such as:
 ~/.cursor/projects/g-gits-tacogips-cursor-cli-agent
 ```
 
-Transcript files do not contain the workspace path in the observed JSONL format, so `cursor-cli-agent` must resolve workspace context using:
+Transcript files do not contain the workspace path in the observed JSONL format, so `curort-cli-agent` must resolve workspace context using:
 
 1. `system.init.cwd` from headless `stream-json` when sessions are spawned by this tool
 2. the current workspace passed explicitly by the caller
@@ -187,6 +209,38 @@ Design position:
 2. `ai-code-tracking.db` is an optional enrichment source
 3. joins should key primarily on `conversationId == localSessionId`
 4. absence of DB rows must not hide or invalidate sessions
+
+## Derived Search and File Intelligence Strategy
+
+`curort-cli-agent` must add two repository-owned derived views beyond the base session index.
+
+### 1. Search Index
+
+Purpose:
+
+- fast filtering on workspace, model, mode, status, and time ranges
+- optional full-text cache of first-user/latest-assistant summaries
+- stable search entrypoint for CLI, server, and SDK
+
+Design position:
+
+1. transcript files remain the canonical source for exact full-text search
+2. the search index is an accelerator, not an authority
+3. search responses should report whether a hit came from cached metadata, transcript scan, or enrichment data
+
+### 2. File Intelligence Index
+
+Purpose:
+
+- summarize per-session touched files
+- expose repository-level file history
+- expose tracked snapshots and deleted-file metadata
+
+Design position:
+
+1. the file index is built from `ai-tracking` tables, not from transcript parsing
+2. results are best-effort intelligence and must include provenance
+3. missing `ai-tracking` rows must degrade gracefully to `unknown`, not `no changes`
 
 ## Skill Catalog Strategy
 
@@ -219,7 +273,7 @@ interface CursorSkillRecord {
 
 ### A. Foreign Session Discovery
 
-Used for sessions created outside `cursor-cli-agent`.
+Used for sessions created outside `curort-cli-agent`.
 
 1. Scan `~/.cursor/projects/*/agent-transcripts/*.jsonl`
 2. Infer `workspaceSlug` from the parent directory
@@ -229,7 +283,7 @@ Used for sessions created outside `cursor-cli-agent`.
 
 ### B. Managed Headless Run
 
-Used when `cursor-cli-agent` itself starts a run.
+Used when `curort-cli-agent` itself starts a run.
 
 1. Spawn `cursor-agent --print --trust --output-format stream-json`
 2. Read `system.init` to capture `session_id`, `cwd`, `model`, `permissionMode`
@@ -240,7 +294,7 @@ Used when `cursor-cli-agent` itself starts a run.
 
 ### C. Pre-Materialized Chat Creation
 
-Used when `cursor-cli-agent` wraps `cursor-agent create-chat`.
+Used when `curort-cli-agent` wraps `cursor-agent create-chat`.
 
 1. Invoke `cursor-agent create-chat`
 2. Persist a `chat_only` session record keyed by local `recordId`
@@ -288,6 +342,14 @@ Normalization rules:
 
 Groups coordinate multiple sessions against one workspace set. They should reuse the same group and queue concepts from `codex-agent`, but use Cursor headless runs as the execution primitive.
 
+Later phases add explicit lifecycle state:
+
+- `active`
+- `paused`
+- `completed`
+- `failed`
+- `archived` (optional)
+
 ### Queues
 
 Queues serialize prompts against one workspace or one target session.
@@ -298,19 +360,46 @@ Execution modes:
 - resume a known session
 - continue the latest session for a workspace
 
+Later phases add per-item execution policy:
+
+- `auto`
+- `manual`
+
 ## Server and Daemon
 
-The daemon/server layer remains a phase-2 concern.
+The daemon/server layer remains a phase-4 concern.
 
 It should expose:
 
 - session listing
 - session detail
+- session and transcript search
 - transcript streaming
 - group/queue control
+- bookmark and file-intelligence APIs
 - health/version endpoints
 
 It should not expose raw Cursor internals directly.
+
+## Public Package Surface
+
+To match `codex-agent` structurally, the package should eventually export a stable library API in addition to the CLI.
+
+Target export families:
+
+- `types`
+- `session`
+- `search`
+- `group`
+- `queue`
+- `bookmark`
+- `file-intelligence`
+- `activity`
+- `sdk`
+- `server`
+- `daemon`
+
+This public surface should be introduced only after the corresponding local modules stop depending on CLI-only wiring.
 
 ## Key Architecture Decisions
 
@@ -357,3 +446,11 @@ Reason:
 - it is locally available and useful
 - built-in skill docs explicitly mark it as Cursor-managed internal storage
 - depending on it as an execution contract would be brittle
+
+### Decision 6: Derive advanced parity features from repository-owned indexes
+
+Reason:
+
+- Cursor does not provide a first-class equivalent of Codex rollouts plus state DB
+- search, bookmarks, activity, and file intelligence need stable local models
+- repository-owned indexes let the server and SDK expose consistent APIs even if Cursor internals change

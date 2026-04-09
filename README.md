@@ -1,6 +1,6 @@
-# cursor-cli-agent
+# curort-cli-agent
 
-`cursor-cli-agent` is a planned Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
+`curort-cli-agent` is a planned Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
 
 This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-agent`.
 
@@ -40,7 +40,7 @@ Primary reference:
 Important difference:
 
 - `codex-agent` is built around Codex rollout files plus a SQLite state DB
-- `cursor-cli-agent` must treat `cursor-agent` transcripts and headless JSON streams as the source of truth
+- `curort-cli-agent` must treat `cursor-agent` transcripts and headless JSON streams as the source of truth
 
 ## Cursor Agent Notes
 

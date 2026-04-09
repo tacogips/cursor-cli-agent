@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "cursor-cli-agent",
+      "name": "curort-cli-agent",
       "devDependencies": {
         "@types/bun": "1.1.14",
         "@vitest/ui": "2.1.8",

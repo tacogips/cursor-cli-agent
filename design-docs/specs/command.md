@@ -1,6 +1,6 @@
 # Command Design
 
-This document defines the planned CLI contract for `cursor-cli-agent`.
+This document defines the planned CLI contract for `curort-cli-agent`.
 
 ## Design Principles
 
@@ -11,13 +11,16 @@ This document defines the planned CLI contract for `cursor-cli-agent`.
 ## Top-Level Commands
 
 ```text
-cursor-cli-agent session <subcommand>
-cursor-cli-agent group <subcommand>
-cursor-cli-agent queue <subcommand>
-cursor-cli-agent skill <subcommand>
-cursor-cli-agent server <subcommand>
-cursor-cli-agent daemon <subcommand>
-cursor-cli-agent version
+curort-cli-agent session <subcommand>
+curort-cli-agent group <subcommand>
+curort-cli-agent queue <subcommand>
+curort-cli-agent bookmark <subcommand>
+curort-cli-agent files <subcommand>
+curort-cli-agent token <subcommand>
+curort-cli-agent skill <subcommand>
+curort-cli-agent server <subcommand>
+curort-cli-agent daemon <subcommand>
+curort-cli-agent version
 ```
 
 ## Session Commands
@@ -29,7 +32,7 @@ List known sessions from the local index, including pending chat-only records cr
 Example:
 
 ```bash
-cursor-cli-agent session list --workspace /repo/path --limit 20
+curort-cli-agent session list --workspace /repo/path --limit 20
 ```
 
 ### `session show <session-id-or-chat-id>`
@@ -109,6 +112,29 @@ Open interactive Cursor Agent attached to the requested session.
 
 When `--workspace` is omitted, use the indexed workspace for a known session if available; otherwise current working directory.
 
+### `session search <query>`
+
+Phase-2 scope.
+
+Search known sessions by metadata and transcript content.
+
+Primary flags:
+
+- `--workspace <path>`
+- `--role <user|assistant>`
+- `--limit <n>`
+- `--offset <n>`
+- `--case-sensitive`
+- `--max-bytes <n>`
+- `--max-events <n>`
+- `--json`
+
+Behavior rules:
+
+- metadata filters should be satisfied from the local session index when possible
+- transcript matches should be produced by streaming transcript JSONL files
+- results should report match provenance such as `index`, `transcript`, or `ai-tracking`
+
 ## Session Identity Semantics
 
 - `session create` creates a local pending record before any transcript exists
@@ -127,6 +153,13 @@ Phase-1 scope:
 - `group remove <name> --workspace <path>`
 - `group run <name> --prompt <text>`
 
+Later phases:
+
+- `group pause <name>`
+- `group resume <name>`
+- `group delete <name>`
+- `group watch <name>`
+
 ## Queue Commands
 
 Phase-1 scope:
@@ -137,6 +170,55 @@ Phase-1 scope:
 - `queue add <name> --prompt <text>`
 - `queue remove <name> --item <id>`
 - `queue run <name>`
+
+Later phases:
+
+- `queue pause <name>`
+- `queue resume <name>`
+- `queue delete <name>`
+- `queue update <name> --item <id> --prompt <text>`
+- `queue move <name> --from <n> --to <n>`
+- `queue mode <name> --item <id> --mode <auto|manual>`
+- `queue stop <name>`
+
+## Bookmark Commands
+
+Phase-2 scope:
+
+- `bookmark add --type <session|message|range> --session <id> --name <name>`
+- `bookmark list`
+- `bookmark show <id>`
+- `bookmark delete <id>`
+- `bookmark search <query>`
+
+Bookmark rules:
+
+- `message` and `range` bookmarks require transcript-backed sessions
+- pending `chat_only` records may only receive `session` bookmarks until transcript materialization
+
+## File Commands
+
+Phase-3 scope:
+
+- `files list <session-id>`
+- `files snapshots <session-id>`
+- `files deleted <session-id>`
+- `files find <path>`
+- `files rebuild`
+
+Response rules:
+
+- file intelligence is derived from `ai-tracking`, not direct transcript replay
+- output must surface provenance and best-effort limitations
+
+## Token Commands
+
+Phase-4 scope:
+
+- `token create --name <name> [--permissions <csv>] [--expires-at <iso8601>]`
+- `token list`
+- `token revoke <id>`
+- `token rotate <id>`
 
 ## Skill Commands
 
@@ -153,15 +235,26 @@ Discovery roots:
 
 ## Server Commands
 
-Phase-2 scope:
+Phase-4 scope:
 
 - `server start --host <host> --port <port>`
+- `server start --host <host> --port <port> [--token <token>]`
 
 Phase-1 behavior: invoking `server` prints a short message and exits with a non-zero code (feature not yet implemented).
 
+Target route groups:
+
+- sessions
+- search
+- groups
+- queues
+- bookmarks
+- files
+- health
+
 ## Daemon Commands
 
-Phase-2 scope:
+Phase-4 scope:
 
 - `daemon start`
 - `daemon stop`
@@ -189,9 +282,13 @@ Phase-1 behavior: invoking `daemon` prints a short message and exits with a non-
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CURSOR_API_KEY` | No | none | Native Cursor CLI authentication override |
-| `CURSOR_CLI_AGENT_CONFIG_DIR` | No | `~/.config/cursor-cli-agent` | Config location |
-| `CURSOR_CLI_AGENT_DATA_DIR` | No | `~/.local/share/cursor-cli-agent` | State and repository data |
-| `CURSOR_CLI_AGENT_CURSOR_HOME` | No | `~/.cursor` | Override Cursor home for testing |
+| `CURORT_CLI_AGENT_CONFIG_DIR` | No | `~/.config/curort-cli-agent` | Config location |
+| `CURORT_CLI_AGENT_DATA_DIR` | No | `~/.local/share/curort-cli-agent` | State and repository data |
+| `CURORT_CLI_AGENT_CURSOR_HOME` | No | `~/.cursor` | Override Cursor home for testing |
+
+Compatibility note:
+
+- the implementation may continue to accept legacy `CURSOR_CLI_AGENT_*` variable names during the rename transition, but docs should prefer `CURORT_CLI_AGENT_*`
 
 ## Exit Codes
 
@@ -210,3 +307,4 @@ Phase-1 behavior: invoking `daemon` prints a short message and exits with a non-
 - `fork` is intentionally absent in phase 1 because Cursor CLI does not expose a native equivalent.
 - `session create` and `session resume` are separate because Cursor uses a pre-materialized chat ID flow that Codex does not.
 - `skill` commands are read-only because `skills-cursor` is internal Cursor-managed state.
+- `files` commands are designed around `ai-tracking` enrichment, so they provide best-effort intelligence rather than exact tool-log replay.

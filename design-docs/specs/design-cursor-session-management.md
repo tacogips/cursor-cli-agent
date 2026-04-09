@@ -1,6 +1,6 @@
 # Cursor Session Management - Research and Design
 
-This document captures the confirmed local behavior of `cursor-agent` and the resulting design for `cursor-cli-agent`.
+This document captures the confirmed local behavior of `cursor-agent` and the resulting design for `curort-cli-agent`.
 
 Design baseline date:
 
@@ -84,7 +84,7 @@ Example:
 
 ### Message Extraction Strategy
 
-`cursor-cli-agent` should distinguish three layers when reading transcript messages:
+`curort-cli-agent` should distinguish three layers when reading transcript messages:
 
 1. `rawText`: exact text stored in the transcript content block
 2. `displayText`: human-oriented text after unwrapping known wrapper tags when safe
@@ -172,7 +172,7 @@ Observed event sequence:
 
 The CLI supports a pre-materialized chat identity that may exist before local transcript creation.
 
-Therefore `cursor-cli-agent` must model:
+Therefore `curort-cli-agent` must model:
 
 - `cursorChatId`: a resumable chat identifier
 - `localSessionId`: the persisted transcript/session identifier
@@ -181,7 +181,7 @@ In many cases they will become equal, but the design must not assume they always
 
 ### Design Response
 
-`cursor-cli-agent` must persist a local session record even before transcript materialization.
+`curort-cli-agent` must persist a local session record even before transcript materialization.
 
 Required lifecycle states:
 
@@ -214,7 +214,7 @@ Cursor Agent can execute code and access files in this directory.
 ### Design Response
 
 - expose a dedicated exit code for trust failures
-- surface a first-class `--trust` flag in `cursor-cli-agent`
+- surface a first-class `--trust` flag in `curort-cli-agent`
 - persist trust-related failures as structured session/process errors
 
 ## 7. Workspace Mapping
@@ -246,7 +246,7 @@ The explicit caller workspace is preferred over `worker.log` because:
 
 ## 7.5 Skill Sources
 
-For `cursor-cli-agent`, local skill data can be read from three sources:
+For `curort-cli-agent`, local skill data can be read from three sources:
 
 1. built-in skill catalog: `~/.cursor/skills-cursor/`
 2. user skill catalog: `~/.cursor/skills/`
@@ -360,7 +360,7 @@ Observed use:
 
 ### Design Response
 
-`cursor-cli-agent` should add an optional `AiTrackingEnricher` that:
+`curort-cli-agent` should add an optional `AiTrackingEnricher` that:
 
 1. joins transcript sessions to DB rows via `conversationId`
 2. derives touched-file summaries from `ai_code_hashes`
@@ -370,7 +370,7 @@ Observed use:
 
 ## 8. Comparison to Codex
 
-| Aspect | Codex (`codex-agent`) | Cursor (`cursor-cli-agent`) |
+| Aspect | Codex (`codex-agent`) | Cursor (`curort-cli-agent`) |
 |--------|------------------------|-----------------------------|
 | Primary local session file | rollout JSONL with typed items | transcript JSONL with message rows |
 | Rich metadata source | rollout + SQLite state DB | headless stdout stream-json |

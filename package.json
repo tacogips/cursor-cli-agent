@@ -1,10 +1,10 @@
 {
-  "name": "cursor-cli-agent",
+  "name": "curort-cli-agent",
   "version": "0.1.0",
-  "description": "cursor-cli-agent",
+  "description": "curort-cli-agent",
   "type": "module",
   "bin": {
-    "cursor-cli-agent": "src/main.ts"
+    "curort-cli-agent": "src/main.ts"
   },
   "main": "dist/main.js",
   "module": "dist/main.js",
