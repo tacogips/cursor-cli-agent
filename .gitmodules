@@ -1,0 +1,3 @@
+[submodule "divedra"]
+	path = divedra
+	url = https://github.com/tacogips/divedra.git

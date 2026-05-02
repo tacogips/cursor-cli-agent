@@ -82,3 +82,15 @@ tasks:
       - task: typecheck
       - task: test
       - task: build
+
+  checkout-divedra:
+    desc: Initialize and checkout the divedra submodule
+    cmds:
+      - git submodule update --init --checkout divedra
+
+  divedra:
+    desc: Run divedra from the local submodule (pass args after --)
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- {{.CLI_ARGS}}
