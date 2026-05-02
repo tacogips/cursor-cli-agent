@@ -1,0 +1,8 @@
+{
+  "id": "divedra-manager",
+  "description": "Coordinate the implementation/review loop and preserve the feedback contract between Step 2 and Step 1.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.4",
+  "promptTemplateFile": "prompts/divedra-manager.md",
+  "variables": {}
+}

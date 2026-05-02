@@ -1,0 +1,11 @@
+{
+  "id": "design-doc-review",
+  "description": "Review the design document and decide whether it must return to design-doc creation.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/design-doc-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.design_needs_revision true when the design doc needs correction, plus payload findings and feedback."
+  }
+}

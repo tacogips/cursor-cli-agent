@@ -1,0 +1,218 @@
+{
+  "divedra-manager": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.4",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "stage": "start",
+      "policy": "step1-implements-step2-reviews"
+    }
+  },
+  "step1-implement": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "output": {
+          "input": {
+            "changedFiles": [
+              "src/example.ts",
+              "impl-plans/active/example.md"
+            ],
+            "implementationSummary": "Implemented the planned change and updated the implementation plan progress log.",
+            "implPlanUpdates": [
+              "Marked TASK-001 implementation complete"
+            ],
+            "verification": [
+              "task typecheck"
+            ],
+            "addressedFeedback": [],
+            "risks": [
+              "Tests were not added for the edge case."
+            ]
+          }
+        }
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "output": {
+          "input": {
+            "changedFiles": [
+              "src/example.ts",
+              "src/example.test.ts",
+              "impl-plans/active/example.md"
+            ],
+            "implementationSummary": "Addressed review feedback by adding edge-case coverage and updating the implementation plan verification notes.",
+            "implPlanUpdates": [
+              "Marked TASK-001 tests complete",
+              "Added verification commands to the progress log"
+            ],
+            "verification": [
+              "task test",
+              "task typecheck"
+            ],
+            "addressedFeedback": [
+              "Added missing edge-case test coverage."
+            ],
+            "risks": []
+          }
+        }
+      }
+    }
+  ],
+  "step1-self-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "output": {
+          "input": {
+            "changedFiles": [
+              "src/example.ts",
+              "impl-plans/active/example.md"
+            ],
+            "implementationSummary": "Self-reviewed the initial implementation and confirmed the handoff still needs external review.",
+            "implPlanUpdates": [
+              "Marked TASK-001 implementation complete"
+            ],
+            "verification": [
+              "task typecheck"
+            ],
+            "selfReview": {
+              "checked": [
+                "diff",
+                "impl-plan progress",
+                "verification"
+              ],
+              "fixesApplied": [],
+              "remainingConcerns": [
+                "Edge-case tests may still be missing."
+              ]
+            },
+            "addressedFeedback": [],
+            "risks": [
+              "Tests were not added for the edge case."
+            ]
+          }
+        }
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "output": {
+          "input": {
+            "changedFiles": [
+              "src/example.ts",
+              "src/example.test.ts",
+              "impl-plans/active/example.md"
+            ],
+            "implementationSummary": "Self-reviewed the revised implementation after adding edge-case coverage and plan verification notes.",
+            "implPlanUpdates": [
+              "Marked TASK-001 tests complete",
+              "Added verification commands to the progress log"
+            ],
+            "verification": [
+              "task test",
+              "task typecheck"
+            ],
+            "selfReview": {
+              "checked": [
+                "diff",
+                "edge-case tests",
+                "impl-plan progress",
+                "verification"
+              ],
+              "fixesApplied": [],
+              "remainingConcerns": []
+            },
+            "addressedFeedback": [
+              "Added missing edge-case test coverage."
+            ],
+            "risks": []
+          }
+        }
+      }
+    }
+  ],
+  "step2-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "needs_revision": true
+      },
+      "payload": {
+        "needs_revision": true,
+        "findings": [
+          {
+            "severity": "mid",
+            "file": "src/example.ts",
+            "line": 1,
+            "message": "The implementation lacks edge-case test coverage required by the implementation plan."
+          }
+        ],
+        "feedback": [
+          "Add the missing edge-case test and update the implementation plan verification notes."
+        ],
+        "accepted": false
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "needs_revision": false
+      },
+      "payload": {
+        "needs_revision": false,
+        "findings": [],
+        "feedback": [],
+        "accepted": true
+      }
+    }
+  ],
+  "workflow-output": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "status": "accepted",
+      "changedFiles": [
+        "src/example.ts",
+        "src/example.test.ts",
+        "impl-plans/active/example.md"
+      ],
+      "implementationSummary": "Step 1 implemented the task, incorporated Step 2 feedback, and updated the implementation plan.",
+      "implPlanUpdates": [
+        "TASK-001 implementation and tests marked complete"
+      ],
+      "verification": [
+        "task test",
+        "task typecheck"
+      ],
+      "reviewSummary": "Step 2 accepted the revised implementation with no high or mid findings.",
+      "residualRisks": []
+    }
+  }
+}

@@ -1,0 +1,371 @@
+{
+  "divedra-manager": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.4",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "stage": "start",
+      "policy": "design-review-before-impl-plan"
+    }
+  },
+  "design-doc-create": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "designDocPaths": [
+          "design-docs/specs/design-example-feature.md"
+        ],
+        "designSummary": "Drafted the feature design but left one user decision inline.",
+        "decisions": [
+          "Use existing persistence boundaries."
+        ],
+        "openQuestions": [
+          "Retention policy needs confirmation."
+        ],
+        "addressedFeedback": [],
+        "risks": [
+          "Open question is not yet captured in user-qa."
+        ]
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "designDocPaths": [
+          "design-docs/specs/design-example-feature.md",
+          "design-docs/user-qa/qa-example-feature-retention.md"
+        ],
+        "designSummary": "Revised the feature design and moved the retention decision into user QA.",
+        "decisions": [
+          "Use existing persistence boundaries."
+        ],
+        "openQuestions": [
+          "Retention policy tracked in user QA."
+        ],
+        "addressedFeedback": [
+          "Moved ambiguous retention policy to design-docs/user-qa."
+        ],
+        "risks": []
+      }
+    }
+  ],
+  "design-doc-self-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "designDocPaths": [
+          "design-docs/specs/design-example-feature.md"
+        ],
+        "designSummary": "Self-reviewed the draft design and flagged that the user decision still needs user-QA tracking.",
+        "decisions": [
+          "Use existing persistence boundaries."
+        ],
+        "openQuestions": [
+          "Retention policy needs confirmation."
+        ],
+        "selfReview": {
+          "checked": [
+            "design-doc location",
+            "scope clarity",
+            "user-QA handling"
+          ],
+          "fixesApplied": [],
+          "remainingConcerns": [
+            "Open question is not yet captured in user-qa."
+          ]
+        },
+        "addressedFeedback": [],
+        "risks": [
+          "Open question is not yet captured in user-qa."
+        ]
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "designDocPaths": [
+          "design-docs/specs/design-example-feature.md",
+          "design-docs/user-qa/qa-example-feature-retention.md"
+        ],
+        "designSummary": "Self-reviewed the revised design and confirmed the retention decision is tracked in user QA.",
+        "decisions": [
+          "Use existing persistence boundaries."
+        ],
+        "openQuestions": [
+          "Retention policy tracked in user QA."
+        ],
+        "selfReview": {
+          "checked": [
+            "design-doc location",
+            "scope clarity",
+            "user-QA handling",
+            "architecture alignment"
+          ],
+          "fixesApplied": [],
+          "remainingConcerns": []
+        },
+        "addressedFeedback": [
+          "Moved ambiguous retention policy to design-docs/user-qa."
+        ],
+        "risks": []
+      }
+    }
+  ],
+  "design-doc-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "design_needs_revision": true
+      },
+      "payload": {
+        "design_needs_revision": true,
+        "findings": [
+          {
+            "severity": "mid",
+            "file": "design-docs/specs/design-example-feature.md",
+            "line": 1,
+            "message": "The design leaves a user decision inline instead of tracking it in design-docs/user-qa."
+          }
+        ],
+        "feedback": [
+          "Move the retention-policy question into design-docs/user-qa and reference it from the design."
+        ],
+        "accepted": false
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "design_needs_revision": false
+      },
+      "payload": {
+        "design_needs_revision": false,
+        "findings": [],
+        "feedback": [],
+        "accepted": true
+      }
+    }
+  ],
+  "impl-plan-create": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "implPlanPaths": [
+          "impl-plans/example-feature.md"
+        ],
+        "designReferences": [
+          "design-docs/specs/design-example-feature.md"
+        ],
+        "taskBreakdown": [
+          "Implement core types",
+          "Implement persistence changes"
+        ],
+        "dependencies": [],
+        "completionCriteria": [
+          "Typecheck passes"
+        ],
+        "addressedFeedback": [],
+        "risks": [
+          "Verification criteria are incomplete."
+        ]
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "implPlanPaths": [
+          "impl-plans/example-feature.md"
+        ],
+        "designReferences": [
+          "design-docs/specs/design-example-feature.md"
+        ],
+        "taskBreakdown": [
+          "Implement core types",
+          "Implement persistence changes",
+          "Add tests and update progress tracking"
+        ],
+        "dependencies": [
+          "Persistence changes depend on core types."
+        ],
+        "completionCriteria": [
+          "Unit tests pass",
+          "Typecheck passes",
+          "Progress log updated"
+        ],
+        "addressedFeedback": [
+          "Added dependencies and concrete verification criteria."
+        ],
+        "risks": []
+      }
+    }
+  ],
+  "impl-plan-self-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "implPlanPaths": [
+          "impl-plans/example-feature.md"
+        ],
+        "designReferences": [
+          "design-docs/specs/design-example-feature.md"
+        ],
+        "taskBreakdown": [
+          "Implement core types",
+          "Implement persistence changes"
+        ],
+        "dependencies": [],
+        "completionCriteria": [
+          "Typecheck passes"
+        ],
+        "selfReview": {
+          "checked": [
+            "impl-plan location",
+            "design reference",
+            "task breakdown",
+            "verification criteria"
+          ],
+          "fixesApplied": [],
+          "remainingConcerns": [
+            "Verification criteria are incomplete."
+          ]
+        },
+        "addressedFeedback": [],
+        "risks": [
+          "Verification criteria are incomplete."
+        ]
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.4",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "implPlanPaths": [
+          "impl-plans/example-feature.md"
+        ],
+        "designReferences": [
+          "design-docs/specs/design-example-feature.md"
+        ],
+        "taskBreakdown": [
+          "Implement core types",
+          "Implement persistence changes",
+          "Add tests and update progress tracking"
+        ],
+        "dependencies": [
+          "Persistence changes depend on core types."
+        ],
+        "completionCriteria": [
+          "Unit tests pass",
+          "Typecheck passes",
+          "Progress log updated"
+        ],
+        "selfReview": {
+          "checked": [
+            "impl-plan location",
+            "design reference",
+            "task dependencies",
+            "verification criteria"
+          ],
+          "fixesApplied": [],
+          "remainingConcerns": []
+        },
+        "addressedFeedback": [
+          "Added dependencies and concrete verification criteria."
+        ],
+        "risks": []
+      }
+    }
+  ],
+  "impl-plan-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "impl_plan_needs_revision": true
+      },
+      "payload": {
+        "impl_plan_needs_revision": true,
+        "findings": [
+          {
+            "severity": "mid",
+            "file": "impl-plans/example-feature.md",
+            "line": 1,
+            "message": "The plan lacks dependency and verification detail needed for safe execution."
+          }
+        ],
+        "feedback": [
+          "Add task dependencies and concrete verification criteria before execution."
+        ],
+        "accepted": false
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "impl_plan_needs_revision": false
+      },
+      "payload": {
+        "impl_plan_needs_revision": false,
+        "findings": [],
+        "feedback": [],
+        "accepted": true
+      }
+    }
+  ],
+  "workflow-output": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "status": "accepted",
+      "designDocPaths": [
+        "design-docs/specs/design-example-feature.md",
+        "design-docs/user-qa/qa-example-feature-retention.md"
+      ],
+      "implPlanPaths": [
+        "impl-plans/example-feature.md"
+      ],
+      "designReviewSummary": "Design accepted after user-QA tracking was added.",
+      "implPlanReviewSummary": "Implementation plan accepted after dependencies and verification criteria were added.",
+      "nextStep": "Execute impl-plans/example-feature.md",
+      "residualRisks": []
+    }
+  }
+}

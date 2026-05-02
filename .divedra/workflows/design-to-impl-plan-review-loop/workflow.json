@@ -1,0 +1,137 @@
+{
+  "workflowId": "design-to-impl-plan-review-loop",
+  "description": "Plan-generation workflow: create a design doc, self-review it in the same document-writing session, review it, create an implementation plan, self-review it in the same planning session, review it, and route each review back to its previous authoring step when problems are found.",
+  "defaults": {
+    "maxLoopIterations": 3,
+    "nodeTimeoutMs": 120000
+  },
+  "prompts": {
+    "divedraPromptTemplate": "Coordinate {{workflowId}}. Run design-doc creation first, then design-doc self-review in the same document-writing session, then design review. After design acceptance, run implementation-plan creation, then impl-plan self-review in the same planning session, then impl-plan review. If a review reports problems, route back to the immediately preceding authoring step.",
+    "workerSystemPromptTemplate": "Return concise business JSON only. Include file paths, review decisions, and feedback explicitly."
+  },
+  "managerStepId": "divedra-manager",
+  "entryStepId": "divedra-manager",
+  "nodes": [
+    {
+      "id": "divedra-manager",
+      "nodeFile": "nodes/node-divedra-manager.json"
+    },
+    {
+      "id": "design-doc-create",
+      "nodeFile": "nodes/node-design-doc-create.json"
+    },
+    {
+      "id": "design-doc-review",
+      "nodeFile": "nodes/node-design-doc-review.json"
+    },
+    {
+      "id": "impl-plan-create",
+      "nodeFile": "nodes/node-impl-plan-create.json"
+    },
+    {
+      "id": "impl-plan-review",
+      "nodeFile": "nodes/node-impl-plan-review.json"
+    },
+    {
+      "id": "workflow-output",
+      "nodeFile": "nodes/node-workflow-output.json"
+    }
+  ],
+  "steps": [
+    {
+      "id": "divedra-manager",
+      "nodeId": "divedra-manager",
+      "role": "manager",
+      "transitions": [
+        {
+          "toStepId": "design-doc-create"
+        }
+      ]
+    },
+    {
+      "id": "design-doc-create",
+      "nodeId": "design-doc-create",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "design-doc-self-review"
+        }
+      ]
+    },
+    {
+      "id": "design-doc-self-review",
+      "nodeId": "design-doc-create",
+      "role": "worker",
+      "promptVariant": "self-review",
+      "sessionPolicy": {
+        "mode": "reuse",
+        "inheritFromStepId": "design-doc-create"
+      },
+      "transitions": [
+        {
+          "toStepId": "design-doc-review"
+        }
+      ]
+    },
+    {
+      "id": "design-doc-review",
+      "nodeId": "design-doc-review",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "design-doc-create",
+          "label": "design_needs_revision"
+        },
+        {
+          "toStepId": "impl-plan-create",
+          "label": "!(design_needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "impl-plan-create",
+      "nodeId": "impl-plan-create",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "impl-plan-self-review"
+        }
+      ]
+    },
+    {
+      "id": "impl-plan-self-review",
+      "nodeId": "impl-plan-create",
+      "role": "worker",
+      "promptVariant": "self-review",
+      "sessionPolicy": {
+        "mode": "reuse",
+        "inheritFromStepId": "impl-plan-create"
+      },
+      "transitions": [
+        {
+          "toStepId": "impl-plan-review"
+        }
+      ]
+    },
+    {
+      "id": "impl-plan-review",
+      "nodeId": "impl-plan-review",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "impl-plan-create",
+          "label": "impl_plan_needs_revision"
+        },
+        {
+          "toStepId": "workflow-output",
+          "label": "!(impl_plan_needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "workflow-output",
+      "nodeId": "workflow-output",
+      "role": "worker"
+    }
+  ]
+}

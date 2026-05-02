@@ -1,0 +1,11 @@
+{
+  "id": "step2-review",
+  "description": "Review Step 1's output.input and decide whether high or mid severity feedback must be routed back.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step2-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_revision true when high or mid findings exist, plus payload findings grouped by severity and feedback for Step 1."
+  }
+}
