@@ -1,8 +1,0 @@
-{
-  "id": "divedra-manager",
-  "description": "Coordinate the design-to-implementation-plan workflow and enforce review gates.",
-  "executionBackend": "codex-agent",
-  "model": "gpt-5.4",
-  "promptTemplateFile": "prompts/divedra-manager.md",
-  "variables": {}
-}
