@@ -1,0 +1,199 @@
+# Parity Backlog Workflow Design
+
+This document defines a project-local `divedra` workflow that keeps
+`curort-cli-agent` moving through the remaining parity backlog by selecting one
+ready capability slice at a time and delegating that slice into
+`design-and-implement-review-loop`.
+
+## Overview
+
+The repository already has:
+
+- a parity roadmap in `design-docs/specs/design-codex-agent-parity-gap.md`
+- a single-slice design/plan/implement workflow in
+  `.divedra/workflows/design-and-implement-review-loop`
+- a quality loop in `.divedra/workflows/recent-change-quality-loop`
+
+What it did not have was a workflow that owns the remaining feature backlog and
+keeps feeding ready items into the existing implementation loop until the
+backlog is exhausted or paused by dependency or run-limit rules.
+
+## Goals
+
+- maintain a canonical backlog for the remaining phase-2 through phase-5 parity
+  work
+- derive the next ready implementation slice from repository design and plan
+  state instead of relying on an ad hoc prompt
+- delegate exactly one backlog item at a time into
+  `design-and-implement-review-loop`
+- re-scan the repository after each delegated run and continue until no ready
+  item remains
+- avoid duplicate ownership when an active implementation plan already covers a
+  backlog item
+
+## Non-Goals
+
+- implementing feature code directly inside the backlog workflow
+- bypassing design or implementation-plan review gates
+- inventing backlog items that are not grounded in the parity-gap design
+- forcing progress on items that are blocked by missing prerequisite slices
+
+## Source Of Truth
+
+The workflow must derive backlog state from these repository inputs, in this
+order:
+
+1. `design-docs/specs/design-parity-backlog-workflow.md`
+2. `design-docs/specs/design-codex-agent-parity-gap.md`
+3. `impl-plans/active/*.md`
+4. `impl-plans/completed/*.md`
+5. `impl-plans/PROGRESS.json`
+
+If these sources drift, this document wins for backlog item identity and
+ordering, while the active and completed plans provide the current execution
+state.
+
+## Canonical Backlog Item Model
+
+Each backlog item is a logical implementation slice with these fields:
+
+- `id`: stable backlog identifier such as `P2-SESSION-SEARCH`
+- `phase`: one of `2`, `3`, `4`, or `5`
+- `title`: short operator-facing name
+- `targetFeatureArea`: concise feature-area label for delegated workflow input
+- `requestedBehavior`: single-slice behavior contract for
+  `design-and-implement-review-loop`
+- `dependencyIds`: backlog items that must be completed first
+- `sourceReferences`: design docs that justify the slice
+
+Runtime state derived by the workflow:
+
+- `status`: `completed`, `blocked`, `ready`, or `filtered`
+- `blockingReason`: dependency or active-plan reason when blocked
+- `completionEvidence`: accepted delegated workflow result or matching completed
+  plan
+
+## Canonical Backlog
+
+The workflow must treat the following list as the default remaining parity
+inventory.
+
+| ID | Phase | Title | Target Feature Area | Depends On |
+|---|---|---|---|---|
+| `P2-SESSION-SEARCH` | 2 | Session metadata search | `session metadata search` | - |
+| `P2-TRANSCRIPT-SEARCH` | 2 | Transcript full-text search | `transcript full-text search` | `P2-SESSION-SEARCH` |
+| `P2-BOOKMARKS` | 2 | Bookmark lifecycle | `bookmarks` | `P2-TRANSCRIPT-SEARCH` |
+| `P2-ACTIVITY` | 2 | Activity derivation | `activity tracking` | - |
+| `P2-MARKDOWN-TASKS` | 2 | Markdown and task extraction | `markdown task extraction` | `P2-TRANSCRIPT-SEARCH` |
+| `P3-GROUP-LIFECYCLE` | 3 | Advanced group controls | `advanced group lifecycle` | `P2-ACTIVITY` |
+| `P3-QUEUE-LIFECYCLE` | 3 | Advanced queue controls | `advanced queue lifecycle` | `P2-ACTIVITY` |
+| `P3-FILE-INTELLIGENCE` | 3 | File intelligence | `file intelligence` | `P2-SESSION-SEARCH` |
+| `P3-REPO-ANALYTICS` | 3 | Commit and repository analytics | `repository analytics` | `P3-FILE-INTELLIGENCE` |
+| `P4-HTTP-SERVER` | 4 | REST server surface | `http server` | `P2-BOOKMARKS`, `P3-GROUP-LIFECYCLE`, `P3-QUEUE-LIFECYCLE`, `P3-FILE-INTELLIGENCE` |
+| `P4-SSE` | 4 | Live event streaming | `server event streaming` | `P4-HTTP-SERVER`, `P2-ACTIVITY` |
+| `P4-AUTH` | 4 | Token and bearer auth | `server auth` | `P4-HTTP-SERVER` |
+| `P4-DAEMON` | 4 | Daemon lifecycle | `daemon mode` | `P4-HTTP-SERVER`, `P4-SSE` |
+| `P4-PUBLIC-SDK` | 4 | Public SDK facade | `public sdk` | `P4-HTTP-SERVER` |
+| `P5-COMPAT-BRIDGE` | 5 | Optional compatibility bridge | `compatibility bridge` | `P4-HTTP-SERVER`, `P4-PUBLIC-SDK` |
+| `P5-TOOL-REGISTRY` | 5 | Tool and model availability helpers | `tool registry` | `P4-PUBLIC-SDK` |
+
+## Selection Rules
+
+### Completed
+
+An item is `completed` when at least one of these conditions is true:
+
+- a delegated `design-and-implement-review-loop` result in the current run
+  reports an accepted `issue-resolution` completion for that item
+- a completed implementation plan or merged design/implementation evidence makes
+  it clear that the capability already landed
+
+### Blocked
+
+An item is `blocked` when any dependency item is not yet completed or when an
+active implementation plan already owns the same scope and is still in progress.
+
+### Ready
+
+An item is `ready` only when:
+
+- it matches the requested phase filter, if any
+- it is not already completed
+- it is not blocked
+- it is the earliest slice by phase order and table order among the ready set
+
+## Workflow Shape
+
+The workflow bundle name is `parity-backlog-design-implement-loop`.
+
+### Step 1: Backlog Review
+
+Read the source-of-truth docs and plan files, compute the backlog state, count
+already-completed items in the current run, and select the next ready slice.
+
+### Step 2: Selection Gate
+
+Exit when no ready slice remains or when the configured per-run limit has been
+reached. Otherwise route to delegated handoff.
+
+### Step 3: Delegated Handoff
+
+Create a narrow `issue-resolution` request for
+`design-and-implement-review-loop` using the selected backlog item's
+`targetFeatureArea`, `requestedBehavior`, dependencies, and source references.
+
+### Step 4: Post-Handoff Sync
+
+Consume the delegated result, record accepted completion evidence for the current
+run, and route back to Step 1 for another repository scan.
+
+### Workflow Output
+
+Publish the run summary:
+
+- items completed in this run
+- remaining ready items
+- blocked items and reasons
+- delegated workflow runs and commit evidence
+
+## Runtime Inputs
+
+Supported workflow input fields:
+
+- `backlogSourceDoc`: optional override; defaults to
+  `design-docs/specs/design-parity-backlog-workflow.md`
+- `targetPhases`: optional subset of `["2", "3", "4", "5"]`
+- `maxItemsPerRun`: optional integer; defaults to `999`
+- `includePartialCapabilities`: optional boolean; defaults to `true`
+- `referenceRepositoryRoot`: optional local Codex reference root; defaults to
+  `/Users/taco/gits/tacogips/codex-agent`
+- `referenceRepositoryUrl`: optional upstream reference URL
+
+## Expected Delegated Input Contract
+
+Each delegated run into `design-and-implement-review-loop` must use
+`executionMode: "issue-resolution"` and include:
+
+- an item-specific `issueTitle`
+- item-specific `targetFeatureArea`
+- a precise `requestedBehavior`
+- `reviewContext.backlogItem`
+- `reviewContext.remainingDependencies`
+- `reviewContext.sourceReferences`
+
+This keeps the child workflow bounded to a single slice while preserving the
+larger parity-program context.
+
+## Operational Notes
+
+- The backlog workflow is an orchestrator, not an implementation surface.
+- It should be safe to re-run because it recomputes backlog state from repository
+  files and the accepted delegated outputs in the current session.
+- When a slice is already owned by an active plan, the workflow should report it
+  as blocked instead of creating a duplicate plan.
+
+## References
+
+- `design-docs/specs/design-codex-agent-parity-gap.md`
+- `.divedra/workflows/design-and-implement-review-loop`
+- `.divedra/workflows/recent-change-quality-loop`

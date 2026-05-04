@@ -1,0 +1,51 @@
+{
+  "id": "divedra-manager",
+  "description": "Coordinate the parity backlog design-and-implement loop.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/divedra-manager.md",
+  "variables": {},
+  "input": {
+    "description": "Workflow arguments. `targetPhases` filters the canonical backlog, `maxItemsPerRun` bounds delegated iterations, `includePartialCapabilities` controls whether partial parity items stay eligible, and `referenceRepositoryRoot` may override the default local codex-agent reference repository.",
+    "jsonSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "backlogSourceDoc": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetPhases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        },
+        "maxItemsPerRun": {
+          "type": "number",
+          "minimum": 1
+        },
+        "includePartialCapabilities": {
+          "type": "boolean"
+        },
+        "referenceRepositoryRoot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "referenceRepositoryUrl": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "output": {
+    "description": "Return initial routing state and preserve runtime inputs for backlog review and delegated handoff steps."
+  }
+}

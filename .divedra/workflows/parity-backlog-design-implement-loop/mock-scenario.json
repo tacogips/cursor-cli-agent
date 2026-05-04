@@ -1,0 +1,515 @@
+{
+  "divedra-manager": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "status": "continue",
+      "nextStep": "step1-backlog-review",
+      "reason": "Start by deriving the canonical parity backlog state."
+    }
+  },
+  "step1-backlog-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "backlogSourceDoc": "design-docs/specs/design-parity-backlog-workflow.md",
+        "targetPhases": [
+          "2"
+        ],
+        "maxItemsPerRun": 1,
+        "includePartialCapabilities": true,
+        "backlogItems": [
+          {
+            "id": "P2-SESSION-SEARCH",
+            "phase": "2",
+            "title": "Session metadata search",
+            "targetFeatureArea": "session metadata search",
+            "requestedBehavior": "Implement metadata search across indexed Cursor sessions, including filters for workspace, model, mode, and status.",
+            "dependencyIds": [],
+            "sourceReferences": [
+              "design-docs/specs/design-parity-backlog-workflow.md",
+              "design-docs/specs/design-codex-agent-parity-gap.md"
+            ],
+            "status": "ready",
+            "blockingReason": null
+          }
+        ],
+        "completedItems": [],
+        "blockedItems": [],
+        "readyItems": [
+          {
+            "id": "P2-SESSION-SEARCH",
+            "phase": "2",
+            "title": "Session metadata search"
+          }
+        ],
+        "nextItem": {
+          "id": "P2-SESSION-SEARCH",
+          "phase": "2",
+          "title": "Session metadata search",
+          "targetFeatureArea": "session metadata search",
+          "requestedBehavior": "Implement metadata search across indexed Cursor sessions, including filters for workspace, model, mode, and status.",
+          "dependencyIds": [],
+          "sourceReferences": [
+            "design-docs/specs/design-parity-backlog-workflow.md",
+            "design-docs/specs/design-codex-agent-parity-gap.md"
+          ],
+          "status": "ready",
+          "blockingReason": null
+        },
+        "processedItemsThisRun": 0,
+        "runLimitReached": false,
+        "selectionNotes": [
+          "Phase 2 is targeted explicitly.",
+          "Session metadata search is the first ready slice with no unmet dependencies."
+        ]
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "backlogSourceDoc": "design-docs/specs/design-parity-backlog-workflow.md",
+        "targetPhases": [
+          "2"
+        ],
+        "maxItemsPerRun": 1,
+        "includePartialCapabilities": true,
+        "backlogItems": [
+          {
+            "id": "P2-SESSION-SEARCH",
+            "phase": "2",
+            "title": "Session metadata search",
+            "targetFeatureArea": "session metadata search",
+            "requestedBehavior": "Implement metadata search across indexed Cursor sessions, including filters for workspace, model, mode, and status.",
+            "dependencyIds": [],
+            "sourceReferences": [
+              "design-docs/specs/design-parity-backlog-workflow.md",
+              "design-docs/specs/design-codex-agent-parity-gap.md"
+            ],
+            "status": "completed",
+            "blockingReason": null
+          }
+        ],
+        "completedItems": [
+          {
+            "id": "P2-SESSION-SEARCH",
+            "phase": "2",
+            "title": "Session metadata search"
+          }
+        ],
+        "blockedItems": [],
+        "readyItems": [],
+        "nextItem": null,
+        "processedItemsThisRun": 1,
+        "runLimitReached": true,
+        "selectionNotes": [
+          "The delegated workflow accepted the selected backlog item.",
+          "The configured maxItemsPerRun has been reached."
+        ]
+      }
+    }
+  ],
+  "step2-select-next": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "needs_item": true
+      },
+      "payload": {
+        "needs_item": true,
+        "decision": "delegate",
+        "nextItem": {
+          "id": "P2-SESSION-SEARCH",
+          "phase": "2",
+          "title": "Session metadata search"
+        },
+        "processedItemsThisRun": 0,
+        "remainingReadyCount": 1,
+        "exitReason": null
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "needs_item": false
+      },
+      "payload": {
+        "needs_item": false,
+        "decision": "exit",
+        "nextItem": null,
+        "processedItemsThisRun": 1,
+        "remainingReadyCount": 0,
+        "exitReason": "Configured maxItemsPerRun reached."
+      }
+    }
+  ],
+  "step3-handoff": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowInput": {
+        "executionMode": "issue-resolution",
+        "issueTitle": "Implement cursor-agent parity backlog item P2-SESSION-SEARCH: session metadata search",
+        "issueBody": "Implement the approved parity backlog slice for session metadata search. Update or add the necessary design docs and implementation plan, implement the accepted behavior, verify it, and complete the delegated commit and push flow.",
+        "targetFeatureArea": "session metadata search",
+        "requestedBehavior": "Implement metadata search across indexed Cursor sessions, including filters for workspace, model, mode, and status.",
+        "referenceRepositoryRoot": "/Users/taco/gits/tacogips/codex-agent"
+      },
+      "backlogItem": {
+        "id": "P2-SESSION-SEARCH",
+        "phase": "2",
+        "title": "Session metadata search",
+        "targetFeatureArea": "session metadata search",
+        "requestedBehavior": "Implement metadata search across indexed Cursor sessions, including filters for workspace, model, mode, and status.",
+        "dependencyIds": [],
+        "sourceReferences": [
+          "design-docs/specs/design-parity-backlog-workflow.md",
+          "design-docs/specs/design-codex-agent-parity-gap.md"
+        ]
+      },
+      "reviewContext": {
+        "backlogItem": {
+          "id": "P2-SESSION-SEARCH",
+          "phase": "2",
+          "title": "Session metadata search"
+        },
+        "remainingDependencies": [],
+        "sourceReferences": [
+          "design-docs/specs/design-parity-backlog-workflow.md",
+          "design-docs/specs/design-codex-agent-parity-gap.md"
+        ],
+        "selectionNotes": [
+          "First ready phase-2 slice."
+        ],
+        "verificationSuggestions": [
+          "task test",
+          "task typecheck"
+        ]
+      },
+      "handoffSummary": "Prepared a delegated issue-resolution request for parity backlog item P2-SESSION-SEARCH."
+    }
+  },
+  "step1-issue-intake": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "issueReference": "parity-backlog-design-implement-loop#P2-SESSION-SEARCH",
+      "issueTitle": "Implement cursor-agent parity backlog item P2-SESSION-SEARCH: session metadata search",
+      "problemSummary": "The repository needs metadata search across indexed Cursor sessions to begin closing the phase-2 parity gap.",
+      "acceptanceSignals": [
+        "Session metadata search supports workspace, model, mode, and status filters.",
+        "Design and implementation plan stay aligned with the phase-2 parity backlog."
+      ],
+      "impactedAreas": [
+        "session index",
+        "session CLI",
+        "phase-2 parity planning"
+      ],
+      "constraints": [
+        "Keep the slice limited to session metadata search rather than transcript full-text search."
+      ],
+      "unknowns": [],
+      "risks": [],
+      "codexAgentReferences": [
+        "/Users/taco/gits/tacogips/codex-agent/src/session",
+        "/Users/taco/gits/tacogips/codex-agent/src/cli"
+      ],
+      "referenceRepositoryRoot": "/Users/taco/gits/tacogips/codex-agent",
+      "referenceRepositoryUrl": ""
+    }
+  },
+  "step2-design-doc-update": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "issueReference": "parity-backlog-design-implement-loop#P2-SESSION-SEARCH",
+      "designDocPaths": [
+        "design-docs/specs/design-session-search.md"
+      ],
+      "codexAgentReferences": [
+        "/Users/taco/gits/tacogips/codex-agent/src/session",
+        "/Users/taco/gits/tacogips/codex-agent/src/cli"
+      ],
+      "cursorCliBehaviorMapping": [],
+      "designSummary": "Defined the phase-2 session metadata search behavior, filter model, and CLI/API boundaries.",
+      "decisions": [
+        "Search metadata in the local session index before transcript search is added later."
+      ],
+      "openQuestions": [],
+      "issueToDesignMapping": [
+        "P2-SESSION-SEARCH maps to metadata-only session search."
+      ],
+      "intentionalDivergences": [],
+      "addressedFeedback": [],
+      "risks": []
+    }
+  },
+  "step3-design-review": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "needs_revision": false
+    },
+    "payload": {
+      "needs_revision": false,
+      "findings": [],
+      "feedback": [],
+      "accepted": true
+    }
+  },
+  "step4-impl-plan-create": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "issueReference": "parity-backlog-design-implement-loop#P2-SESSION-SEARCH",
+      "implPlanPaths": [
+        "impl-plans/active/session-search.md"
+      ],
+      "designReferences": [
+        "design-docs/specs/design-session-search.md"
+      ],
+      "codexAgentReferences": [
+        "/Users/taco/gits/tacogips/codex-agent/src/session",
+        "/Users/taco/gits/tacogips/codex-agent/src/cli"
+      ],
+      "taskBreakdown": [
+        "Add metadata search query model",
+        "Implement repository and CLI filtering",
+        "Add tests and progress-log updates"
+      ],
+      "dependencies": [],
+      "parallelizableTasks": [],
+      "verification": [
+        "task test",
+        "task typecheck"
+      ],
+      "completionCriteria": [
+        "Tests pass",
+        "Typecheck passes",
+        "Plan progress updated"
+      ],
+      "addressedFeedback": [],
+      "risks": []
+    }
+  },
+  "step5-impl-plan-review": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "needs_design_revision": false,
+      "needs_revision": false,
+      "planning_only": false
+    },
+    "payload": {
+      "needs_design_revision": false,
+      "needs_revision": false,
+      "planning_only": false,
+      "findings": [],
+      "feedback": [],
+      "accepted": true
+    }
+  },
+  "step6-implement": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "issueReference": "parity-backlog-design-implement-loop#P2-SESSION-SEARCH",
+      "changedFiles": [
+        "src/cli/cli.ts",
+        "src/persistence/session-index-repository.ts",
+        "src/cli/cli.test.ts",
+        "impl-plans/active/session-search.md"
+      ],
+      "implementationSummary": "Implemented session metadata search over the local session index, wired CLI filters, added tests, and updated plan progress.",
+      "implPlanPaths": [
+        "impl-plans/active/session-search.md"
+      ],
+      "implPlanUpdates": [
+        "Marked metadata search tasks completed."
+      ],
+      "verification": [
+        "task test",
+        "task typecheck"
+      ],
+      "addressedFeedback": [],
+      "risks": []
+    }
+  },
+  "step7-review": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "needs_revision": false
+    },
+    "payload": {
+      "needs_revision": false,
+      "findings": [],
+      "feedback": [],
+      "accepted": true
+    }
+  },
+  "step8-docs-refresh": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "documentationFiles": [
+        "README.md",
+        ".divedra/README.md"
+      ],
+      "skillFiles": [
+        ".agents/skills/divedra-impl-workflow/SKILL.md"
+      ],
+      "documentationSummary": "Refreshed repository-facing documentation so the new session search capability and the parity backlog workflow path are discoverable.",
+      "addressedBehaviorChanges": [
+        "Documented session metadata search and the parity backlog orchestration path."
+      ],
+      "residualRisks": []
+    }
+  },
+  "step9-commit-message": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "commitMessage": "feat: implement session metadata search backlog slice",
+      "committedFiles": [
+        "design-docs/specs/design-session-search.md",
+        "impl-plans/active/session-search.md",
+        "src/cli/cli.ts",
+        "src/persistence/session-index-repository.ts",
+        "src/cli/cli.test.ts"
+      ],
+      "changeSummary": "Accepted the phase-2 session metadata search slice with aligned design, plan, implementation, verification, and docs refresh.",
+      "residualRisks": []
+    }
+  },
+  "step10-commit-push": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "commitMessage": "feat: implement session metadata search backlog slice",
+      "commitHash": "1234567890abcdef1234567890abcdef12345678",
+      "pushedRemote": "origin",
+      "pushedBranch": "main"
+    }
+  },
+  "step4-post-handoff": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "completedItemId": "P2-SESSION-SEARCH",
+      "completedItemTitle": "Session metadata search",
+      "delegatedWorkflowId": "design-and-implement-review-loop",
+      "delegatedWorkflowMode": "issue-resolution",
+      "delegatedStatus": "accepted",
+      "designDocPaths": [
+        "design-docs/specs/design-session-search.md"
+      ],
+      "implPlanPaths": [
+        "impl-plans/active/session-search.md"
+      ],
+      "changedFiles": [
+        "src/cli/cli.ts",
+        "src/persistence/session-index-repository.ts",
+        "src/cli/cli.test.ts",
+        "impl-plans/active/session-search.md"
+      ],
+      "verification": [
+        "task test",
+        "task typecheck"
+      ],
+      "commitHash": "1234567890abcdef1234567890abcdef12345678",
+      "pushedRemote": "origin",
+      "pushedBranch": "main",
+      "reviewResumePlan": "Loop back to Step 1 and re-scan the remaining phase-2 backlog.",
+      "residualRisks": []
+    }
+  },
+  "workflow-output": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "status": "accepted",
+      "backlogSourceDoc": "design-docs/specs/design-parity-backlog-workflow.md",
+      "processedItemsThisRun": 1,
+      "completedItemsThisRun": [
+        {
+          "id": "P2-SESSION-SEARCH",
+          "title": "Session metadata search"
+        }
+      ],
+      "remainingReadyItems": [],
+      "blockedItems": [],
+      "exitReason": "Configured maxItemsPerRun reached.",
+      "delegatedWorkflowRuns": [
+        {
+          "workflowId": "design-and-implement-review-loop",
+          "itemId": "P2-SESSION-SEARCH",
+          "commitHash": "1234567890abcdef1234567890abcdef12345678"
+        }
+      ],
+      "changedFiles": [
+        "src/cli/cli.ts",
+        "src/persistence/session-index-repository.ts",
+        "src/cli/cli.test.ts",
+        "impl-plans/active/session-search.md"
+      ],
+      "verification": [
+        "task test",
+        "task typecheck"
+      ],
+      "residualRisks": [],
+      "operatorNotes": [
+        "Re-run the workflow to continue with the next ready phase-2 backlog item."
+      ]
+    }
+  }
+}

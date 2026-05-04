@@ -1,0 +1,11 @@
+{
+  "id": "step2-select-next",
+  "description": "Route to delegated handoff only when a ready backlog item remains and the per-run limit has not been reached.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step2-select-next.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with `when.needs_item` true only when the workflow should delegate the next backlog item."
+  }
+}

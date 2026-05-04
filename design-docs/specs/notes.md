@@ -34,3 +34,19 @@ Design intent after this review:
 - treat Cursor-specific approximations as first-class design constraints, not implementation accidents
 
 ---
+
+## 2026-05-04 Parity Backlog Automation
+
+Added `design-docs/specs/design-parity-backlog-workflow.md` to define a
+repository-local orchestrator workflow that owns the remaining phase-2 through
+phase-5 parity backlog and delegates one ready slice at a time into
+`design-and-implement-review-loop`.
+
+Why this exists:
+
+- the parity roadmap already existed
+- the repository already had a single-slice implementation workflow
+- the missing piece was a workflow-owned backlog queue that can keep selecting
+  the next ready capability without relying on ad hoc operator prompts
+
+---

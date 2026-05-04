@@ -9,6 +9,7 @@ project catalog.
 ## Available Workflows
 
 - `design-and-implement-review-loop`: issue intake, design-doc update, design review, implementation-plan creation, implementation-plan review, optional implementation, README and user-facing workflow-skill refresh on the implementation path, and final commit/push.
+- `parity-backlog-design-implement-loop`: derive the remaining Cursor-agent parity backlog from repository design and plan state, pick one ready slice at a time, delegate each slice into `design-and-implement-review-loop`, and continue until no ready item remains or the run limit is reached.
 - `recent-change-quality-loop`: review recent committed and uncommitted changes, hand blocking findings into `design-and-implement-review-loop`, then re-review until only low-severity risks remain.
 
 ## Root Commands
@@ -29,6 +30,12 @@ Validate the bundled recent-change workflow:
 
 ```bash
 task divedra-recent-change-validate
+```
+
+Validate the bundled parity-backlog workflow:
+
+```bash
+task divedra-parity-backlog-validate
 ```
 
 Run any `divedra` command through the local submodule:
@@ -53,6 +60,15 @@ Run the bundled recent-change workflow with its deterministic mock scenario:
 ```bash
 task divedra -- workflow run recent-change-quality-loop \
   --mock-scenario .divedra/workflows/recent-change-quality-loop/mock-scenario.json \
+  --output json
+```
+
+Run the bundled parity-backlog workflow with its deterministic mock scenario:
+
+```bash
+task divedra -- workflow run parity-backlog-design-implement-loop \
+  --mock-scenario .divedra/workflows/parity-backlog-design-implement-loop/mock-scenario.json \
+  --variables '{"targetPhases":["2"],"maxItemsPerRun":1}' \
   --output json
 ```
 

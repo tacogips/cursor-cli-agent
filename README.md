@@ -18,6 +18,9 @@ This repository also ships project-local `divedra` workflows under
 - `design-and-implement-review-loop` supports issue intake, design updates,
   implementation-plan authoring, implementation, review gates, README and
   user-facing workflow-skill refresh, and final commit/push.
+- `parity-backlog-design-implement-loop` derives the remaining parity backlog
+  from repository design and plan state, selects one ready item at a time, and
+  delegates each slice into `design-and-implement-review-loop`.
 - `recent-change-quality-loop` reviews recent committed and uncommitted changes,
   delegates blocking findings into `design-and-implement-review-loop`, and then
   re-reviews until the change set is clean.
@@ -27,6 +30,7 @@ Run them from this repository root with:
 ```bash
 task divedra-workflows
 task divedra-design-loop-validate
+task divedra-parity-backlog-validate
 task divedra-recent-change-validate
 task divedra -- workflow inspect design-and-implement-review-loop --output json
 ```
@@ -53,6 +57,7 @@ Planned capabilities:
 ## Implementation Plan
 
 - `impl-plans/active/phase1-core-foundation.md`
+- `impl-plans/active/parity-backlog-workflow.md`
 
 ## Reference Project
 

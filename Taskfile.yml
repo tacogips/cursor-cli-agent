@@ -126,3 +126,17 @@ tasks:
       - checkout-divedra
     cmds:
       - nix run ./divedra -- workflow validate recent-change-quality-loop
+
+  divedra-parity-backlog-validate:
+    desc: Validate the parity backlog design-and-implement workflow bundle
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow validate parity-backlog-design-implement-loop
+
+  divedra-parity-backlog:
+    desc: Run the parity backlog design-and-implement workflow from the project catalog (pass workflow args after --)
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run .#divedra -- workflow run parity-backlog-design-implement-loop {{.CLI_ARGS}}

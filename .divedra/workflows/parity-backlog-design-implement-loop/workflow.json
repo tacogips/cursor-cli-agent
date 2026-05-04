@@ -1,0 +1,111 @@
+{
+  "workflowId": "parity-backlog-design-implement-loop",
+  "description": "Derive the remaining curort-cli-agent parity backlog from repository design and implementation-plan state, select one ready item at a time, delegate it into design-and-implement-review-loop, and continue until no ready item remains or the per-run limit is reached.",
+  "defaults": {
+    "maxLoopIterations": 24,
+    "nodeTimeoutMs": 900000
+  },
+  "prompts": {
+    "divedraPromptTemplate": "Coordinate {{workflowId}}. Run Step 1 backlog review first, then Step 2 selection. If Step 2 reports a ready item, run Step 3 delegated handoff into design-and-implement-review-loop, then resume at Step 4 post-handoff sync, and then loop back to Step 1. If Step 2 reports no ready item or that the per-run limit has been reached, route to workflow-output and finish. Finish only after the run has either exhausted the ready backlog or stopped at the configured item limit while publishing the delegated completion evidence and the remaining blocked or ready items.",
+    "workerSystemPromptTemplate": "Return concise business JSON only. Keep backlog item ids, dependency state, delegated workflow input, changed files, verification, and exit reasons explicit."
+  },
+  "managerStepId": "divedra-manager",
+  "entryStepId": "divedra-manager",
+  "nodes": [
+    {
+      "id": "divedra-manager",
+      "nodeFile": "nodes/node-divedra-manager.json"
+    },
+    {
+      "id": "step1-backlog-review",
+      "nodeFile": "nodes/node-step1-backlog-review.json"
+    },
+    {
+      "id": "step2-select-next",
+      "nodeFile": "nodes/node-step2-select-next.json"
+    },
+    {
+      "id": "step3-handoff",
+      "nodeFile": "nodes/node-step3-handoff.json"
+    },
+    {
+      "id": "step4-post-handoff",
+      "nodeFile": "nodes/node-step4-post-handoff.json"
+    },
+    {
+      "id": "workflow-output",
+      "kind": "output",
+      "nodeFile": "nodes/node-workflow-output.json"
+    }
+  ],
+  "steps": [
+    {
+      "id": "divedra-manager",
+      "nodeId": "divedra-manager",
+      "description": "Start the parity backlog orchestration workflow.",
+      "role": "manager",
+      "transitions": [
+        {
+          "toStepId": "step1-backlog-review"
+        }
+      ]
+    },
+    {
+      "id": "step1-backlog-review",
+      "nodeId": "step1-backlog-review",
+      "description": "Compute canonical backlog state from design docs, plans, and accepted delegated results.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step2-select-next"
+        }
+      ]
+    },
+    {
+      "id": "step2-select-next",
+      "nodeId": "step2-select-next",
+      "description": "Exit when no ready backlog item remains or when the per-run limit is reached; otherwise route to delegated handoff.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step3-handoff",
+          "label": "needs_item"
+        },
+        {
+          "toStepId": "workflow-output",
+          "label": "!(needs_item)"
+        }
+      ]
+    },
+    {
+      "id": "step3-handoff",
+      "nodeId": "step3-handoff",
+      "description": "Package the next backlog item as a delegated issue-resolution request for design-and-implement-review-loop.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toWorkflowId": "design-and-implement-review-loop",
+          "toStepId": "divedra-manager",
+          "resumeStepId": "step4-post-handoff"
+        }
+      ]
+    },
+    {
+      "id": "step4-post-handoff",
+      "nodeId": "step4-post-handoff",
+      "description": "Consume the accepted delegated result, record the completion evidence for this run, and prepare the next backlog scan.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step1-backlog-review"
+        }
+      ]
+    },
+    {
+      "id": "workflow-output",
+      "nodeId": "workflow-output",
+      "description": "Publish the backlog-run summary after the ready set is exhausted or the run limit is reached.",
+      "role": "worker"
+    }
+  ]
+}
