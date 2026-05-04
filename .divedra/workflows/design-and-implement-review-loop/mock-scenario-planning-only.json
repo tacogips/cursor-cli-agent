@@ -288,7 +288,7 @@
       }
     }
   ],
-  "step8-commit-message": {
+  "step9-commit-message": {
     "provider": "scenario-mock",
     "model": "gpt-5.5",
     "when": {
@@ -305,7 +305,7 @@
       "residualRisks": []
     }
   },
-  "step9-commit-push": {
+  "step10-commit-push": {
     "provider": "scenario-mock",
     "model": "command/commit-and-push",
     "when": {

@@ -16,9 +16,11 @@ This repository also ships project-local `divedra` workflows under
 `.divedra/workflows`.
 
 - `design-and-implement-review-loop` supports issue intake, design updates,
-  implementation-plan authoring, implementation, and review gates.
-- `recent-change-quality-loop` reviews recent committed and uncommitted changes
-  and loops until blocking findings are fixed.
+  implementation-plan authoring, implementation, review gates, README and
+  user-facing workflow-skill refresh, and final commit/push.
+- `recent-change-quality-loop` reviews recent committed and uncommitted changes,
+  delegates blocking findings into `design-and-implement-review-loop`, and then
+  re-reviews until the change set is clean.
 
 Run them from this repository root with:
 

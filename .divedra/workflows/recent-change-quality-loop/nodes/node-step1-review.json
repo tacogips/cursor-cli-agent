@@ -6,6 +6,6 @@
   "promptTemplateFile": "prompts/step1-review.md",
   "variables": {},
   "output": {
-    "description": "Return findings classified as high, mid, or low, with high/mid determining whether the workflow must fix and loop."
+    "description": "Return findings classified as high, mid, or low, with high/mid determining whether the workflow must delegate and loop."
   }
 }

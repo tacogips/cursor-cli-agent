@@ -28,6 +28,6 @@
     }
   },
   "output": {
-    "description": "Route to Step 1 and preserve runtime inputs such as hours."
+    "description": "Route to Step 1 and preserve runtime inputs such as hours for both review and delegated-handoff steps."
   }
 }

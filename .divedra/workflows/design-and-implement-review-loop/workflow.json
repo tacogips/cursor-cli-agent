@@ -1,12 +1,12 @@
 {
   "workflowId": "design-and-implement-review-loop",
-  "description": "Shared workflow for either full issue resolution or planning-only Codex-reference design and implementation-plan handoff, with explicit review gates, a final commit-message step, a command-node git commit/push step, and return paths.",
+  "description": "Shared workflow for either full issue resolution or planning-only Codex-reference design and implementation-plan handoff, with explicit review gates, a post-implementation README and user-facing skill refresh step, a final commit-message step, a command-node git commit/push step, and return paths.",
   "defaults": {
     "maxLoopIterations": 3,
     "nodeTimeoutMs": 600000
   },
   "prompts": {
-    "divedraPromptTemplate": "Coordinate {{workflowId}}. Run Step 1 intake first, then Step 2 design-doc update, then Step 3 design review. If Step 3 reports any high or mid findings, route back to Step 2. After design acceptance, run Step 4 implementation-plan creation, then Step 5 implementation-plan and design consistency review. If Step 5 reports design changes are required, route back to Step 2. If Step 5 reports plan-only changes are required, route back to Step 4. After Step 5 acceptance for a planning-only run, run Step 8 commit-message creation, then Step 9 command-node commit and push, then finish. Otherwise run Step 6 implementation, then Step 7 implementation review. If Step 7 reports any high or mid findings, route back to Step 6. After Step 7 acceptance, run Step 8 commit-message creation, then Step 9 command-node commit and push, then finish. Finish only when the required review gates are accepted and the final workflow changes have been committed and pushed for the selected mode.",
+    "divedraPromptTemplate": "Coordinate {{workflowId}}. Run Step 1 intake first, then Step 2 design-doc update, then Step 3 design review. If Step 3 reports any high or mid findings, route back to Step 2. After design acceptance, run Step 4 implementation-plan creation, then Step 5 implementation-plan and design consistency review. If Step 5 reports design changes are required, route back to Step 2. If Step 5 reports plan-only changes are required, route back to Step 4. After Step 5 acceptance for a planning-only run, run Step 9 commit-message creation, then Step 10 command-node commit and push, then finish. Otherwise run Step 6 implementation, then Step 7 implementation review. If Step 7 reports any high or mid findings, route back to Step 6. After Step 7 acceptance, run Step 8 documentation and user-facing skill refresh, then Step 9 commit-message creation, then Step 10 command-node commit and push, then finish. Finish only when the required review gates are accepted, the implementation-facing documentation is refreshed, and the final workflow changes have been committed and pushed for the selected mode.",
     "workerSystemPromptTemplate": "Return concise business JSON only. Keep workflow mode, issue references, codex-agent references, file paths, findings, review decisions, and verification commands explicit."
   },
   "managerStepId": "divedra-manager",
@@ -45,15 +45,20 @@
       "nodeFile": "nodes/node-step7-review.json"
     },
     {
-      "id": "step8-commit-message",
-      "nodeFile": "nodes/node-step8-commit-message.json"
+      "id": "step8-docs-refresh",
+      "nodeFile": "nodes/node-step8-docs-refresh.json"
     },
     {
-      "id": "step9-commit-push",
-      "nodeFile": "nodes/node-step9-commit-push.json"
+      "id": "step9-commit-message",
+      "nodeFile": "nodes/node-step9-commit-message.json"
+    },
+    {
+      "id": "step10-commit-push",
+      "nodeFile": "nodes/node-step10-commit-push.json"
     },
     {
       "id": "workflow-output",
+      "kind": "output",
       "nodeFile": "nodes/node-workflow-output.json"
     }
   ],
@@ -133,7 +138,7 @@
           "label": "needs_revision"
         },
         {
-          "toStepId": "step8-commit-message",
+          "toStepId": "step9-commit-message",
           "label": "planning_only && !(needs_design_revision || needs_revision)"
         },
         {
@@ -164,26 +169,37 @@
           "label": "needs_revision"
         },
         {
-          "toStepId": "step8-commit-message",
+          "toStepId": "step8-docs-refresh",
           "label": "!(needs_revision)"
         }
       ]
     },
     {
-      "id": "step8-commit-message",
-      "nodeId": "step8-commit-message",
-      "description": "Emit the final change summary and commit message after planning-only acceptance or implementation acceptance.",
+      "id": "step8-docs-refresh",
+      "nodeId": "step8-docs-refresh",
+      "description": "Refresh README and user-facing workflow skill descriptions after implementation acceptance and before commit preparation.",
       "role": "worker",
       "transitions": [
         {
-          "toStepId": "step9-commit-push"
+          "toStepId": "step9-commit-message"
         }
       ]
     },
     {
-      "id": "step9-commit-push",
-      "nodeId": "step9-commit-push",
-      "description": "Use the Step 8 commit message in a command node that stages, commits, and pushes the accepted workflow changes.",
+      "id": "step9-commit-message",
+      "nodeId": "step9-commit-message",
+      "description": "Emit the final change summary and commit message after planning-only acceptance or after the implementation documentation refresh step.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step10-commit-push"
+        }
+      ]
+    },
+    {
+      "id": "step10-commit-push",
+      "nodeId": "step10-commit-push",
+      "description": "Use the Step 9 commit message in a command node that stages, commits, and pushes the accepted workflow changes.",
       "role": "worker",
       "transitions": [
         {

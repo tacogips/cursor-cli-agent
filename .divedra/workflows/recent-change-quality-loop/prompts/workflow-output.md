@@ -8,6 +8,7 @@ Return JSON with:
 - `reviewedRange`
 - `finalFindings`
 - `fixIterations`
+- `delegatedWorkflowRuns`
 - `changedFiles`
 - `verification`
 - `residualLowRisks`

@@ -18,7 +18,7 @@ Return adapter JSON:
   "payload": {
     "needs_fix": true,
     "blockingFindingCount": 1,
-    "decision": "fix",
+    "decision": "delegate",
     "blockingFindings": [
       {
         "severity": "mid",

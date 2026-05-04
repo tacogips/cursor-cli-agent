@@ -1,11 +1,11 @@
 {
   "id": "workflow-output",
-  "description": "Publish either the accepted planning handoff or the final accepted issue-resolution handoff after the required review gates pass, Step 8 emits the commit message, and Step 9 successfully commits and pushes.",
+  "description": "Publish either the accepted planning handoff or the final accepted issue-resolution handoff after the required review gates pass, the implementation path refreshes README and user-facing workflow skill guidance, the commit-message step runs, and the command-node commit/push succeeds.",
   "executionBackend": "codex-agent",
   "model": "gpt-5.5",
   "promptTemplateFile": "prompts/workflow-output.md",
   "variables": {},
   "output": {
-    "description": "Return either the accepted design-and-plan handoff or the final issue-resolution handoff, with review summaries, commit/push details, and residual risks."
+    "description": "Return either the accepted design-and-plan handoff or the final issue-resolution handoff, with review summaries, documentation-refresh details, commit/push details, and residual risks."
   }
 }

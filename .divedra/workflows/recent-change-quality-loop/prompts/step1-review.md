@@ -18,7 +18,7 @@ Review standard:
 - Prioritize correctness bugs, behavioral regressions, missing tests, unsafe error handling, unclear design, stale implementation plans, and maintainability issues.
 - If a finding needs design-document or implementation-plan updates before code changes, say so explicitly.
 - Classify findings as `high`, `mid`, or `low`.
-- High or mid findings are blocking and must be fixed by Step 3.
+- High or mid findings are blocking and must be handed off by Step 3 into `design-and-implement-review-loop`.
 - Low findings are non-blocking and may be left as residual risks.
 
 Return JSON with:
