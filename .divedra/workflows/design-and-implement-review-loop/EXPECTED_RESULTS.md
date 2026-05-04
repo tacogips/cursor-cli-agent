@@ -30,8 +30,8 @@ Expected stable run summary:
   "status": "completed",
   "workflowName": "design-and-implement-review-loop",
   "workflowId": "design-and-implement-review-loop",
-  "nodeExecutions": 15,
-  "transitions": 14,
+  "nodeExecutions": 17,
+  "transitions": 16,
   "exitCode": 0
 }
 ```
@@ -62,6 +62,10 @@ Expected final output payload:
   "implPlanReviewSummary": "Implementation plan accepted after explicit persistence migration and regression verification tasks were added.",
   "implementationSummary": "Step 6 implemented the approved plan, addressed Step 7 feedback, and updated implementation-plan progress.",
   "implementationReviewSummary": "Implementation accepted with no remaining high or mid findings.",
+  "commitMessage": "feat: persist workflow review findings across reruns",
+  "commitHash": "abc123def4567890abc123def4567890abc123de",
+  "pushedRemote": "origin",
+  "pushedBranch": "main",
   "verification": [
     "task test",
     "task typecheck"
@@ -85,8 +89,8 @@ Expected planning-only run summary:
   "status": "completed",
   "workflowName": "design-and-implement-review-loop",
   "workflowId": "design-and-implement-review-loop",
-  "nodeExecutions": 11,
-  "transitions": 10,
+  "nodeExecutions": 13,
+  "transitions": 12,
   "exitCode": 0
 }
 ```
@@ -109,6 +113,10 @@ Expected planning-only final output payload:
   ],
   "designReviewSummary": "Design accepted after Cursor adapter boundaries and codex-agent divergence were clarified.",
   "implPlanReviewSummary": "Implementation plan and design consistency review accepted after transcript edge-case tasks were added.",
+  "commitMessage": "docs: add codex-reference session history design and plan",
+  "commitHash": "fedcba9876543210fedcba9876543210fedcba98",
+  "pushedRemote": "origin",
+  "pushedBranch": "main",
   "nextStep": "Run a full issue-resolution execution for impl-plans/active/codex-reference-session-history.md when implementation is approved.",
   "residualRisks": []
 }

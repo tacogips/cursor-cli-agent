@@ -140,6 +140,7 @@ This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 - `~/.cursor/skills-cursor/` is Cursor-managed internal state. Read it for discovery only; never write to it. User-authored skills belong under `~/.cursor/skills/` or project `.cursor/skills/`.
 - Before implementing non-trivial features, confirm the corresponding design doc and active implementation plan exist and are aligned. If they drift, fix the documents first or explicitly note the mismatch.
 - Prefer project automation entry points over ad hoc commands: `task ci`, `task test`, `task typecheck`, and Bun package scripts. If you touch test infrastructure, align the repository on one test runner instead of mixing conventions further.
+- For implementation changes in this repository, default to the project-local `divedra` workflow `design-and-implement-review-loop` unless the user explicitly says not to use a workflow. This default applies to implementation fixes, behavior changes, feature additions, and bug fixes.
 
 ## Development Environment
 - **Language**: TypeScript
@@ -199,6 +200,10 @@ This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 
 **IMPORTANT**: Implementation tasks MUST follow implementation plans. Implementation plans translate design documents into actionable specifications without code.
 
+**IMPORTANT**: For implementation fixes, feature additions, and bug fixes, you (the LLM model) MUST use the project-local `divedra` workflow unless the user explicitly instructs you not to use a workflow.
+
+**Workflow Reference**: Refer to `.agents/skills/divedra-impl-workflow/SKILL.md` for the default execution policy and invocation pattern.
+
 ### Implementation Workflow
 
 ```
@@ -207,6 +212,18 @@ Design Document --> Implementation Plan --> Implementation --> Completion
 design-docs/         impl-plans/            ts-coding        Progress
 specs/*.md          active/*.md              agent            Update
 ```
+
+### Default Implementation Execution Path
+
+For implementation changes, use the project-local workflow:
+
+```bash
+task divedra-design-implement -- --output json
+```
+
+The workflow id is `design-and-implement-review-loop` under `.divedra/workflows/`.
+
+Do not bypass this workflow for implementation fixes, behavior additions, or bug fixes unless the user explicitly requests non-workflow execution.
 
 ### Creating Implementation Plans
 

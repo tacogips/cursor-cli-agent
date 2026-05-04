@@ -288,6 +288,39 @@
       }
     }
   ],
+  "step8-commit-message": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "design-plan-only",
+      "commitMessage": "docs: add codex-reference session history design and plan",
+      "committedFiles": [
+        "design-docs/specs/design-codex-reference-session-history.md",
+        "impl-plans/active/codex-reference-session-history.md"
+      ],
+      "changeSummary": "Accepted planning-only design and implementation-plan updates for codex-reference session history behavior.",
+      "residualRisks": []
+    }
+  },
+  "step9-commit-push": {
+    "provider": "scenario-mock",
+    "model": "command/commit-and-push",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "design-plan-only",
+      "commitMessage": "docs: add codex-reference session history design and plan",
+      "commitHash": "fedcba9876543210fedcba9876543210fedcba98",
+      "pushedRemote": "origin",
+      "pushedBranch": "main",
+      "pushStatus": "pushed",
+      "residualRisks": []
+    }
+  },
   "workflow-output": {
     "provider": "scenario-mock",
     "model": "gpt-5.5",
@@ -309,6 +342,10 @@
       ],
       "designReviewSummary": "Design accepted after Cursor adapter boundaries and codex-agent divergence were clarified.",
       "implPlanReviewSummary": "Implementation plan and design consistency review accepted after transcript edge-case tasks were added.",
+      "commitMessage": "docs: add codex-reference session history design and plan",
+      "commitHash": "fedcba9876543210fedcba9876543210fedcba98",
+      "pushedRemote": "origin",
+      "pushedBranch": "main",
       "nextStep": "Run a full issue-resolution execution for impl-plans/active/codex-reference-session-history.md when implementation is approved.",
       "residualRisks": []
     }

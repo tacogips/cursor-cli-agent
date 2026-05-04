@@ -103,6 +103,8 @@ Follow this workflow:
 
 ## Post-Implementation Verification (For Calling Agent)
 
+**REPOSITORY-SPECIFIC OVERRIDE FOR CALLERS**: In `curort-cli-agent`, callers should prefer the project-local `divedra` implementation workflow before invoking direct TypeScript editing. If the task is an implementation fix, behavior change, feature addition, or bug fix and the user did not explicitly disable workflows, route the work through `.divedra/workflows/design-and-implement-review-loop` first. Use this `ts-coding` subagent only when that workflow or the user explicitly requires direct code editing.
+
 **NOTE TO CALLING AGENT**: After this ts-coding subagent completes and returns results, the calling agent SHOULD invoke the `check-and-test-after-modify` agent for comprehensive verification.
 
 Use Task tool with:

@@ -84,9 +84,13 @@ tasks:
       - task: build
 
   checkout-divedra:
-    desc: Initialize and checkout the divedra submodule
+    desc: Initialize the divedra submodule without overwriting local submodule work
     cmds:
-      - git submodule update --init --checkout divedra
+      - |
+        if [ -e divedra/.git ] && [ -d .git/modules/divedra ]; then
+          exit 0
+        fi
+        git submodule update --init divedra
 
   divedra:
     desc: Run divedra from the local submodule (pass args after --)
@@ -94,3 +98,31 @@ tasks:
       - checkout-divedra
     cmds:
       - nix run ./divedra -- {{.CLI_ARGS}}
+
+  divedra-workflows:
+    desc: List project-local divedra workflows from .divedra/workflows
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow list
+
+  divedra-design-loop-validate:
+    desc: Validate the design-and-implement review workflow bundle
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow validate design-and-implement-review-loop
+
+  divedra-design-implement:
+    desc: Run the design-and-implement workflow from the project catalog (pass workflow args after --)
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run .#divedra -- workflow run design-and-implement-review-loop {{.CLI_ARGS}}
+
+  divedra-recent-change-validate:
+    desc: Validate the recent-change quality workflow bundle
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow validate recent-change-quality-loop

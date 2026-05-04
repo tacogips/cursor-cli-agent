@@ -375,6 +375,42 @@
       }
     }
   ],
+  "step8-commit-message": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "commitMessage": "feat: persist workflow review findings across reruns",
+      "committedFiles": [
+        "design-docs/specs/design-workflow-review-findings.md",
+        "design-docs/user-qa/qa-review-finding-retention.md",
+        "impl-plans/active/workflow-review-findings.md",
+        "src/workflow/review-findings.ts",
+        "src/workflow/review-findings.test.ts"
+      ],
+      "changeSummary": "Accepted implementation, design, and plan updates for persisted workflow review findings across reruns.",
+      "residualRisks": []
+    }
+  },
+  "step9-commit-push": {
+    "provider": "scenario-mock",
+    "model": "command/commit-and-push",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "workflowMode": "issue-resolution",
+      "commitMessage": "feat: persist workflow review findings across reruns",
+      "commitHash": "abc123def4567890abc123def4567890abc123de",
+      "pushedRemote": "origin",
+      "pushedBranch": "main",
+      "pushStatus": "pushed",
+      "residualRisks": []
+    }
+  },
   "workflow-output": {
     "provider": "scenario-mock",
     "model": "gpt-5.5",
@@ -402,6 +438,10 @@
       "implPlanReviewSummary": "Implementation plan accepted after explicit persistence migration and regression verification tasks were added.",
       "implementationSummary": "Step 6 implemented the approved plan, addressed Step 7 feedback, and updated implementation-plan progress.",
       "implementationReviewSummary": "Implementation accepted with no remaining high or mid findings.",
+      "commitMessage": "feat: persist workflow review findings across reruns",
+      "commitHash": "abc123def4567890abc123def4567890abc123de",
+      "pushedRemote": "origin",
+      "pushedBranch": "main",
       "verification": [
         "task test",
         "task typecheck"

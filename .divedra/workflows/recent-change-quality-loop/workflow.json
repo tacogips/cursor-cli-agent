@@ -1,0 +1,93 @@
+{
+  "workflowId": "recent-change-quality-loop",
+  "description": "Review code changes introduced within a configurable recent time window, including uncommitted changes, and loop through quality fixes until no high or mid review findings remain.",
+  "defaults": {
+    "maxLoopIterations": 6,
+    "nodeTimeoutMs": 900000
+  },
+  "prompts": {
+    "divedraPromptTemplate": "Coordinate {{workflowId}}. Start at Step 1 review. Step 1 reviews recent committed and uncommitted changes. Step 2 inspects Step 1 and routes to Step 3 when any high or mid finding remains; otherwise route to workflow-output and finish. Step 3 fixes the findings by updating design documents, implementation plans, and implementation code when needed, then route back to Step 1. Finish only after Step 1 has no high or mid findings.",
+    "workerSystemPromptTemplate": "Return concise business JSON only. Keep severity, changed files, commands, design changes, implementation-plan changes, code changes, verification, and routing decisions explicit."
+  },
+  "managerStepId": "divedra-manager",
+  "entryStepId": "divedra-manager",
+  "nodes": [
+    {
+      "id": "divedra-manager",
+      "nodeFile": "nodes/node-divedra-manager.json"
+    },
+    {
+      "id": "step1-review",
+      "nodeFile": "nodes/node-step1-review.json"
+    },
+    {
+      "id": "step2-exit-gate",
+      "nodeFile": "nodes/node-step2-exit-gate.json"
+    },
+    {
+      "id": "step3-fix",
+      "nodeFile": "nodes/node-step3-fix.json"
+    },
+    {
+      "id": "workflow-output",
+      "nodeFile": "nodes/node-workflow-output.json"
+    }
+  ],
+  "steps": [
+    {
+      "id": "divedra-manager",
+      "nodeId": "divedra-manager",
+      "description": "Start the recent-change quality loop.",
+      "role": "manager",
+      "transitions": [
+        {
+          "toStepId": "step1-review"
+        }
+      ]
+    },
+    {
+      "id": "step1-review",
+      "nodeId": "step1-review",
+      "description": "Review committed changes from the recent time window plus uncommitted changes.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step2-exit-gate"
+        }
+      ]
+    },
+    {
+      "id": "step2-exit-gate",
+      "nodeId": "step2-exit-gate",
+      "description": "Exit when Step 1 has no high or mid findings; otherwise send findings to the fixer.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step3-fix",
+          "label": "needs_fix"
+        },
+        {
+          "toStepId": "workflow-output",
+          "label": "!(needs_fix)"
+        }
+      ]
+    },
+    {
+      "id": "step3-fix",
+      "nodeId": "step3-fix",
+      "description": "Fix high and mid findings, improving design, implementation plans, and code as needed.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step1-review"
+        }
+      ]
+    },
+    {
+      "id": "workflow-output",
+      "nodeId": "workflow-output",
+      "description": "Publish the accepted review summary once no high or mid findings remain.",
+      "role": "worker"
+    }
+  ]
+}

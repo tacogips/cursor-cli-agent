@@ -10,6 +10,27 @@ Current status:
 - No production code in this repository yet
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
+## Project Workflows
+
+This repository also ships project-local `divedra` workflows under
+`.divedra/workflows`.
+
+- `design-and-implement-review-loop` supports issue intake, design updates,
+  implementation-plan authoring, implementation, and review gates.
+- `recent-change-quality-loop` reviews recent committed and uncommitted changes
+  and loops until blocking findings are fixed.
+
+Run them from this repository root with:
+
+```bash
+task divedra-workflows
+task divedra-design-loop-validate
+task divedra-recent-change-validate
+task divedra -- workflow inspect design-and-implement-review-loop --output json
+```
+
+Additional usage examples live in [`.divedra/README.md`](.divedra/README.md).
+
 Planned capabilities:
 
 - Session discovery from `~/.cursor/projects/*/agent-transcripts/*.jsonl`

@@ -1,0 +1,187 @@
+{
+  "divedra-manager": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "hours": 24,
+      "targetScope": [
+        "README.md",
+        "Taskfile.yml",
+        ".divedra/workflows/recent-change-quality-loop"
+      ],
+      "notes": [
+        "Start the recent-change quality loop."
+      ]
+    }
+  },
+  "step1-review": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "hours": 24,
+        "historyBase": "HEAD~2",
+        "reviewedCommands": [
+          "git rev-list -n 1 --before=\"24 hours ago\" HEAD",
+          "git log --since=\"24 hours ago\" --stat --name-status",
+          "git diff --cached",
+          "git diff"
+        ],
+        "reviewedCommittedRange": "HEAD~2..HEAD",
+        "reviewedUncommitted": true,
+        "findings": [
+          {
+            "severity": "mid",
+            "file": "README.md",
+            "line": 1,
+            "message": "The repository does not document how to run the project-local divedra workflows from this directory.",
+            "recommendedFix": "Add project-local workflow documentation and explicit root commands."
+          }
+        ],
+        "blockingFindingCount": 1,
+        "needs_fix": true,
+        "recommendedFixPlan": [
+          "Document the project-local workflow catalog.",
+          "Expose root validation commands for the bundled workflows."
+        ],
+        "verificationSuggestions": [
+          "nix run ./divedra -- workflow validate recent-change-quality-loop",
+          "task divedra-workflows"
+        ]
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "always": true
+      },
+      "payload": {
+        "hours": 24,
+        "historyBase": "HEAD~2",
+        "reviewedCommands": [
+          "git rev-list -n 1 --before=\"24 hours ago\" HEAD",
+          "git log --since=\"24 hours ago\" --stat --name-status",
+          "git diff --cached",
+          "git diff"
+        ],
+        "reviewedCommittedRange": "HEAD~2..HEAD",
+        "reviewedUncommitted": true,
+        "findings": [],
+        "blockingFindingCount": 0,
+        "needs_fix": false,
+        "recommendedFixPlan": [],
+        "verificationSuggestions": [
+          "task divedra-recent-change-validate",
+          "task divedra-workflows"
+        ]
+      }
+    }
+  ],
+  "step2-exit-gate": [
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "needs_fix": true
+      },
+      "payload": {
+        "needs_fix": true,
+        "blockingFindingCount": 1,
+        "decision": "fix",
+        "blockingFindings": [
+          {
+            "severity": "mid",
+            "file": "README.md",
+            "line": 1,
+            "message": "The repository does not document how to run the project-local divedra workflows from this directory."
+          }
+        ],
+        "exitReason": null
+      }
+    },
+    {
+      "provider": "scenario-mock",
+      "model": "gpt-5.5",
+      "when": {
+        "needs_fix": false
+      },
+      "payload": {
+        "needs_fix": false,
+        "blockingFindingCount": 0,
+        "decision": "exit",
+        "blockingFindings": [],
+        "exitReason": "No high or mid findings remain."
+      }
+    }
+  ],
+  "step3-fix": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "addressedFindings": [
+        {
+          "severity": "mid",
+          "file": "README.md",
+          "line": 1,
+          "message": "The repository did not document the project-local divedra workflow entry points."
+        }
+      ],
+      "designDocChanges": [],
+      "implementationPlanChanges": [],
+      "codeChanges": [
+        "README.md",
+        "Taskfile.yml",
+        ".divedra/workflows/recent-change-quality-loop/workflow.json"
+      ],
+      "verification": [
+        "task typecheck",
+        "task test"
+      ],
+      "remainingRisks": [
+        "A follow-up documentation polish pass could tighten examples further."
+      ],
+      "notesForNextReview": [
+        "Confirm the root workflow-list and validation commands are discoverable."
+      ]
+    }
+  },
+  "workflow-output": {
+    "provider": "scenario-mock",
+    "model": "gpt-5.5",
+    "when": {
+      "always": true
+    },
+    "payload": {
+      "status": "accepted",
+      "hours": 24,
+      "reviewedRange": "HEAD~2..HEAD plus working tree",
+      "finalFindings": [],
+      "fixIterations": 1,
+      "changedFiles": [
+        "README.md",
+        "Taskfile.yml",
+        ".divedra/workflows/recent-change-quality-loop/workflow.json"
+      ],
+      "verification": [
+        "task typecheck",
+        "task test"
+      ],
+      "residualLowRisks": [
+        "A follow-up documentation polish pass could tighten examples further."
+      ],
+      "operatorNotes": [
+        "The blocking review finding was resolved in one fix loop."
+      ]
+    }
+  }
+}
