@@ -282,4 +282,157 @@ describe("CLI search commands", () => {
       "transcript search: --max-events must be a positive integer",
     );
   });
+
+  test("creates and searches bookmark JSON records", async () => {
+    const workspace = resolve("/tmp/bookmark-cli-workspace");
+    const transcriptPath = join(testDir, "bookmark-cli.jsonl");
+    await writeFile(
+      transcriptPath,
+      `${transcriptLine("user", "<user_query>\nBookmark CLI needle\n</user_query>")}\n`,
+      "utf8",
+    );
+    await seedSessionIndex([
+      {
+        recordId: "rec-bookmark-cli",
+        localSessionId: "local-bookmark-cli",
+        cursorChatId: "chat-bookmark-cli",
+        identityState: "linked",
+        workspaceSlug: "tmp-bookmark-cli-workspace",
+        workspacePath: workspace,
+        transcriptPath,
+        createdAt: "2026-05-05T00:00:00.000Z",
+        updatedAt: "2026-05-05T01:00:00.000Z",
+        source: "headless",
+        status: "completed",
+      },
+    ]);
+
+    const addExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "bookmark",
+      "add",
+      "--type",
+      "message",
+      "--session",
+      "chat-bookmark-cli",
+      "--message",
+      "event-0-user",
+      "--name",
+      "CLI bookmark",
+      "--tag",
+      "cli",
+      "--json",
+    ]);
+
+    expect(addExit).toBe(0);
+    const bookmark = JSON.parse(logs.join("\n")) as {
+      id: string;
+      messageId: string;
+      excerpt: { displayText: string; rawText: string };
+    };
+    expect(bookmark.messageId).toBe("event-0-user");
+    expect(bookmark.excerpt.displayText).toBe("Bookmark CLI needle");
+    expect(bookmark.excerpt.rawText).toContain("user_query");
+
+    logs = [];
+    const listExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "bookmark",
+      "list",
+      "--session",
+      "chat-bookmark-cli",
+      "--json",
+    ]);
+
+    expect(listExit).toBe(0);
+    const list = JSON.parse(logs.join("\n")) as {
+      bookmarks: Array<{ id: string }>;
+    };
+    expect(list.bookmarks[0]?.id).toBe(bookmark.id);
+
+    logs = [];
+    const searchExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "bookmark",
+      "search",
+      "needle",
+      "--limit",
+      "5",
+      "--json",
+    ]);
+
+    expect(searchExit).toBe(0);
+    const result = JSON.parse(logs.join("\n")) as {
+      total: number;
+      hits: Array<{ bookmark: { id: string } }>;
+    };
+    expect(result.total).toBe(1);
+    expect(result.hits[0]?.bookmark.id).toBe(bookmark.id);
+  });
+
+  test("enforces bookmark not-found and chat-only validation exits", async () => {
+    await seedSessionIndex([
+      {
+        recordId: "rec-bookmark-pending",
+        cursorChatId: "chat-bookmark-pending",
+        identityState: "chat_only",
+        workspaceSlug: "tmp-bookmark-pending",
+        workspacePath: resolve("/tmp/bookmark-pending"),
+        createdAt: "2026-05-05T00:00:00.000Z",
+        updatedAt: "2026-05-05T01:00:00.000Z",
+        source: "create-chat",
+        status: "pending",
+      },
+    ]);
+
+    const sessionExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "bookmark",
+      "add",
+      "--type",
+      "session",
+      "--session",
+      "chat-bookmark-pending",
+      "--name",
+      "Pending session bookmark",
+      "--json",
+    ]);
+    expect(sessionExit).toBe(0);
+
+    logs = [];
+    errors = [];
+    const messageExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "bookmark",
+      "add",
+      "--type",
+      "message",
+      "--session",
+      "chat-bookmark-pending",
+      "--message",
+      "event-0-user",
+      "--name",
+      "Invalid pending bookmark",
+    ]);
+    expect(messageExit).toBe(2);
+    expect(errors[0]).toContain(
+      "message and range bookmarks require a transcript-backed session",
+    );
+
+    errors = [];
+    const showMissingExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "bookmark",
+      "show",
+      "missing",
+    ]);
+    expect(showMissingExit).toBe(3);
+    expect(errors[0]).toBe("bookmark not found");
+  });
 });

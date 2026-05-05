@@ -1,13 +1,13 @@
 # curort-cli-agent
 
-`curort-cli-agent` is a planned Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
+`curort-cli-agent` is a Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
 
 This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-agent`.
 
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, group and queue orchestration, and skill catalog commands have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, group and queue orchestration, and skill catalog commands have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -48,6 +48,7 @@ Implemented capabilities:
 - Metadata enrichment from `~/.cursor/ai-tracking/ai-code-tracking.db` when available
 - Metadata-only `session search <query>` over the repository-owned session index
 - Read-only `transcript search <query>` over local Cursor transcript JSONL files with role filters, session narrowing, pagination, scan budgets, transcript provenance, stable synthetic message IDs, and JSON output
+- Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -55,10 +56,20 @@ Implemented capabilities:
 
 Planned capabilities:
 
-- Bookmark lifecycle and search over sessions and transcript messages
 - Markdown/task extraction from transcript content
 - Activity summaries and file intelligence
 - Optional daemon/server surface after core CLI stabilizes
+
+Bookmark command examples:
+
+```bash
+bun run src/main.ts bookmark add --type session --session <id> --name <name> --json
+bun run src/main.ts bookmark add --type message --session <id> --message event-0-user --name <name> --json
+bun run src/main.ts bookmark list --session <id> --json
+bun run src/main.ts bookmark show <bookmark-id> --json
+bun run src/main.ts bookmark search <query> --limit 5 --json
+bun run src/main.ts bookmark delete <bookmark-id> --json
+```
 
 ## Design Documents
 
@@ -66,6 +77,7 @@ Planned capabilities:
 - `design-docs/specs/command.md`
 - `design-docs/specs/design-cursor-session-management.md`
 - `design-docs/specs/design-codex-agent-parity-gap.md`
+- `design-docs/specs/design-bookmarks.md`
 
 ## Implementation Plan
 
@@ -74,6 +86,7 @@ Planned capabilities:
 - `impl-plans/active/parity-global-design-plan-workflow.md`
 - `impl-plans/active/session-search.md`
 - `impl-plans/active/transcript-search.md`
+- `impl-plans/active/bookmarks.md`
 
 ## Reference Project
 

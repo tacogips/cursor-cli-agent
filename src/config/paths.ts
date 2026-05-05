@@ -80,6 +80,10 @@ export function queuesJsonPath(): string {
   return join(getDataDir(), "queues.json");
 }
 
+export function bookmarksJsonPath(): string {
+  return join(getDataDir(), "bookmarks.json");
+}
+
 export function cursorProjectsRoot(): string {
   return join(getCursorHome(), "projects");
 }

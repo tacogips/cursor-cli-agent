@@ -23,6 +23,7 @@ export interface TranscriptParseError {
 
 export interface TranscriptSearchLine {
   readonly role: TranscriptSearchRole;
+  readonly rawText: string;
   readonly text: string;
   readonly eventOffset: number;
   readonly byteOffset: number;
@@ -145,7 +146,7 @@ function parseTranscriptSearchJsonLine(
     role === "user" || role === "assistant"
       ? normalizeTextBlock(role, rawText).displayText
       : rawText;
-  return { role, text, eventOffset, byteOffset, byteLength };
+  return { role, rawText, text, eventOffset, byteOffset, byteLength };
 }
 
 /**

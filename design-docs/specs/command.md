@@ -213,16 +213,19 @@ Later phases:
 
 Phase-2 scope:
 
-- `bookmark add --type <session|message|range> --session <id> --name <name>`
-- `bookmark list`
-- `bookmark show <id>`
-- `bookmark delete <id>`
-- `bookmark search <query>`
+- `bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]`
+- `bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]`
+- `bookmark show <id> [--json]`
+- `bookmark delete <id> [--json]`
+- `bookmark search <query> [--limit <n>] [--json]`
 
 Bookmark rules:
 
 - `message` and `range` bookmarks require transcript-backed sessions
 - pending `chat_only` records may only receive `session` bookmarks until transcript materialization
+- message and range bookmark output must preserve raw and display excerpts when available
+
+See `design-docs/specs/design-bookmarks.md` for the detailed behavior, validation, Codex-reference mapping, and Cursor-specific boundaries.
 
 ## File Commands
 

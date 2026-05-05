@@ -11,6 +11,11 @@ import {
   stateDbPath,
 } from "../config/paths";
 import {
+  BookmarkInputError,
+  BookmarkNotFoundError,
+  createBookmarkManager,
+} from "../bookmarks/manager";
+import {
   createChat,
   type HeadlessRunOptions,
   isTrustFailureMessage,
@@ -33,6 +38,12 @@ import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
 import type { AgentEvent } from "../types/agent-event";
+import type {
+  BookmarkFilter,
+  BookmarkSearchOptions,
+  CreateBookmarkInput,
+} from "../types/bookmark";
+import { isBookmarkType } from "../types/bookmark";
 import type { SessionSearchOptions } from "../types/session-search";
 import type { SessionMode, SessionStatus } from "../types/session-record";
 import type {
@@ -393,6 +404,116 @@ function parseTranscriptSearchOptions(
   };
 }
 
+function parseBookmarkFilter(
+  flags: Record<string, string | boolean>,
+): { filter: BookmarkFilter } | { error: string } {
+  const sessionId = flags["session"];
+  if (sessionId !== undefined && typeof sessionId !== "string") {
+    return { error: "bookmark list: --session requires an id" };
+  }
+  const type = flags["type"];
+  if (type !== undefined) {
+    if (typeof type !== "string" || !isBookmarkType(type)) {
+      return {
+        error: "bookmark list: --type must be session, message, or range",
+      };
+    }
+  }
+  const tag = flags["tag"];
+  if (tag !== undefined && typeof tag !== "string") {
+    return { error: "bookmark list: --tag requires a tag" };
+  }
+  return {
+    filter: {
+      ...(typeof sessionId === "string" ? { sessionId } : {}),
+      ...(typeof type === "string" && isBookmarkType(type) ? { type } : {}),
+      ...(typeof tag === "string" ? { tag } : {}),
+    },
+  };
+}
+
+function parseBookmarkAddInput(
+  flags: Record<string, string | boolean>,
+): { input: CreateBookmarkInput } | { error: string } {
+  const type = flags["type"];
+  if (typeof type !== "string" || !isBookmarkType(type)) {
+    return { error: "bookmark add: --type must be session, message, or range" };
+  }
+  const sessionId = flags["session"];
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    return { error: "bookmark add: --session is required" };
+  }
+  const name = flags["name"];
+  if (typeof name !== "string" || name.length === 0) {
+    return { error: "bookmark add: --name is required" };
+  }
+  const messageId = flags["message"];
+  if (messageId !== undefined && typeof messageId !== "string") {
+    return { error: "bookmark add: --message requires an id" };
+  }
+  const fromMessageId = flags["from"];
+  if (fromMessageId !== undefined && typeof fromMessageId !== "string") {
+    return { error: "bookmark add: --from requires an id" };
+  }
+  const toMessageId = flags["to"];
+  if (toMessageId !== undefined && typeof toMessageId !== "string") {
+    return { error: "bookmark add: --to requires an id" };
+  }
+  const description = flags["description"];
+  if (description !== undefined && typeof description !== "string") {
+    return { error: "bookmark add: --description requires text" };
+  }
+  const tag = flags["tag"];
+  if (tag !== undefined && typeof tag !== "string") {
+    return { error: "bookmark add: --tag requires a tag" };
+  }
+  return {
+    input: {
+      type,
+      sessionId,
+      name,
+      ...(typeof messageId === "string" ? { messageId } : {}),
+      ...(typeof fromMessageId === "string" ? { fromMessageId } : {}),
+      ...(typeof toMessageId === "string" ? { toMessageId } : {}),
+      ...(typeof description === "string" ? { description } : {}),
+      ...(typeof tag === "string" ? { tags: [tag] } : {}),
+    },
+  };
+}
+
+function parseBookmarkSearchOptions(
+  flags: Record<string, string | boolean>,
+): { options: BookmarkSearchOptions } | { error: string } {
+  const limit = parseOptionalPositiveIntegerFlag(flags, "limit");
+  if (limit === null) {
+    return { error: "bookmark search: --limit must be a positive integer" };
+  }
+  return { options: { ...(limit !== undefined ? { limit } : {}) } };
+}
+
+function renderBookmarkHuman(bookmark: {
+  readonly id: string;
+  readonly type: string;
+  readonly sessionId: string;
+  readonly name: string;
+  readonly tags: readonly string[];
+  readonly messageId?: string;
+  readonly fromMessageId?: string;
+  readonly toMessageId?: string;
+}): void {
+  const target =
+    bookmark.type === "message"
+      ? `message=${bookmark.messageId ?? ""}`
+      : bookmark.type === "range"
+        ? `range=${bookmark.fromMessageId ?? ""}..${bookmark.toMessageId ?? ""}`
+        : "session";
+  const tags =
+    bookmark.tags.length > 0 ? ` tags=${bookmark.tags.join(",")}` : "";
+  console.log(
+    `${bookmark.id}  ${bookmark.type}  session=${bookmark.sessionId}  ${target}  ${bookmark.name}${tags}`,
+  );
+}
+
 function renderSessionSearchHuman(
   result: ReturnType<SessionIndexRepository["searchSessions"]>,
 ): void {
@@ -509,6 +630,11 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent session attach <id> [--workspace <path>]
   curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
   curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
+  curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
+  curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
+  curort-cli-agent bookmark show <id> [--json]
+  curort-cli-agent bookmark delete <id> [--json]
+  curort-cli-agent bookmark search <query> [--limit N] [--json]
   curort-cli-agent group <subcommand> ...
   curort-cli-agent queue <subcommand> ...
   curort-cli-agent skill list [--workspace <path>] [--json]
@@ -537,6 +663,9 @@ export async function runCli(argv: string[]): Promise<number> {
   if (cmd === "transcript") {
     return runTranscript(tail);
   }
+  if (cmd === "bookmark") {
+    return runBookmark(tail);
+  }
   if (cmd === "group") {
     return runGroup(tail);
   }
@@ -548,6 +677,128 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   console.error(`Unknown command: ${cmd}`);
+  return EXIT.USAGE;
+}
+
+async function runBookmark(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub === undefined) {
+    console.error("bookmark: missing subcommand");
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  const json = flags["json"] === true;
+  const repo = await openRepo();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const manager = createBookmarkManager({ sessions: repo });
+
+    if (sub === "add") {
+      const parsed = parseBookmarkAddInput(flags);
+      if ("error" in parsed) {
+        console.error(parsed.error);
+        return EXIT.USAGE;
+      }
+      try {
+        const bookmark = await manager.add(parsed.input);
+        if (json) {
+          printJson(bookmark);
+        } else {
+          renderBookmarkHuman(bookmark);
+        }
+        return EXIT.OK;
+      } catch (e) {
+        if (e instanceof BookmarkInputError) {
+          console.error(`bookmark add: ${e.message}`);
+          return EXIT.USAGE;
+        }
+        if (e instanceof BookmarkNotFoundError) {
+          console.error(e.message);
+          return EXIT.NOT_FOUND;
+        }
+        throw e;
+      }
+    }
+
+    if (sub === "list") {
+      const parsed = parseBookmarkFilter(flags);
+      if ("error" in parsed) {
+        console.error(parsed.error);
+        return EXIT.USAGE;
+      }
+      const bookmarks = await manager.list(parsed.filter);
+      if (json) {
+        printJson({ bookmarks });
+      } else {
+        for (const bookmark of bookmarks) {
+          renderBookmarkHuman(bookmark);
+        }
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "show") {
+      const id = pos[0];
+      if (id === undefined || id.length === 0) {
+        console.error("bookmark show: missing bookmark id");
+        return EXIT.USAGE;
+      }
+      const bookmark = await manager.show(id);
+      if (bookmark === null) {
+        console.error("bookmark not found");
+        return EXIT.NOT_FOUND;
+      }
+      if (json) {
+        printJson(bookmark);
+      } else {
+        renderBookmarkHuman(bookmark);
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "delete") {
+      const id = pos[0];
+      if (id === undefined || id.length === 0) {
+        console.error("bookmark delete: missing bookmark id");
+        return EXIT.USAGE;
+      }
+      const deleted = await manager.delete(id);
+      if (!deleted) {
+        console.error("bookmark not found");
+        return EXIT.NOT_FOUND;
+      }
+      if (json) {
+        printJson({ deleted: true, id });
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "search") {
+      const query = pos[0];
+      if (query === undefined || query.trim().length === 0) {
+        console.error("bookmark search: missing query");
+        return EXIT.USAGE;
+      }
+      const parsed = parseBookmarkSearchOptions(flags);
+      if ("error" in parsed) {
+        console.error(parsed.error);
+        return EXIT.USAGE;
+      }
+      const result = await manager.search(query, parsed.options);
+      if (json) {
+        printJson(result);
+      } else {
+        for (const hit of result.hits) {
+          renderBookmarkHuman(hit.bookmark);
+        }
+      }
+      return EXIT.OK;
+    }
+  } finally {
+    repo.close();
+  }
+
+  console.error(`Unknown bookmark subcommand: ${sub}`);
   return EXIT.USAGE;
 }
 
