@@ -1,11 +1,161 @@
 {
-  "lastUpdated": "2026-01-01T00:00:00Z",
+  "lastUpdated": "2026-05-05T12:16:32+09:00",
   "phases": {
     "1": { "status": "READY" },
-    "2": { "status": "BLOCKED" },
+    "2": { "status": "READY" },
     "3": { "status": "BLOCKED" },
     "4": { "status": "BLOCKED" }
   },
   "plans": {
+    "session-search": {
+      "phase": 2,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": []
+        },
+        "TASK-002": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003"]
+        }
+      }
+    },
+    "transcript-search": {
+      "phase": 2,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["session-search:TASK-001"]
+        },
+        "TASK-002": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "session-search:TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+        }
+      }
+    },
+    "bookmarks": {
+      "phase": 2,
+      "status": "Blocked",
+      "tasks": {
+        "TASK-001": {
+          "status": "Not Started",
+          "parallelizable": true,
+          "deps": ["transcript-search:TASK-001"]
+        },
+        "TASK-002": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "transcript-search:TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+        }
+      }
+    },
+    "activity": {
+      "phase": 2,
+      "status": "Ready",
+      "tasks": {
+        "TASK-001": {
+          "status": "Not Started",
+          "parallelizable": true,
+          "deps": []
+        },
+        "TASK-002": {
+          "status": "Not Started",
+          "parallelizable": true,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+        }
+      }
+    },
+    "markdown-tasks": {
+      "phase": 2,
+      "status": "Blocked",
+      "tasks": {
+        "TASK-001": {
+          "status": "Not Started",
+          "parallelizable": true,
+          "deps": ["transcript-search:TASK-001"]
+        },
+        "TASK-002": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "transcript-search:TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Not Started",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+        }
+      }
+    }
   }
 }

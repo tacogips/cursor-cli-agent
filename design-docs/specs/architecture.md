@@ -224,9 +224,13 @@ Purpose:
 
 Design position:
 
-1. transcript files remain the canonical source for exact full-text search
-2. the search index is an accelerator, not an authority
-3. search responses should report whether a hit came from cached metadata, transcript scan, or enrichment data
+1. `P2-SESSION-SEARCH` starts with metadata-only search against the repository-owned session index
+2. transcript files remain the canonical source for exact full-text search, which is a separate backlog slice
+3. the search index is authoritative for metadata filters and an accelerator for summary text
+4. search responses should report whether a hit came from cached metadata, transcript scan, or enrichment data
+5. Cursor search models must preserve `recordId`, `localSessionId`, `cursorChatId`, and `identityState` so pending chat-only records can be searched before transcript materialization
+
+See `design-docs/specs/design-session-search.md` for the phase-2 session metadata search slice and `design-docs/specs/design-transcript-search.md` for the phase-2 transcript full-text search slice.
 
 ### 2. File Intelligence Index
 

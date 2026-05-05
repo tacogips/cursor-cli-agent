@@ -1,10 +1,11 @@
 {
   "id": "step3-handoff",
   "description": "Prepare a delegated issue-resolution handoff for the next parity backlog item.",
-  "executionBackend": "codex-agent",
-  "model": "gpt-5.5",
-  "promptTemplateFile": "prompts/step3-handoff.md",
+  "nodeType": "command",
   "variables": {},
+  "command": {
+    "scriptPath": "scripts/build-step3-handoff.sh"
+  },
   "output": {
     "description": "Return JSON with the delegated workflow input, the selected backlog item, dependency context, and the handoff summary."
   }

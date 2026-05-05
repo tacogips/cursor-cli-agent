@@ -1,0 +1,12 @@
+{
+  "id": "step6-handoff",
+  "description": "Prepare a delegated issue-resolution handoff for the selected reviewed implementation plan.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/build-handoff.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return JSON with the delegated workflow input, selected backlog item, dependency context, and handoff summary."
+  }
+}

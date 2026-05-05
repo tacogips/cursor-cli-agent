@@ -1,0 +1,11 @@
+{
+  "id": "step1-global-design",
+  "description": "Create or update the global parity design for all selected backlog items.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step1-global-design.md",
+  "variables": {},
+  "output": {
+    "description": "Return JSON with global design-doc paths, backlog coverage, dependencies, codex-agent references, decisions, divergences, and risks."
+  }
+}

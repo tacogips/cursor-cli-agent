@@ -19,6 +19,10 @@ import {
   runHeadlessStreaming,
 } from "../cursor/process-runner";
 import { StreamNormalizerState } from "../cursor/stream-normalizer";
+import {
+  createTranscriptSearchService,
+  DEFAULT_TRANSCRIPT_SEARCH_TIMEOUT_MS,
+} from "../cursor/transcript-search";
 import { loadAiTrackingEnrichment } from "../cursor/ai-tracking-reader";
 import { findSkillByName, listSkillRecords } from "../cursor/skill-catalog";
 import {
@@ -29,6 +33,13 @@ import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
 import type { AgentEvent } from "../types/agent-event";
+import type { SessionSearchOptions } from "../types/session-search";
+import type { SessionMode, SessionStatus } from "../types/session-record";
+import type {
+  TranscriptSearchOptions,
+  TranscriptSearchResult,
+  TranscriptSearchRole,
+} from "../types/transcript-search";
 
 const EXIT = {
   OK: 0,
@@ -166,6 +177,253 @@ function getExplicitWorkspace(
   return undefined;
 }
 
+function isSessionMode(value: string): value is SessionMode {
+  return value === "default" || value === "plan" || value === "ask";
+}
+
+function isSessionStatus(value: string): value is SessionStatus {
+  return (
+    value === "pending" ||
+    value === "active" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "unknown"
+  );
+}
+
+function isTranscriptSearchRole(value: string): value is TranscriptSearchRole {
+  return (
+    value === "user" ||
+    value === "assistant" ||
+    value === "system" ||
+    value === "tool"
+  );
+}
+
+function parsePositiveIntegerFlag(
+  flags: Record<string, string | boolean>,
+  key: string,
+  defaultValue: number,
+): number | undefined {
+  const value = flags[key];
+  if (value === undefined) {
+    return defaultValue;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return parsed;
+}
+
+function parseNonNegativeIntegerFlag(
+  flags: Record<string, string | boolean>,
+  key: string,
+  defaultValue: number,
+): number | undefined {
+  const value = flags[key];
+  if (value === undefined) {
+    return defaultValue;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return undefined;
+  }
+  return parsed;
+}
+
+function parseSessionSearchOptions(
+  pos: readonly string[],
+  flags: Record<string, string | boolean>,
+): { options: SessionSearchOptions } | { error: string } {
+  const query = pos[0];
+  if (query === undefined || query.trim().length === 0) {
+    return { error: "session search: missing query" };
+  }
+
+  const workspace = flags["workspace"];
+  if (workspace !== undefined && typeof workspace !== "string") {
+    return { error: "session search: --workspace requires a path" };
+  }
+
+  const model = flags["model"];
+  if (model !== undefined && typeof model !== "string") {
+    return { error: "session search: --model requires a model" };
+  }
+
+  const mode = flags["mode"];
+  if (mode !== undefined) {
+    if (typeof mode !== "string" || !isSessionMode(mode)) {
+      return { error: "session search: --mode must be default, plan, or ask" };
+    }
+  }
+
+  const status = flags["status"];
+  if (status !== undefined) {
+    if (typeof status !== "string" || !isSessionStatus(status)) {
+      return {
+        error:
+          "session search: --status must be pending, active, completed, failed, or unknown",
+      };
+    }
+  }
+
+  const limit = parsePositiveIntegerFlag(flags, "limit", 20);
+  if (limit === undefined) {
+    return { error: "session search: --limit must be a positive integer" };
+  }
+
+  const offset = parseNonNegativeIntegerFlag(flags, "offset", 0);
+  if (offset === undefined) {
+    return { error: "session search: --offset must be a non-negative integer" };
+  }
+
+  return {
+    options: {
+      query,
+      limit,
+      offset,
+      filters: {
+        ...(typeof workspace === "string" ? { workspace } : {}),
+        ...(typeof model === "string" ? { model } : {}),
+        ...(typeof mode === "string" && isSessionMode(mode) ? { mode } : {}),
+        ...(typeof status === "string" && isSessionStatus(status)
+          ? { status }
+          : {}),
+      },
+    },
+  };
+}
+
+function parseOptionalPositiveIntegerFlag(
+  flags: Record<string, string | boolean>,
+  key: string,
+): number | undefined | null {
+  const value = flags[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseTranscriptSearchOptions(
+  pos: readonly string[],
+  flags: Record<string, string | boolean>,
+): { options: TranscriptSearchOptions } | { error: string } {
+  const query = pos[0];
+  if (query === undefined || query.trim().length === 0) {
+    return { error: "transcript search: missing query" };
+  }
+
+  const sessionId = flags["session"];
+  if (sessionId !== undefined && typeof sessionId !== "string") {
+    return { error: "transcript search: --session requires an id" };
+  }
+
+  const role = flags["role"];
+  if (role !== undefined) {
+    if (typeof role !== "string" || !isTranscriptSearchRole(role)) {
+      return {
+        error:
+          "transcript search: --role must be user, assistant, system, or tool",
+      };
+    }
+  }
+
+  const limit = parsePositiveIntegerFlag(flags, "limit", 20);
+  if (limit === undefined) {
+    return { error: "transcript search: --limit must be a positive integer" };
+  }
+
+  const offset = parseNonNegativeIntegerFlag(flags, "offset", 0);
+  if (offset === undefined) {
+    return {
+      error: "transcript search: --offset must be a non-negative integer",
+    };
+  }
+
+  const maxSessions = parseOptionalPositiveIntegerFlag(flags, "max-sessions");
+  if (maxSessions === null) {
+    return {
+      error: "transcript search: --max-sessions must be a positive integer",
+    };
+  }
+
+  const maxBytes = parseOptionalPositiveIntegerFlag(flags, "max-bytes");
+  if (maxBytes === null) {
+    return {
+      error: "transcript search: --max-bytes must be a positive integer",
+    };
+  }
+
+  const maxEvents = parseOptionalPositiveIntegerFlag(flags, "max-events");
+  if (maxEvents === null) {
+    return {
+      error: "transcript search: --max-events must be a positive integer",
+    };
+  }
+
+  return {
+    options: {
+      query,
+      limit,
+      offset,
+      timeoutMs: DEFAULT_TRANSCRIPT_SEARCH_TIMEOUT_MS,
+      ...(typeof sessionId === "string" ? { sessionId } : {}),
+      ...(typeof role === "string" && isTranscriptSearchRole(role)
+        ? { role }
+        : {}),
+      ...(maxSessions !== undefined ? { maxSessions } : {}),
+      ...(maxBytes !== undefined ? { maxBytes } : {}),
+      ...(maxEvents !== undefined ? { maxEvents } : {}),
+    },
+  };
+}
+
+function renderSessionSearchHuman(
+  result: ReturnType<SessionIndexRepository["searchSessions"]>,
+): void {
+  for (const r of result.sessions) {
+    const pending = r.identityState === "chat_only" ? " [pending-chat]" : "";
+    const id = r.localSessionId ?? r.cursorChatId ?? r.recordId;
+    console.log(
+      `${id}${pending}  ${r.workspaceSlug}  ${r.status}  ${r.updatedAt}  matches=${r.matchFields.join(",")}`,
+    );
+  }
+}
+
+function renderTranscriptSearchHuman(result: TranscriptSearchResult): void {
+  for (const hit of result.hits) {
+    const id = hit.localSessionId ?? hit.cursorChatId ?? hit.recordId;
+    console.log(
+      `${id}  ${hit.role}  ${hit.messageId}  ${hit.excerpt.replace(/\s+/g, " ").trim()}`,
+    );
+  }
+  if (result.truncated) {
+    console.log(
+      `Search truncated after ${result.scannedSessions} sessions, ${result.scannedEvents} events, ${result.scannedBytes} bytes`,
+    );
+  }
+  if (result.timedOut) {
+    console.log(
+      `Search timed out after ${result.scannedSessions} sessions, ${result.scannedEvents} events, ${result.scannedBytes} bytes`,
+    );
+  }
+}
+
 function printJson(v: unknown): void {
   console.log(JSON.stringify(v, null, 2));
 }
@@ -249,6 +507,8 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent session resume <id> [--prompt <text>] [options]
   curort-cli-agent session continue [--workspace <path>] [--stream <text|json|events>] [--json]
   curort-cli-agent session attach <id> [--workspace <path>]
+  curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
+  curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
   curort-cli-agent group <subcommand> ...
   curort-cli-agent queue <subcommand> ...
   curort-cli-agent skill list [--workspace <path>] [--json]
@@ -274,6 +534,9 @@ export async function runCli(argv: string[]): Promise<number> {
   if (cmd === "session") {
     return runSession(tail);
   }
+  if (cmd === "transcript") {
+    return runTranscript(tail);
+  }
   if (cmd === "group") {
     return runGroup(tail);
   }
@@ -286,6 +549,43 @@ export async function runCli(argv: string[]): Promise<number> {
 
   console.error(`Unknown command: ${cmd}`);
   return EXIT.USAGE;
+}
+
+async function runTranscript(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub === undefined) {
+    console.error("transcript: missing subcommand");
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  const json = flags["json"] === true;
+
+  if (sub !== "search") {
+    console.error(`Unknown transcript subcommand: ${sub}`);
+    return EXIT.USAGE;
+  }
+
+  const parsed = parseTranscriptSearchOptions(pos, flags);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+
+  const repo = await openRepo();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const result = await createTranscriptSearchService(repo).search(
+      parsed.options,
+    );
+    if (json) {
+      printJson(result);
+    } else {
+      renderTranscriptSearchHuman(result);
+    }
+    return EXIT.OK;
+  } finally {
+    repo.close();
+  }
 }
 
 async function runSession(argv: string[]): Promise<number> {
@@ -302,6 +602,7 @@ async function runSession(argv: string[]): Promise<number> {
   let runHeadlessPrompt: string | undefined;
   let resumeSessionId: string | undefined;
   let headlessStreamMode: "text" | "json" | "events" | undefined;
+  let searchOptions: SessionSearchOptions | undefined;
 
   if (sub === "run") {
     const prompt =
@@ -340,6 +641,22 @@ async function runSession(argv: string[]): Promise<number> {
     }
     headlessStreamMode = sm.mode;
   }
+  if (sub === "search") {
+    const parsed = parseSessionSearchOptions(pos, flags);
+    if ("error" in parsed) {
+      console.error(parsed.error);
+      return EXIT.USAGE;
+    }
+    searchOptions = {
+      ...parsed.options,
+      filters: {
+        ...parsed.options.filters,
+        ...(explicitWorkspace !== undefined
+          ? { workspace: explicitWorkspace }
+          : {}),
+      },
+    };
+  }
 
   const repo = await openRepo();
   await repo.importTranscriptsFromFilesystem();
@@ -360,6 +677,16 @@ async function runSession(argv: string[]): Promise<number> {
           `${id}${pending}  ${r.workspaceSlug}  ${r.status}  ${r.updatedAt}`,
         );
       }
+    }
+    return EXIT.OK;
+  }
+
+  if (sub === "search") {
+    const result = repo.searchSessions(searchOptions!);
+    if (json) {
+      printJson(result);
+    } else {
+      renderSessionSearchHuman(result);
     }
     return EXIT.OK;
   }

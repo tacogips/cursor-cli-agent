@@ -1,9 +1,10 @@
 {
   "id": "step1-backlog-review",
   "description": "Review repository design and plan state to compute the canonical parity backlog status and the next ready item.",
-  "executionBackend": "codex-agent",
-  "model": "gpt-5.5",
-  "promptTemplateFile": "prompts/step1-backlog-review.md",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/build-step1-backlog-review.sh"
+  },
   "variables": {},
   "output": {
     "description": "Return JSON with backlog items, completed items, blocked items, ready items, the selected next item, processed-item count for this run, and any run-limit signal."

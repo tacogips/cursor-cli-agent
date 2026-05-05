@@ -1,0 +1,11 @@
+{
+  "id": "step4-batch-impl-plan-review",
+  "description": "Review the full batch of implementation plans before implementation handoff.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step4-batch-impl-plan-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with needs_design_revision or needs_revision for blocking findings."
+  }
+}

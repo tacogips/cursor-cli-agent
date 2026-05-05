@@ -30,24 +30,19 @@ tasks:
       - bun run start
 
   test:
-    desc: Run tests with Vitest
+    desc: Run tests with Bun
     cmds:
       - bun run test
 
   test-watch:
-    desc: Run tests in watch mode with Vitest
+    desc: Run tests in watch mode with Bun
     cmds:
       - bun run test:watch
 
   test-verbose:
     desc: Run tests with verbose output
     cmds:
-      - vitest run --reporter=verbose
-
-  test-ui:
-    desc: Run tests with Vitest UI
-    cmds:
-      - vitest --ui
+      - scripts/run-src-tests.sh --verbose
 
   typecheck:
     desc: Run TypeScript type checking
@@ -118,7 +113,7 @@ tasks:
     deps:
       - checkout-divedra
     cmds:
-      - nix run .#divedra -- workflow run design-and-implement-review-loop {{.CLI_ARGS}}
+      - nix run ./divedra -- workflow run design-and-implement-review-loop {{.CLI_ARGS}}
 
   divedra-recent-change-validate:
     desc: Validate the recent-change quality workflow bundle
@@ -139,4 +134,18 @@ tasks:
     deps:
       - checkout-divedra
     cmds:
-      - nix run .#divedra -- workflow run parity-backlog-design-implement-loop {{.CLI_ARGS}}
+      - nix run ./divedra -- workflow run parity-backlog-design-implement-loop {{.CLI_ARGS}}
+
+  divedra-global-parity-validate:
+    desc: Validate the global parity design-plan-implement workflow bundle
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow validate parity-global-design-plan-implement-loop
+
+  divedra-global-parity:
+    desc: Run the global parity design-plan-implement workflow from the project catalog (pass workflow args after --)
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow run parity-global-design-plan-implement-loop {{.CLI_ARGS}}

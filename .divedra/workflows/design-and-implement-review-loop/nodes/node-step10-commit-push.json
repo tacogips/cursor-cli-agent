@@ -5,8 +5,8 @@
   "command": {
     "scriptPath": "scripts/commit-and-push.sh",
     "envTemplate": {
-      "COMMIT_MESSAGE": "{{inbox.latest.output.commitMessage}}",
-      "WORKFLOW_MODE": "{{inbox.latest.output.workflowMode}}"
+      "COMMIT_MESSAGE": "{{inbox.latest.output.payload.commitMessage}}",
+      "WORKFLOW_MODE": "{{inbox.latest.output.payload.workflowMode}}"
     }
   },
   "output": {

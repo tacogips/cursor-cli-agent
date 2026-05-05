@@ -15,6 +15,12 @@ import type {
   SessionSource,
   SessionStatus,
 } from "../types/session-record";
+import type {
+  SessionSearchFilters,
+  SessionSearchHit,
+  SessionSearchOptions,
+  SessionSearchResult,
+} from "../types/session-search";
 
 function rowToRecord(r: Record<string, unknown>): CursorSessionRecord {
   const localSessionId = optionalString(r["local_session_id"]);
@@ -66,6 +72,85 @@ function parseMode(v: unknown): SessionMode | undefined {
     return v;
   }
   return undefined;
+}
+
+function normalizeSearchQuery(query: string): string {
+  const normalized = query.trim().toLowerCase();
+  if (normalized.length === 0) {
+    throw new Error("query must not be empty");
+  }
+  return normalized;
+}
+
+function normalizeSearchFilters(
+  filters: SessionSearchFilters | undefined,
+): SessionSearchFilters {
+  const workspace =
+    filters?.workspace === undefined ? undefined : resolve(filters.workspace);
+  return {
+    ...(workspace !== undefined ? { workspace } : {}),
+    ...(filters?.model !== undefined ? { model: filters.model } : {}),
+    ...(filters?.mode !== undefined ? { mode: filters.mode } : {}),
+    ...(filters?.status !== undefined ? { status: filters.status } : {}),
+  };
+}
+
+function searchCandidateFields(
+  record: CursorSessionRecord,
+): ReadonlyArray<readonly [string, string | undefined]> {
+  return [
+    ["recordId", record.recordId],
+    ["localSessionId", record.localSessionId],
+    ["cursorChatId", record.cursorChatId],
+    ["workspaceSlug", record.workspaceSlug],
+    ["workspacePath", record.workspacePath],
+    ["model", record.model],
+    ["mode", record.mode],
+    ["status", record.status],
+    ["source", record.source],
+    ["firstUserText", record.firstUserText],
+    ["lastAssistantText", record.lastAssistantText],
+  ];
+}
+
+function matchFieldsForRecord(
+  record: CursorSessionRecord,
+  normalizedQuery: string,
+): readonly string[] {
+  const matches: string[] = [];
+  for (const [field, value] of searchCandidateFields(record)) {
+    if (value?.toLowerCase().includes(normalizedQuery) === true) {
+      matches.push(field);
+    }
+  }
+  return matches;
+}
+
+function toSearchHit(
+  record: CursorSessionRecord,
+  matchFields: readonly string[],
+): SessionSearchHit {
+  return {
+    ...record,
+    matchFields,
+    provenance: "index",
+  };
+}
+
+async function listJsonlFiles(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listJsonlFiles(path)));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+      files.push(path);
+    }
+  }
+  return files.sort();
 }
 
 const MIGRATION = `
@@ -132,22 +217,22 @@ ON CONFLICT(record_id) DO UPDATE SET
   last_assistant_text = excluded.last_assistant_text
 `);
     stmt.run({
-      record_id: record.recordId,
-      local_session_id: record.localSessionId ?? null,
-      cursor_chat_id: record.cursorChatId ?? null,
-      identity_state: record.identityState,
-      workspace_slug: record.workspaceSlug,
-      workspace_path: record.workspacePath ?? null,
-      transcript_path: record.transcriptPath ?? null,
-      created_at: record.createdAt,
-      updated_at: record.updatedAt,
-      materialized_at: record.materializedAt ?? null,
-      source: record.source,
-      model: record.model ?? null,
-      mode: record.mode ?? null,
-      status: record.status,
-      first_user_text: record.firstUserText ?? null,
-      last_assistant_text: record.lastAssistantText ?? null,
+      "@record_id": record.recordId,
+      "@local_session_id": record.localSessionId ?? null,
+      "@cursor_chat_id": record.cursorChatId ?? null,
+      "@identity_state": record.identityState,
+      "@workspace_slug": record.workspaceSlug,
+      "@workspace_path": record.workspacePath ?? null,
+      "@transcript_path": record.transcriptPath ?? null,
+      "@created_at": record.createdAt,
+      "@updated_at": record.updatedAt,
+      "@materialized_at": record.materializedAt ?? null,
+      "@source": record.source,
+      "@model": record.model ?? null,
+      "@mode": record.mode ?? null,
+      "@status": record.status,
+      "@first_user_text": record.firstUserText ?? null,
+      "@last_assistant_text": record.lastAssistantText ?? null,
     });
   }
 
@@ -206,6 +291,81 @@ ON CONFLICT(record_id) DO UPDATE SET
     return rows.map(rowToRecord);
   }
 
+  listTranscriptBackedSessions(): CursorSessionRecord[] {
+    const rows = this.db
+      .query(
+        `SELECT * FROM sessions
+         WHERE transcript_path IS NOT NULL AND transcript_path != ''
+         ORDER BY updated_at DESC, record_id ASC`,
+      )
+      .all() as Record<string, unknown>[];
+    return rows.map(rowToRecord);
+  }
+
+  searchSessions(options: SessionSearchOptions): SessionSearchResult {
+    const normalizedQuery = normalizeSearchQuery(options.query);
+    if (
+      !Number.isInteger(options.limit) ||
+      !Number.isFinite(options.limit) ||
+      options.limit <= 0
+    ) {
+      throw new Error("limit must be a positive integer");
+    }
+    if (
+      !Number.isInteger(options.offset) ||
+      !Number.isFinite(options.offset) ||
+      options.offset < 0
+    ) {
+      throw new Error("offset must be a non-negative integer");
+    }
+
+    const limit = options.limit;
+    const offset = options.offset;
+    const filters = normalizeSearchFilters(options.filters);
+    const clauses: string[] = [];
+    const params: string[] = [];
+
+    if (filters.workspace !== undefined) {
+      clauses.push("(workspace_slug = ? OR workspace_path = ?)");
+      params.push(workspaceSlugFromPath(filters.workspace), filters.workspace);
+    }
+    if (filters.model !== undefined) {
+      clauses.push("model = ?");
+      params.push(filters.model);
+    }
+    if (filters.mode !== undefined) {
+      clauses.push("mode = ?");
+      params.push(filters.mode);
+    }
+    if (filters.status !== undefined) {
+      clauses.push("status = ?");
+      params.push(filters.status);
+    }
+
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const rows = this.db
+      .query(
+        `SELECT * FROM sessions ${where}
+         ORDER BY updated_at DESC, record_id ASC`,
+      )
+      .all(...params) as Record<string, unknown>[];
+    const hits = rows.flatMap((row) => {
+      const record = rowToRecord(row);
+      const matchFields = matchFieldsForRecord(record, normalizedQuery);
+      return matchFields.length > 0 ? [toSearchHit(record, matchFields)] : [];
+    });
+
+    return {
+      query: options.query,
+      filters,
+      sessions: hits.slice(offset, offset + limit),
+      total: hits.length,
+      offset,
+      limit,
+      provenance: "index",
+    };
+  }
+
   /**
    * When a pending chat-only row exists, attach transcript id and paths after materialization.
    */
@@ -249,19 +409,19 @@ ON CONFLICT(record_id) DO UPDATE SET
       }
       const slug = ent.name;
       const transcriptsDir = join(root, slug, "agent-transcripts");
-      let files: Awaited<ReturnType<typeof readdir>>;
+      let files: Array<{ readonly path: string; readonly name: string }>;
       try {
-        files = await readdir(transcriptsDir, { withFileTypes: true });
+        files = (await listJsonlFiles(transcriptsDir)).map((path) => ({
+          path,
+          name: basename(path),
+        }));
       } catch {
         continue;
       }
       const workspacePath = await resolveWorkspacePathFromWorkerLog(slug);
       for (const f of files) {
-        if (!f.isFile() || !f.name.endsWith(".jsonl")) {
-          continue;
-        }
         const localSessionId = basename(f.name, ".jsonl");
-        const transcriptPath = join(transcriptsDir, f.name);
+        const transcriptPath = f.path;
         const summary = await readTranscriptFile(transcriptPath);
         const existing =
           this.findByLocalSessionId(localSessionId) ??

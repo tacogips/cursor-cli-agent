@@ -114,26 +114,54 @@ When `--workspace` is omitted, use the indexed workspace for a known session if 
 
 ### `session search <query>`
 
-Phase-2 scope.
+Phase-2 metadata-search scope for backlog item `P2-SESSION-SEARCH`.
 
-Search known sessions by metadata and transcript content.
+Search known sessions by indexed metadata. Transcript full-text search is a separate phase-2 slice and should not be implemented as part of metadata search.
 
 Primary flags:
 
 - `--workspace <path>`
-- `--role <user|assistant>`
+- `--model <model>`
+- `--mode <default|plan|ask>`
+- `--status <pending|active|completed|failed|unknown>`
 - `--limit <n>`
 - `--offset <n>`
-- `--case-sensitive`
+- `--json`
+
+Behavior rules:
+
+- query matching is case-insensitive over indexed metadata such as session IDs, workspace, model, mode, status, first user text, and latest assistant text
+- metadata filters must be satisfied from the local session index
+- results must report match provenance as `index`
+- pending chat-only records must remain searchable by `cursorChatId`, workspace metadata, status, and source
+
+See `design-docs/specs/design-session-search.md` for the detailed behavior, validation, Codex-reference mapping, and Cursor-specific boundaries.
+
+### `transcript search <query>`
+
+Phase-2 transcript full-text scope for backlog item `P2-TRANSCRIPT-SEARCH`.
+
+Search transcript-backed Cursor sessions by message content. This command scans local transcript JSONL files and must not change the metadata-only behavior of `session search`.
+
+Primary flags:
+
+- `--session <id>`
+- `--role <user|assistant|system|tool>` (`system` and `tool` are Cursor-specific transcript roles and only match when normalized from observed Cursor rows)
+- `--limit <n>`
+- `--offset <n>`
+- `--max-sessions <n>`
 - `--max-bytes <n>`
 - `--max-events <n>`
 - `--json`
 
 Behavior rules:
 
-- metadata filters should be satisfied from the local session index when possible
-- transcript matches should be produced by streaming transcript JSONL files
-- results should report match provenance such as `index`, `transcript`, or `ai-tracking`
+- query matching is case-insensitive over transcript message text
+- results must report match provenance as `transcript`
+- pending chat-only records do not produce transcript hits until materialized
+- scan budgets must surface `truncated` or `timedOut` state in JSON output
+
+See `design-docs/specs/design-transcript-search.md` for the detailed behavior, validation, Codex-reference mapping, and Cursor-specific boundaries.
 
 ## Session Identity Semantics
 

@@ -110,8 +110,12 @@ An item is `completed` when at least one of these conditions is true:
 
 ### Blocked
 
-An item is `blocked` when any dependency item is not yet completed or when an
-active implementation plan already owns the same scope and is still in progress.
+An item is `blocked` when any dependency item is not yet completed.
+
+An aligned active implementation plan for the same scope is not a blocker for
+this workflow. It is implementation input for the delegated
+`design-and-implement-review-loop`; the parent parity loop should keep the item
+ready unless implementation evidence shows the capability has already landed.
 
 ### Ready
 
@@ -156,6 +160,60 @@ Publish the run summary:
 - blocked items and reasons
 - delegated workflow runs and commit evidence
 
+## Global Design-Plan-Implement Workflow
+
+The alternate workflow bundle name is
+`parity-global-design-plan-implement-loop`.
+
+This workflow is for larger parity catch-up runs where the efficient path is to
+settle the complete target design and the complete implementation-plan batch
+before any feature implementation starts.
+
+### Step 1: Global Design
+
+Create or update the global parity design for all selected phases. This step
+must cover the canonical backlog, dependency graph, Cursor-specific adapter
+boundaries, codex-agent references, intentional divergences, and expected
+implementation-plan paths.
+
+### Step 2: Global Design Review
+
+Review Step 1 before implementation-plan creation. Blocking design findings
+route back to Step 1.
+
+### Step 3: Batch Implementation Plans
+
+Create or update one active implementation plan per selected backlog item before
+any delegated implementation begins. Plans must preserve dependency order and
+identify parallelizable work only when write scopes are disjoint.
+
+### Step 4: Batch Implementation-Plan Review
+
+Review the complete plan batch before any feature handoff. Design-level blocking
+findings route back to Step 1; plan-only blocking findings route back to Step 3.
+
+### Step 5: Ready Plan Selection
+
+Deterministically select the next ready plan from the reviewed batch. A plan is
+eligible only when its active plan file exists, its dependencies are completed,
+and the current run has not reached `maxItemsPerRun`.
+
+### Step 6: Delegated Handoff
+
+Package the selected plan as a single `issue-resolution` request for
+`design-and-implement-review-loop`. This step does not implement locally.
+
+### Step 7: Post-Handoff Sync
+
+Summarize the delegated implementation result for the selected backlog item,
+including changed files, plan updates, verification, commit evidence, and risks.
+
+### Step 8: Parent Review
+
+Review the delegated result before another item can be selected. Blocking
+findings route another handoff for the same item; accepted results return to
+Step 5.
+
 ## Runtime Inputs
 
 Supported workflow input fields:
@@ -189,8 +247,10 @@ larger parity-program context.
 - The backlog workflow is an orchestrator, not an implementation surface.
 - It should be safe to re-run because it recomputes backlog state from repository
   files and the accepted delegated outputs in the current session.
-- When a slice is already owned by an active plan, the workflow should report it
-  as blocked instead of creating a duplicate plan.
+- The one-item backlog workflow is optimized for incremental progress when
+  designs and plans can be produced slice-by-slice.
+- The global workflow is optimized for throughput when all selected designs and
+  plans should be reviewed up front before implementation starts.
 
 ## References
 

@@ -1,0 +1,11 @@
+{
+  "id": "step2-global-design-review",
+  "description": "Review the global parity design before batch implementation planning.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step2-global-design-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_revision true only when blocking global-design findings exist."
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "divedra-manager",
+  "description": "Coordinate the global parity design-plan-implement workflow.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/divedra-manager.md",
+  "variables": {},
+  "input": {
+    "description": "Workflow arguments. `targetPhases` filters the canonical parity backlog, `maxItemsPerRun` bounds delegated implementation iterations after the batch planning pass, and `referenceRepositoryRoot` may override the local codex-agent reference repository.",
+    "jsonSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "targetPhases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["2", "3", "4", "5"]
+          }
+        },
+        "maxItemsPerRun": {
+          "type": "number",
+          "minimum": 1
+        },
+        "referenceRepositoryRoot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "referenceRepositoryUrl": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "output": {
+    "description": "Return initial routing state and preserve runtime inputs for downstream steps."
+  }
+}

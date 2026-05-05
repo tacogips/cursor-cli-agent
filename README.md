@@ -21,6 +21,10 @@ This repository also ships project-local `divedra` workflows under
 - `parity-backlog-design-implement-loop` derives the remaining parity backlog
   from repository design and plan state, selects one ready item at a time, and
   delegates each slice into `design-and-implement-review-loop`.
+- `parity-global-design-plan-implement-loop` first updates the global parity
+  design, reviews it, creates the full implementation-plan batch, reviews that
+  batch, and only then delegates ready plans one at a time into
+  `design-and-implement-review-loop`.
 - `recent-change-quality-loop` reviews recent committed and uncommitted changes,
   delegates blocking findings into `design-and-implement-review-loop`, and then
   re-reviews until the change set is clean.
@@ -31,6 +35,7 @@ Run them from this repository root with:
 task divedra-workflows
 task divedra-design-loop-validate
 task divedra-parity-backlog-validate
+task divedra-global-parity-validate
 task divedra-recent-change-validate
 task divedra -- workflow inspect design-and-implement-review-loop --output json
 ```
@@ -58,6 +63,7 @@ Planned capabilities:
 
 - `impl-plans/active/phase1-core-foundation.md`
 - `impl-plans/active/parity-backlog-workflow.md`
+- `impl-plans/active/parity-global-design-plan-workflow.md`
 
 ## Reference Project
 

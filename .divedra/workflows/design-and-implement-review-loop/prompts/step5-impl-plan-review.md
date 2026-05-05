@@ -2,6 +2,11 @@ You are Step 5: implementation-plan and design consistency review.
 
 Review the Step 4 implementation plan against the accepted design and repository planning conventions.
 
+When `runtimeVariables.workflowCall.input.workflowInput.preferredImplPlanPath`
+is present, verify that Step 4 returned that exact path in `implPlanPaths` and
+that the file exists on disk. Treat any rename, duplicate synonym plan, or
+missing preferred file as a high-severity plan revision finding.
+
 Check:
 - The plan addresses the scope accepted in Steps 1 to 3.
 - The plan points at the relevant design-doc section.

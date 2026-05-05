@@ -1,0 +1,11 @@
+{
+  "id": "step7-post-handoff",
+  "description": "Summarize the delegated implementation result before parent-level review.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step7-post-handoff.md",
+  "variables": {},
+  "output": {
+    "description": "Return JSON with completed item id, delegated evidence, changed files, verification, commit evidence, and residual risks."
+  }
+}

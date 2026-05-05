@@ -1,0 +1,11 @@
+{
+  "id": "workflow-output",
+  "description": "Publish the global parity design-plan-implement run summary.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/workflow-output.md",
+  "variables": {},
+  "output": {
+    "description": "Return the final run summary, including global design paths, all implementation plans, completed items, remaining ready or blocked items, delegated evidence, verification, and operator notes."
+  }
+}

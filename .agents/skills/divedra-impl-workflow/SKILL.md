@@ -36,7 +36,7 @@ task divedra-design-implement -- --output json
 Equivalent direct command:
 
 ```bash
-nix run .#divedra -- workflow run design-and-implement-review-loop --output json
+nix run ./divedra -- workflow run design-and-implement-review-loop --output json
 ```
 
 ## Runtime Inputs

@@ -1,0 +1,12 @@
+{
+  "id": "step5-select-ready-plan",
+  "description": "Deterministically select the next ready implementation plan from the reviewed batch.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/select-ready-plan.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_item true only when a ready implementation plan should be delegated."
+  }
+}

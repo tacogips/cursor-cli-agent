@@ -1,0 +1,190 @@
+{
+  "workflowId": "parity-global-design-plan-implement-loop",
+  "description": "Plan the full cursor-agent parity backlog against the codex-agent reference first, review the global design, create all implementation plans in a batch, review the batch, then implement ready plans one by one through the reviewed design-and-implement workflow.",
+  "defaults": {
+    "maxLoopIterations": 48,
+    "nodeTimeoutMs": 900000
+  },
+  "prompts": {
+    "divedraPromptTemplate": "Coordinate {{workflowId}}. Run global design, review it, create the full batch of implementation plans, review that batch, then repeatedly select one ready plan, hand it to design-and-implement-review-loop for implementation, review the returned result, and continue until no ready plan remains or maxItemsPerRun is reached.",
+    "workerSystemPromptTemplate": "Return concise business JSON only. Keep backlog item ids, design-doc paths, implementation-plan paths, review findings, delegated workflow input, verification, and exit reasons explicit."
+  },
+  "managerStepId": "divedra-manager",
+  "entryStepId": "divedra-manager",
+  "nodes": [
+    {
+      "id": "divedra-manager",
+      "nodeFile": "nodes/node-divedra-manager.json"
+    },
+    {
+      "id": "step1-global-design",
+      "nodeFile": "nodes/node-step1-global-design.json"
+    },
+    {
+      "id": "step2-global-design-review",
+      "nodeFile": "nodes/node-step2-global-design-review.json"
+    },
+    {
+      "id": "step3-batch-impl-plans",
+      "nodeFile": "nodes/node-step3-batch-impl-plans.json"
+    },
+    {
+      "id": "step4-batch-impl-plan-review",
+      "nodeFile": "nodes/node-step4-batch-impl-plan-review.json"
+    },
+    {
+      "id": "step5-select-ready-plan",
+      "nodeFile": "nodes/node-step5-select-ready-plan.json"
+    },
+    {
+      "id": "step6-handoff",
+      "nodeFile": "nodes/node-step6-handoff.json"
+    },
+    {
+      "id": "step7-post-handoff",
+      "nodeFile": "nodes/node-step7-post-handoff.json"
+    },
+    {
+      "id": "step8-post-handoff-review",
+      "nodeFile": "nodes/node-step8-post-handoff-review.json"
+    },
+    {
+      "id": "workflow-output",
+      "kind": "output",
+      "nodeFile": "nodes/node-workflow-output.json"
+    }
+  ],
+  "steps": [
+    {
+      "id": "divedra-manager",
+      "nodeId": "divedra-manager",
+      "description": "Start the global parity design-plan-implement workflow.",
+      "role": "manager",
+      "transitions": [
+        {
+          "toStepId": "step1-global-design"
+        }
+      ]
+    },
+    {
+      "id": "step1-global-design",
+      "nodeId": "step1-global-design",
+      "description": "Create or update global parity design docs for all requested backlog phases before implementation planning.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step2-global-design-review"
+        }
+      ]
+    },
+    {
+      "id": "step2-global-design-review",
+      "nodeId": "step2-global-design-review",
+      "description": "Review the global parity design before any batch implementation plans are created.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step1-global-design",
+          "label": "needs_revision"
+        },
+        {
+          "toStepId": "step3-batch-impl-plans",
+          "label": "!(needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "step3-batch-impl-plans",
+      "nodeId": "step3-batch-impl-plans",
+      "description": "Create all active implementation plans for the selected parity backlog before implementation begins.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step4-batch-impl-plan-review"
+        }
+      ]
+    },
+    {
+      "id": "step4-batch-impl-plan-review",
+      "nodeId": "step4-batch-impl-plan-review",
+      "description": "Review the complete implementation-plan batch before any implementation handoff.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step1-global-design",
+          "label": "needs_design_revision"
+        },
+        {
+          "toStepId": "step3-batch-impl-plans",
+          "label": "needs_revision"
+        },
+        {
+          "toStepId": "step5-select-ready-plan",
+          "label": "!(needs_design_revision || needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "step5-select-ready-plan",
+      "nodeId": "step5-select-ready-plan",
+      "description": "Select the next ready implementation plan from the reviewed batch.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step6-handoff",
+          "label": "needs_item"
+        },
+        {
+          "toStepId": "workflow-output",
+          "label": "!(needs_item)"
+        }
+      ]
+    },
+    {
+      "id": "step6-handoff",
+      "nodeId": "step6-handoff",
+      "description": "Package the selected reviewed plan as a delegated issue-resolution request for design-and-implement-review-loop.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toWorkflowId": "design-and-implement-review-loop",
+          "toStepId": "divedra-manager",
+          "resumeStepId": "step7-post-handoff"
+        }
+      ]
+    },
+    {
+      "id": "step7-post-handoff",
+      "nodeId": "step7-post-handoff",
+      "description": "Summarize the delegated implementation result for the selected plan.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step8-post-handoff-review"
+        }
+      ]
+    },
+    {
+      "id": "step8-post-handoff-review",
+      "nodeId": "step8-post-handoff-review",
+      "description": "Review the delegated result before continuing to the next ready plan.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step6-handoff",
+          "label": "needs_revision"
+        },
+        {
+          "toStepId": "step5-select-ready-plan",
+          "label": "!(needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "workflow-output",
+      "nodeId": "workflow-output",
+      "description": "Publish the global parity run summary.",
+      "role": "worker"
+    }
+  ]
+}
