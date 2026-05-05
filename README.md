@@ -6,8 +6,8 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 
 Current status:
 
-- Design complete enough to start implementation
-- No production code in this repository yet
+- Phase 1 local CLI implementation is active under `src/`
+- Session discovery, metadata search, transcript full-text search, group and queue orchestration, and skill catalog commands have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -42,14 +42,22 @@ task divedra -- workflow inspect design-and-implement-review-loop --output json
 
 Additional usage examples live in [`.divedra/README.md`](.divedra/README.md).
 
-Planned capabilities:
+Implemented capabilities:
 
 - Session discovery from `~/.cursor/projects/*/agent-transcripts/*.jsonl`
 - Metadata enrichment from `~/.cursor/ai-tracking/ai-code-tracking.db` when available
+- Metadata-only `session search <query>` over the repository-owned session index
+- Read-only `transcript search <query>` over local Cursor transcript JSONL files with role filters, session narrowing, pagination, scan budgets, transcript provenance, stable synthetic message IDs, and JSON output
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
-- Optional read-only skill catalog support for `~/.cursor/skills-cursor`, `~/.cursor/skills`, and project `.cursor/skills`
+- Read-only skill catalog support for `~/.cursor/skills-cursor`, `~/.cursor/skills`, and project `.cursor/skills`
+
+Planned capabilities:
+
+- Bookmark lifecycle and search over sessions and transcript messages
+- Markdown/task extraction from transcript content
+- Activity summaries and file intelligence
 - Optional daemon/server surface after core CLI stabilizes
 
 ## Design Documents
@@ -64,6 +72,8 @@ Planned capabilities:
 - `impl-plans/active/phase1-core-foundation.md`
 - `impl-plans/active/parity-backlog-workflow.md`
 - `impl-plans/active/parity-global-design-plan-workflow.md`
+- `impl-plans/active/session-search.md`
+- `impl-plans/active/transcript-search.md`
 
 ## Reference Project
 

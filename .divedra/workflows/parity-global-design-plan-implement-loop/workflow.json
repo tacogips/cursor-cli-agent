@@ -3,7 +3,7 @@
   "description": "Plan the full cursor-agent parity backlog against the codex-agent reference first, review the global design, create all implementation plans in a batch, review the batch, then implement ready plans one by one through the reviewed design-and-implement workflow.",
   "defaults": {
     "maxLoopIterations": 48,
-    "nodeTimeoutMs": 900000
+    "nodeTimeoutMs": 3600000
   },
   "prompts": {
     "divedraPromptTemplate": "Coordinate {{workflowId}}. Run global design, review it, create the full batch of implementation plans, review that batch, then repeatedly select one ready plan, hand it to design-and-implement-review-loop for implementation, review the returned result, and continue until no ready plan remains or maxItemsPerRun is reached.",

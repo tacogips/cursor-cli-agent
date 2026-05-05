@@ -3,7 +3,7 @@
   "description": "Derive the remaining curort-cli-agent parity backlog from repository design and implementation-plan state, select one ready item at a time, delegate it into design-and-implement-review-loop, and continue until no ready item remains or the per-run limit is reached.",
   "defaults": {
     "maxLoopIterations": 24,
-    "nodeTimeoutMs": 900000
+    "nodeTimeoutMs": 3600000
   },
   "prompts": {
     "divedraPromptTemplate": "Coordinate {{workflowId}}. Run Step 1 backlog review first, then Step 2 selection. If Step 2 reports a ready item, run Step 3 delegated handoff into design-and-implement-review-loop, then resume at Step 4 post-handoff sync, and then loop back to Step 1. If Step 2 reports no ready item or that the per-run limit has been reached, route to workflow-output and finish. Finish only after the run has either exhausted the ready backlog or stopped at the configured item limit while publishing the delegated completion evidence and the remaining blocked or ready items.",
