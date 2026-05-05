@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, group and queue orchestration, and skill catalog commands have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, group and queue orchestration, and skill catalog commands have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -49,6 +49,7 @@ Implemented capabilities:
 - Metadata-only `session search <query>` over the repository-owned session index
 - Read-only `transcript search <query>` over local Cursor transcript JSONL files with role filters, session narrowing, pagination, scan budgets, transcript provenance, stable synthetic message IDs, and JSON output
 - Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
+- Derived `activity` records from the session index, transcript mtimes, wrapper-recorded stream/process signals, and stderr/stdout wait patterns, with explicit `provenance: "derived"` signal details
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -57,7 +58,7 @@ Implemented capabilities:
 Planned capabilities:
 
 - Markdown/task extraction from transcript content
-- Activity summaries and file intelligence
+- File intelligence
 - Optional daemon/server surface after core CLI stabilizes
 
 Bookmark command examples:
@@ -71,6 +72,19 @@ bun run src/main.ts bookmark search <query> --limit 5 --json
 bun run src/main.ts bookmark delete <bookmark-id> --json
 ```
 
+Activity command examples:
+
+```bash
+bun run src/main.ts activity --json
+bun run src/main.ts activity --session <id> --json
+bun run src/main.ts activity --status running --limit 3 --json
+```
+
+`activity` supports `idle`, `running`, `waiting_trust`, `waiting_input`,
+`completed`, and `failed` statuses. Output is derived from local Cursor evidence
+only; optional cached stream/process signals are best-effort and fall back to
+index/transcript-derived state when unavailable.
+
 ## Design Documents
 
 - `design-docs/specs/architecture.md`
@@ -78,6 +92,7 @@ bun run src/main.ts bookmark delete <bookmark-id> --json
 - `design-docs/specs/design-cursor-session-management.md`
 - `design-docs/specs/design-codex-agent-parity-gap.md`
 - `design-docs/specs/design-bookmarks.md`
+- `design-docs/specs/design-activity.md`
 
 ## Implementation Plan
 
@@ -87,6 +102,7 @@ bun run src/main.ts bookmark delete <bookmark-id> --json
 - `impl-plans/active/session-search.md`
 - `impl-plans/active/transcript-search.md`
 - `impl-plans/active/bookmarks.md`
+- `impl-plans/active/activity.md`
 
 ## Reference Project
 

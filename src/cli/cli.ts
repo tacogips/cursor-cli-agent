@@ -10,11 +10,13 @@ import {
   getDataDir,
   stateDbPath,
 } from "../config/paths";
+import { createActivityManager } from "../activity/manager";
 import {
   BookmarkInputError,
   BookmarkNotFoundError,
   createBookmarkManager,
 } from "../bookmarks/manager";
+import { createActivitySignalClassifier } from "../cursor/activity-signals";
 import {
   createChat,
   type HeadlessRunOptions,
@@ -43,6 +45,7 @@ import type {
   BookmarkSearchOptions,
   CreateBookmarkInput,
 } from "../types/bookmark";
+import type { ActivitySignal, ActivityStatus } from "../types/activity";
 import { isBookmarkType } from "../types/bookmark";
 import type { SessionSearchOptions } from "../types/session-search";
 import type { SessionMode, SessionStatus } from "../types/session-record";
@@ -199,6 +202,17 @@ function isSessionStatus(value: string): value is SessionStatus {
     value === "completed" ||
     value === "failed" ||
     value === "unknown"
+  );
+}
+
+function isActivityStatus(value: string): value is ActivityStatus {
+  return (
+    value === "idle" ||
+    value === "running" ||
+    value === "waiting_trust" ||
+    value === "waiting_input" ||
+    value === "completed" ||
+    value === "failed"
   );
 }
 
@@ -404,6 +418,42 @@ function parseTranscriptSearchOptions(
   };
 }
 
+function parseActivityOptions(flags: Record<string, string | boolean>):
+  | {
+      session?: string;
+      status?: ActivityStatus;
+      limit?: number;
+    }
+  | { error: string } {
+  const session = flags["session"];
+  if (session !== undefined && typeof session !== "string") {
+    return { error: "activity: --session requires an id" };
+  }
+
+  const status = flags["status"];
+  if (status !== undefined) {
+    if (typeof status !== "string" || !isActivityStatus(status)) {
+      return {
+        error:
+          "activity: --status must be idle, running, waiting_trust, waiting_input, completed, or failed",
+      };
+    }
+  }
+
+  const limit = parseOptionalPositiveIntegerFlag(flags, "limit");
+  if (limit === null) {
+    return { error: "activity: --limit must be a positive integer" };
+  }
+
+  return {
+    ...(typeof session === "string" ? { session } : {}),
+    ...(typeof status === "string" && isActivityStatus(status)
+      ? { status }
+      : {}),
+    ...(limit !== undefined ? { limit } : {}),
+  };
+}
+
 function parseBookmarkFilter(
   flags: Record<string, string | boolean>,
 ): { filter: BookmarkFilter } | { error: string } {
@@ -545,6 +595,20 @@ function renderTranscriptSearchHuman(result: TranscriptSearchResult): void {
   }
 }
 
+function renderActivityHuman(activity: {
+  readonly localSessionId?: string;
+  readonly cursorChatId?: string;
+  readonly recordId: string;
+  readonly status: ActivityStatus;
+  readonly updatedAt: string;
+  readonly signals: readonly ActivitySignal[];
+}): void {
+  const id =
+    activity.localSessionId ?? activity.cursorChatId ?? activity.recordId;
+  const sources = activity.signals.map((signal) => signal.source).join(",");
+  console.log(`${id}  ${activity.status}  ${activity.updatedAt}  ${sources}`);
+}
+
 function printJson(v: unknown): void {
   console.log(JSON.stringify(v, null, 2));
 }
@@ -615,6 +679,33 @@ async function openRepo(): Promise<SessionIndexRepository> {
   return new SessionIndexRepository(stateDbPath());
 }
 
+function sessionIdFromEvent(event: AgentEvent): string | undefined {
+  switch (event.type) {
+    case "session.started":
+    case "session.user_message":
+    case "session.thinking":
+    case "session.assistant_message":
+    case "session.completed":
+      return event.sessionId;
+    case "session.error":
+      return event.sessionId;
+    case "session.pending":
+    case "session.materialized":
+      return undefined;
+  }
+}
+
+async function recordActivitySignal(
+  manager: ReturnType<typeof createActivityManager>,
+  sessionId: string | undefined,
+  signal: ActivitySignal | null,
+): Promise<void> {
+  if (sessionId === undefined || signal === null) {
+    return;
+  }
+  await manager.recordSignal(sessionId, signal);
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   const [, , cmd, ...tail] = argv;
   if (cmd === undefined || cmd === "-h" || cmd === "--help") {
@@ -630,6 +721,7 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent session attach <id> [--workspace <path>]
   curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
   curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
+  curort-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
   curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
   curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
   curort-cli-agent bookmark show <id> [--json]
@@ -663,6 +755,9 @@ export async function runCli(argv: string[]): Promise<number> {
   if (cmd === "transcript") {
     return runTranscript(tail);
   }
+  if (cmd === "activity") {
+    return runActivity(tail);
+  }
   if (cmd === "bookmark") {
     return runBookmark(tail);
   }
@@ -678,6 +773,58 @@ export async function runCli(argv: string[]): Promise<number> {
 
   console.error(`Unknown command: ${cmd}`);
   return EXIT.USAGE;
+}
+
+async function runActivity(argv: string[]): Promise<number> {
+  const { rest: pos, flags } = parseFlags(argv);
+  if (pos.length > 0) {
+    console.error("activity: unexpected positional arguments");
+    return EXIT.USAGE;
+  }
+  const parsed = parseActivityOptions(flags);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+  const json = flags["json"] === true;
+  const repo = await openRepo();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const manager = createActivityManager({ sessions: repo });
+    if (parsed.session !== undefined) {
+      const activity = await manager.getSessionActivity(parsed.session);
+      if (activity === null) {
+        console.error("session not found");
+        return EXIT.NOT_FOUND;
+      }
+      if (parsed.status !== undefined && activity.status !== parsed.status) {
+        if (json) {
+          printJson({ activity: null });
+        }
+        return EXIT.OK;
+      }
+      if (json) {
+        printJson(activity);
+      } else {
+        renderActivityHuman(activity);
+      }
+      return EXIT.OK;
+    }
+    const activities = await manager.listActivity({
+      ...(parsed.status !== undefined ? { status: parsed.status } : {}),
+      ...(parsed.limit !== undefined ? { limit: parsed.limit } : {}),
+    });
+    if (json) {
+      printJson({ activities });
+    } else {
+      for (const activity of activities) {
+        renderActivityHuman(activity);
+      }
+    }
+    return EXIT.OK;
+  } finally {
+    repo.close();
+  }
 }
 
 async function runBookmark(argv: string[]): Promise<number> {
@@ -911,6 +1058,45 @@ async function runSession(argv: string[]): Promise<number> {
 
   const repo = await openRepo();
   await repo.importTranscriptsFromFilesystem();
+  const activityManager = createActivityManager({ sessions: repo });
+  const activityClassifier = createActivitySignalClassifier();
+  let activityWriteChain: Promise<void> = Promise.resolve();
+  let lastActivitySessionId: string | undefined;
+  const enqueueActivitySignal = (
+    sessionId: string | undefined,
+    signal: ActivitySignal | null,
+  ): void => {
+    activityWriteChain = activityWriteChain.then(() =>
+      recordActivitySignal(activityManager, sessionId, signal),
+    );
+  };
+  const captureActivityEvents = (
+    events: readonly AgentEvent[],
+    fallbackSessionId?: string,
+  ): void => {
+    for (const event of events) {
+      const sessionId = sessionIdFromEvent(event) ?? fallbackSessionId;
+      if (sessionId !== undefined) {
+        lastActivitySessionId = sessionId;
+      }
+      enqueueActivitySignal(
+        sessionId,
+        activityClassifier.classifyStreamEvent(event),
+      );
+    }
+  };
+  const recordProcessResult = async (
+    exitCode: number | null,
+    stderr: string,
+    stdout: string,
+    fallbackSessionId?: string,
+  ): Promise<void> => {
+    enqueueActivitySignal(
+      lastActivitySessionId ?? fallbackSessionId,
+      activityClassifier.classifyProcessResult(exitCode, stderr, stdout),
+    );
+    await activityWriteChain;
+  };
 
   if (sub === "list") {
     const limit =
@@ -1148,9 +1334,12 @@ async function runSession(argv: string[]): Promise<number> {
     const exit = await runHeadlessStreaming(
       buildHeadlessRunOptions(workspace, prompt, flags),
       (line) => {
-        emitStreamedAgentEvents(stream, norm.processLine(line), textState);
+        const events = norm.processLine(line);
+        emitStreamedAgentEvents(stream, events, textState);
+        captureActivityEvents(events);
       },
     );
+    await recordProcessResult(exit.code, exit.stderr, exit.stdout);
     if (isTrustFailureMessage(exit.stderr)) {
       console.error(exit.stderr);
       return EXIT.TRUST;
@@ -1190,12 +1379,21 @@ async function runSession(argv: string[]): Promise<number> {
     const textState: TextStreamRenderState = {
       lastAssistantBySession: new Map(),
     };
+    await activityManager.recordSignal(sid, {
+      source: "process",
+      status: "running",
+      observedAt: new Date().toISOString(),
+      detail: "resume process started",
+    });
     const exit = await resumeStreaming(
       buildResumeRunOptions(resumeWorkspace, sid, flags),
       (line) => {
-        emitStreamedAgentEvents(stream, norm.processLine(line), textState);
+        const events = norm.processLine(line);
+        emitStreamedAgentEvents(stream, events, textState);
+        captureActivityEvents(events, sid);
       },
     );
+    await recordProcessResult(exit.code, exit.stderr, exit.stdout, sid);
     if (isTrustFailureMessage(exit.stderr)) {
       console.error(exit.stderr);
       return EXIT.TRUST;
@@ -1224,12 +1422,21 @@ async function runSession(argv: string[]): Promise<number> {
       lastAssistantBySession: new Map(),
     };
     const norm = new StreamNormalizerState();
+    await activityManager.recordSignal(sid, {
+      source: "process",
+      status: "running",
+      observedAt: new Date().toISOString(),
+      detail: "continue process started",
+    });
     const exit = await resumeStreaming(
       buildResumeRunOptions(workspace, sid, flags),
       (line) => {
-        emitStreamedAgentEvents(stream, norm.processLine(line), textState);
+        const events = norm.processLine(line);
+        emitStreamedAgentEvents(stream, events, textState);
+        captureActivityEvents(events, sid);
       },
     );
+    await recordProcessResult(exit.code, exit.stderr, exit.stdout, sid);
     if (isTrustFailureMessage(exit.stderr)) {
       console.error(exit.stderr);
       return EXIT.TRUST;
@@ -1378,17 +1585,49 @@ async function runGroup(argv: string[]): Promise<number> {
     }
     const stream = sm.mode;
     const repo = await openRepo();
+    const activityManager = createActivityManager({ sessions: repo });
+    const activityClassifier = createActivitySignalClassifier();
     for (const w of g.workspaces) {
       const norm = new StreamNormalizerState();
       const textState: TextStreamRenderState = {
         lastAssistantBySession: new Map(),
       };
+      let activityWriteChain: Promise<void> = Promise.resolve();
+      let lastSessionId: string | undefined;
+      const enqueueActivitySignal = (
+        sessionId: string | undefined,
+        signal: ActivitySignal | null,
+      ): void => {
+        activityWriteChain = activityWriteChain.then(() =>
+          recordActivitySignal(activityManager, sessionId, signal),
+        );
+      };
       const exit = await runHeadlessStreaming(
         buildHeadlessRunOptions(resolve(w), prompt, flags),
         (line) => {
-          emitStreamedAgentEvents(stream, norm.processLine(line), textState);
+          const events = norm.processLine(line);
+          emitStreamedAgentEvents(stream, events, textState);
+          for (const event of events) {
+            const sessionId = sessionIdFromEvent(event);
+            if (sessionId !== undefined) {
+              lastSessionId = sessionId;
+            }
+            enqueueActivitySignal(
+              sessionId,
+              activityClassifier.classifyStreamEvent(event),
+            );
+          }
         },
       );
+      enqueueActivitySignal(
+        lastSessionId,
+        activityClassifier.classifyProcessResult(
+          exit.code,
+          exit.stderr,
+          exit.stdout,
+        ),
+      );
+      await activityWriteChain;
       if (isTrustFailureMessage(exit.stderr)) {
         console.error(exit.stderr);
         return EXIT.TRUST;
@@ -1506,17 +1745,49 @@ async function runQueue(argv: string[]): Promise<number> {
     }
     const stream = sm.mode;
     const repo = await openRepo();
+    const activityManager = createActivityManager({ sessions: repo });
+    const activityClassifier = createActivitySignalClassifier();
     for (const item of q.items) {
       const norm = new StreamNormalizerState();
       const textState: TextStreamRenderState = {
         lastAssistantBySession: new Map(),
       };
+      let activityWriteChain: Promise<void> = Promise.resolve();
+      let lastSessionId: string | undefined;
+      const enqueueActivitySignal = (
+        sessionId: string | undefined,
+        signal: ActivitySignal | null,
+      ): void => {
+        activityWriteChain = activityWriteChain.then(() =>
+          recordActivitySignal(activityManager, sessionId, signal),
+        );
+      };
       const exit = await runHeadlessStreaming(
         buildHeadlessRunOptions(q.workspace, item.prompt, flags),
         (line) => {
-          emitStreamedAgentEvents(stream, norm.processLine(line), textState);
+          const events = norm.processLine(line);
+          emitStreamedAgentEvents(stream, events, textState);
+          for (const event of events) {
+            const sessionId = sessionIdFromEvent(event);
+            if (sessionId !== undefined) {
+              lastSessionId = sessionId;
+            }
+            enqueueActivitySignal(
+              sessionId,
+              activityClassifier.classifyStreamEvent(event),
+            );
+          }
         },
       );
+      enqueueActivitySignal(
+        lastSessionId,
+        activityClassifier.classifyProcessResult(
+          exit.code,
+          exit.stderr,
+          exit.stdout,
+        ),
+      );
+      await activityWriteChain;
       if (isTrustFailureMessage(exit.stderr)) {
         console.error(exit.stderr);
         return EXIT.TRUST;

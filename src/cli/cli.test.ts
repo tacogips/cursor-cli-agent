@@ -435,4 +435,112 @@ describe("CLI search commands", () => {
     expect(showMissingExit).toBe(3);
     expect(errors[0]).toBe("bookmark not found");
   });
+
+  test("renders derived activity JSON and filters by status and limit", async () => {
+    await seedSessionIndex([
+      {
+        recordId: "rec-activity-running",
+        localSessionId: "local-activity-running",
+        identityState: "transcript_only",
+        workspaceSlug: "tmp-activity-cli",
+        workspacePath: resolve("/tmp/activity-cli"),
+        createdAt: "2026-05-05T00:00:00.000Z",
+        updatedAt: "2026-05-05T00:02:00.000Z",
+        source: "headless",
+        status: "active",
+      },
+      {
+        recordId: "rec-activity-idle",
+        cursorChatId: "chat-activity-idle",
+        identityState: "chat_only",
+        workspaceSlug: "tmp-activity-cli",
+        workspacePath: resolve("/tmp/activity-cli"),
+        createdAt: "2026-05-05T00:00:00.000Z",
+        updatedAt: "2026-05-05T00:01:00.000Z",
+        source: "create-chat",
+        status: "pending",
+      },
+    ]);
+
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "activity",
+      "--status",
+      "running",
+      "--limit",
+      "1",
+      "--json",
+    ]);
+
+    expect(exit).toBe(0);
+    const parsed = JSON.parse(logs.join("\n")) as {
+      activities: Array<{
+        localSessionId?: string;
+        status: string;
+        provenance: string;
+        signals: Array<{ source: string }>;
+      }>;
+    };
+    expect(parsed.activities).toHaveLength(1);
+    expect(parsed.activities[0]?.localSessionId).toBe("local-activity-running");
+    expect(parsed.activities[0]?.status).toBe("running");
+    expect(parsed.activities[0]?.provenance).toBe("derived");
+    expect(parsed.activities[0]?.signals[0]?.source).toBe("index");
+  });
+
+  test("supports activity session lookup and validation exits", async () => {
+    await seedSessionIndex([
+      {
+        recordId: "rec-activity-lookup",
+        cursorChatId: "chat-activity-lookup",
+        identityState: "chat_only",
+        workspaceSlug: "tmp-activity-cli",
+        workspacePath: resolve("/tmp/activity-cli"),
+        createdAt: "2026-05-05T00:00:00.000Z",
+        updatedAt: "2026-05-05T00:01:00.000Z",
+        source: "create-chat",
+        status: "pending",
+      },
+    ]);
+
+    const lookupExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "activity",
+      "--session",
+      "chat-activity-lookup",
+      "--json",
+    ]);
+
+    expect(lookupExit).toBe(0);
+    const activity = JSON.parse(logs.join("\n")) as {
+      cursorChatId: string;
+      status: string;
+    };
+    expect(activity.cursorChatId).toBe("chat-activity-lookup");
+    expect(activity.status).toBe("idle");
+
+    errors = [];
+    const invalidStatus = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "activity",
+      "--status",
+      "waiting_approval",
+    ]);
+    expect(invalidStatus).toBe(2);
+    expect(errors[0]).toContain("activity: --status must be");
+
+    errors = [];
+    const missing = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "activity",
+      "--session",
+      "missing",
+    ]);
+    expect(missing).toBe(3);
+    expect(errors[0]).toBe("session not found");
+  });
 });

@@ -150,6 +150,8 @@ The activity model should expose at least:
 - `completed`
 - `failed`
 
+See `design-docs/specs/design-activity.md` for the bounded `P2-ACTIVITY` behavior, validation rules, CLI contract, and Codex-reference mapping.
+
 ## Phase 3: File Intelligence and Orchestration Expansion
 
 Phase 3 adds the next parity tier: advanced control surfaces and derived file intelligence.

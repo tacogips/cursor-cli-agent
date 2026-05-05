@@ -84,6 +84,10 @@ export function bookmarksJsonPath(): string {
   return join(getDataDir(), "bookmarks.json");
 }
 
+export function activitySignalsJsonPath(): string {
+  return join(getDataDir(), "activity-signals.json");
+}
+
 export function cursorProjectsRoot(): string {
   return join(getCursorHome(), "projects");
 }

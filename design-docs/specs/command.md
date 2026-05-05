@@ -15,6 +15,7 @@ curort-cli-agent session <subcommand>
 curort-cli-agent group <subcommand>
 curort-cli-agent queue <subcommand>
 curort-cli-agent bookmark <subcommand>
+curort-cli-agent activity [options]
 curort-cli-agent files <subcommand>
 curort-cli-agent token <subcommand>
 curort-cli-agent skill <subcommand>
@@ -226,6 +227,23 @@ Bookmark rules:
 - message and range bookmark output must preserve raw and display excerpts when available
 
 See `design-docs/specs/design-bookmarks.md` for the detailed behavior, validation, Codex-reference mapping, and Cursor-specific boundaries.
+
+## Activity Command
+
+Phase-2 scope:
+
+```bash
+curort-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
+```
+
+Activity rules:
+
+- activity is derived from local Cursor session index records, managed process state, transcript mtimes, normalized stream events, and stderr/stdout waiting signals
+- status values are `idle`, `running`, `waiting_trust`, `waiting_input`, `completed`, and `failed`
+- every JSON record must include `provenance: "derived"` plus signal source details
+- missing optional signals reduce confidence/provenance detail but must not make list or lookup fail
+
+See `design-docs/specs/design-activity.md` for the detailed behavior, validation, Codex-reference mapping, and Cursor-specific boundaries.
 
 ## File Commands
 

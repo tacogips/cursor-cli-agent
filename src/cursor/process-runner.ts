@@ -4,11 +4,14 @@ import { once } from "node:events";
 function streamLines(
   proc: ReturnType<typeof spawn>,
   onLine: (line: string) => void,
+  onStdoutChunk?: (chunk: string) => void,
 ): Promise<void> {
   let buffer = "";
   return new Promise<void>((resolve, reject) => {
     proc.stdout?.on("data", (d: Buffer) => {
-      buffer += d.toString("utf8");
+      const chunk = d.toString("utf8");
+      onStdoutChunk?.(chunk);
+      buffer += chunk;
       let idx: number;
       while ((idx = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, idx);
@@ -47,6 +50,7 @@ export interface HeadlessRunOptions {
 export type CursorAgentExit = {
   readonly code: number | null;
   readonly signal: NodeJS.Signals | null;
+  readonly stdout: string;
   readonly stderr: string;
 };
 
@@ -162,17 +166,20 @@ export async function runHeadlessStreaming(
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
+  let stdout = "";
   let stderr = "";
   proc.stderr?.on("data", (d: Buffer) => {
     stderr += d.toString();
   });
-  const linesDone = streamLines(proc, onLine);
+  const linesDone = streamLines(proc, onLine, (chunk) => {
+    stdout += chunk;
+  });
   const [code, signal] = (await once(proc, "close")) as [
     number | null,
     NodeJS.Signals | null,
   ];
   await linesDone;
-  return { code, signal, stderr };
+  return { code, signal, stdout, stderr };
 }
 
 export interface ResumeRunOptions extends Omit<HeadlessRunOptions, "prompt"> {
@@ -228,17 +235,20 @@ export async function resumeStreaming(
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
+  let stdout = "";
   let stderr = "";
   proc.stderr?.on("data", (d: Buffer) => {
     stderr += d.toString();
   });
-  const linesDone = streamLines(proc, onLine);
+  const linesDone = streamLines(proc, onLine, (chunk) => {
+    stdout += chunk;
+  });
   const [code, signal] = (await once(proc, "close")) as [
     number | null,
     NodeJS.Signals | null,
   ];
   await linesDone;
-  return { code, signal, stderr };
+  return { code, signal, stdout, stderr };
 }
 
 export function isTrustFailureMessage(text: string): boolean {
