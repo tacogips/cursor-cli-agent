@@ -1,3 +1,9 @@
 [submodule "divedra"]
 	path = divedra
 	url = https://github.com/tacogips/divedra.git
+[submodule "codex-agent"]
+	path = codex-agent
+	url = https://github.com/tacogips/codex-agent.git
+[submodule "claude-code-agent"]
+	path = claude-code-agent
+	url = https://github.com/tacogips/claude-code-agent.git
