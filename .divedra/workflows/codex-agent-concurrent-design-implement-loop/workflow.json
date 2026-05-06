@@ -1,0 +1,233 @@
+{
+  "workflowId": "codex-agent-concurrent-design-implement-loop",
+  "description": "Decompose codex-agent functionality, concurrently create reviewed design-doc and implementation-plan pairs, review the full batch, implement ready plans one at a time through the design-and-implement workflow, and finish with an overall review.",
+  "defaults": {
+    "fanoutConcurrency": 10,
+    "maxLoopIterations": 96,
+    "nodeTimeoutMs": 3600000
+  },
+  "prompts": {
+    "divedraPromptTemplate": "Coordinate {{workflowId}}. Run Step 1 codex-agent feature decomposition, Step 2 decomposition review, then fan out accepted feature items through codex-agent-feature-design-plan-loop at concurrency 10. Join the branch results, run the full design-doc and implementation-plan review, then repeatedly select the next ready implementation plan, delegate it to design-and-implement-review-loop, review the delegated result, and continue until no ready plan remains or maxItemsPerRun is reached. Finish with a whole-run review before workflow output.",
+    "workerSystemPromptTemplate": "Return concise business JSON only. Keep feature ids, codex-agent references, design-doc paths, implementation-plan paths, fanout group summaries, delegated workflow inputs, review decisions, and verification explicit."
+  },
+  "managerStepId": "divedra-manager",
+  "entryStepId": "divedra-manager",
+  "nodes": [
+    {
+      "id": "divedra-manager",
+      "nodeFile": "nodes/node-divedra-manager.json"
+    },
+    {
+      "id": "step1-decompose-codex-features",
+      "nodeFile": "nodes/node-step1-decompose-codex-features.json"
+    },
+    {
+      "id": "step2-decomposition-review",
+      "nodeFile": "nodes/node-step2-decomposition-review.json"
+    },
+    {
+      "id": "step4-join-feature-plans",
+      "nodeFile": "nodes/node-step4-join-feature-plans.json"
+    },
+    {
+      "id": "step5-overall-design-plan-review",
+      "nodeFile": "nodes/node-step5-overall-design-plan-review.json"
+    },
+    {
+      "id": "step5-commit-plan-batch",
+      "nodeFile": "nodes/node-step5-commit-plan-batch.json"
+    },
+    {
+      "id": "step6-select-next-impl-plan",
+      "nodeFile": "nodes/node-step6-select-next-impl-plan.json"
+    },
+    {
+      "id": "step6-build-implementation-handoff",
+      "nodeFile": "nodes/node-step6-build-implementation-handoff.json"
+    },
+    {
+      "id": "step6-post-implementation-review",
+      "nodeFile": "nodes/node-step6-post-implementation-review.json"
+    },
+    {
+      "id": "step7-overall-review",
+      "nodeFile": "nodes/node-step7-overall-review.json"
+    },
+    {
+      "id": "workflow-output",
+      "kind": "output",
+      "nodeFile": "nodes/node-workflow-output.json"
+    }
+  ],
+  "steps": [
+    {
+      "id": "divedra-manager",
+      "nodeId": "divedra-manager",
+      "description": "Start the codex-agent concurrent design and implementation workflow.",
+      "role": "manager",
+      "transitions": [
+        {
+          "toStepId": "step1-decompose-codex-features"
+        }
+      ]
+    },
+    {
+      "id": "step1-decompose-codex-features",
+      "nodeId": "step1-decompose-codex-features",
+      "description": "Decompose codex-agent functionality into feature-local design and implementation-plan work items.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step2-decomposition-review"
+        }
+      ]
+    },
+    {
+      "id": "step2-decomposition-review",
+      "nodeId": "step2-decomposition-review",
+      "description": "Review the codex-agent feature decomposition before concurrent design and planning.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step1-decompose-codex-features",
+          "label": "needs_revision"
+        },
+        {
+          "toStepId": "step3-feature-design-plan",
+          "toWorkflowId": "codex-agent-feature-design-plan-loop",
+          "resumeStepId": "step4-join-feature-plans",
+          "label": "has_feature_items && !(needs_revision)",
+          "fanout": {
+            "groupId": "codex-agent-feature-design-plan",
+            "itemsFrom": "/payload/featureItems",
+            "itemVariable": "feature",
+            "concurrency": 10,
+            "joinStepId": "step4-join-feature-plans",
+            "failurePolicy": "fail-fast",
+            "resultOrder": "input",
+            "writeOwnership": {
+              "mode": "disjoint-paths",
+              "directories": [
+                "design-docs/specs",
+                "impl-plans/active"
+              ]
+            }
+          }
+        },
+        {
+          "toStepId": "step5-commit-plan-batch",
+          "label": "!(has_feature_items || needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "step4-join-feature-plans",
+      "nodeId": "step4-join-feature-plans",
+      "description": "Join concurrent feature-local design and implementation-plan outputs.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step5-overall-design-plan-review"
+        }
+      ]
+    },
+    {
+      "id": "step5-overall-design-plan-review",
+      "nodeId": "step5-overall-design-plan-review",
+      "description": "Review the full design-doc and implementation-plan batch before implementation begins.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step2-decomposition-review",
+          "label": "needs_design_plan_revision"
+        },
+        {
+          "toStepId": "step5-commit-plan-batch",
+          "label": "!(needs_design_plan_revision)"
+        }
+      ]
+    },
+    {
+      "id": "step5-commit-plan-batch",
+      "nodeId": "step5-commit-plan-batch",
+      "description": "Commit accepted design-doc and implementation-plan workflow artifacts before serial implementation begins.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step6-select-next-impl-plan"
+        }
+      ]
+    },
+    {
+      "id": "step6-select-next-impl-plan",
+      "nodeId": "step6-select-next-impl-plan",
+      "description": "Select the next ready implementation plan from the reviewed batch.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step6-build-implementation-handoff",
+          "label": "needs_item"
+        },
+        {
+          "toStepId": "step7-overall-review",
+          "label": "!(needs_item)"
+        }
+      ]
+    },
+    {
+      "id": "step6-build-implementation-handoff",
+      "nodeId": "step6-build-implementation-handoff",
+      "description": "Build a delegated issue-resolution request for the selected implementation plan.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toWorkflowId": "design-and-implement-review-loop",
+          "toStepId": "divedra-manager",
+          "resumeStepId": "step6-post-implementation-review"
+        }
+      ]
+    },
+    {
+      "id": "step6-post-implementation-review",
+      "nodeId": "step6-post-implementation-review",
+      "description": "Review the delegated implementation result and decide whether another improvement pass is required.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step6-build-implementation-handoff",
+          "label": "needs_revision"
+        },
+        {
+          "toStepId": "step6-select-next-impl-plan",
+          "label": "!(needs_revision)"
+        }
+      ]
+    },
+    {
+      "id": "step7-overall-review",
+      "nodeId": "step7-overall-review",
+      "description": "Review the whole codex-agent parity design, planning, and implementation run.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step1-decompose-codex-features",
+          "label": "needs_design_plan_revision"
+        },
+        {
+          "toStepId": "step6-select-next-impl-plan",
+          "label": "needs_implementation_revision"
+        },
+        {
+          "toStepId": "workflow-output",
+          "label": "!(needs_design_plan_revision || needs_implementation_revision)"
+        }
+      ]
+    },
+    {
+      "id": "workflow-output",
+      "nodeId": "workflow-output",
+      "description": "Publish the final accepted codex-agent concurrent design and implementation run summary.",
+      "role": "worker"
+    }
+  ]
+}

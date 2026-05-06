@@ -182,12 +182,12 @@ Phase-1 scope:
 - `group remove <name> --workspace <path>`
 - `group run <name> --prompt <text>`
 
-Later phases:
+P3 group lifecycle scope (see `design-docs/specs/design-group-lifecycle.md`):
 
-- `group pause <name>`
-- `group resume <name>`
-- `group delete <name>`
-- `group watch <name>`
+- `group pause <name> [--json]`
+- `group resume <name> [--json]`
+- `group delete <name> [--force] [--json]`
+- `group watch <name> [--interval <seconds>] [--once] [--json]`
 
 ## Queue Commands
 

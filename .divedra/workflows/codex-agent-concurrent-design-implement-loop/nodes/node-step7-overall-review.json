@@ -1,0 +1,11 @@
+{
+  "id": "step7-overall-review",
+  "description": "Review the whole codex-agent parity run after design, planning, and implementation passes.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step7-overall-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with final review findings and revision routing flags."
+  }
+}

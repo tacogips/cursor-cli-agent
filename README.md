@@ -16,8 +16,14 @@ This repository also ships project-local `divedra` workflows under
 `.divedra/workflows`.
 
 - `design-and-implement-review-loop` supports issue intake, design updates,
-  implementation-plan authoring, implementation, review gates, README and
-  user-facing workflow-skill refresh, and final commit/push.
+  self-review plus independent review gates for design, planning, and
+  implementation, README and user-facing workflow-skill refresh, and final
+  commit/push.
+- `codex-agent-concurrent-design-implement-loop` decomposes codex-agent
+  functionality, reviews the feature breakdown, fans out feature-local design
+  docs and implementation plans at concurrency 10, reviews the full design/plan
+  batch, delegates ready plans through `design-and-implement-review-loop`, and
+  finishes with an overall review.
 - `parity-backlog-design-implement-loop` derives the remaining parity backlog
   from repository design and plan state, selects one ready item at a time, and
   delegates each slice into `design-and-implement-review-loop`.
@@ -36,6 +42,7 @@ task divedra-workflows
 task divedra-design-loop-validate
 task divedra-parity-backlog-validate
 task divedra-global-parity-validate
+task divedra-codex-concurrent-validate
 task divedra-recent-change-validate
 task divedra -- workflow inspect design-and-implement-review-loop --output json
 ```
@@ -50,6 +57,7 @@ Implemented capabilities:
 - Read-only `transcript search <query>` over local Cursor transcript JSONL files with role filters, session narrowing, pagination, scan budgets, transcript provenance, stable synthetic message IDs, and JSON output
 - Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
 - Derived `activity` records from the session index, transcript mtimes, wrapper-recorded stream/process signals, and stderr/stdout wait patterns, with explicit `provenance: "derived"` signal details
+- Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -85,6 +93,20 @@ bun run src/main.ts activity --status running --limit 3 --json
 only; optional cached stream/process signals are best-effort and fall back to
 index/transcript-derived state when unavailable.
 
+Group lifecycle command examples:
+
+```bash
+bun run src/main.ts group pause <name> --json
+bun run src/main.ts group resume <name> --json
+bun run src/main.ts group delete <name> --force --json
+bun run src/main.ts group watch <name> --once --json
+```
+
+`group run` refuses paused groups before launching Cursor and re-reads group
+lifecycle before each workspace so a mid-run pause stops additional scheduling.
+`group watch` derives latest-run workspace totals from repository-owned group
+state plus `activity` signals and reports `provenance: "group-store+activity"`.
+
 ## Design Documents
 
 - `design-docs/specs/architecture.md`
@@ -93,6 +115,7 @@ index/transcript-derived state when unavailable.
 - `design-docs/specs/design-codex-agent-parity-gap.md`
 - `design-docs/specs/design-bookmarks.md`
 - `design-docs/specs/design-activity.md`
+- `design-docs/specs/design-group-lifecycle.md`
 
 ## Implementation Plan
 
@@ -103,6 +126,7 @@ index/transcript-derived state when unavailable.
 - `impl-plans/active/transcript-search.md`
 - `impl-plans/active/bookmarks.md`
 - `impl-plans/active/activity.md`
+- `impl-plans/active/group-lifecycle.md`
 
 ## Reference Project
 

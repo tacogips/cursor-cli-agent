@@ -1,0 +1,12 @@
+{
+  "id": "step5-overall-design-plan-review",
+  "description": "Deterministically review the full design-doc and implementation-plan batch before implementation can start.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/review-design-plan-batch.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_design_plan_revision true only when the batch must be regenerated or revised before implementation."
+  }
+}

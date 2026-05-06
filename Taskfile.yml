@@ -149,3 +149,17 @@ tasks:
       - checkout-divedra
     cmds:
       - nix run ./divedra -- workflow run parity-global-design-plan-implement-loop {{.CLI_ARGS}}
+
+  divedra-codex-concurrent-validate:
+    desc: Validate the codex-agent concurrent design-plan-implement workflow bundle
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow validate codex-agent-concurrent-design-implement-loop
+
+  divedra-codex-concurrent:
+    desc: Run the codex-agent concurrent design-plan-implement workflow from the project catalog (pass workflow args after --)
+    deps:
+      - checkout-divedra
+    cmds:
+      - nix run ./divedra -- workflow run codex-agent-concurrent-design-implement-loop {{.CLI_ARGS}}

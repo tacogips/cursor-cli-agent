@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -12,7 +12,8 @@ import {
   type Mock,
 } from "bun:test";
 
-import { runCli } from "./cli";
+import { runCli, setCliTestOverrides } from "./cli";
+import * as groupsStore from "../persistence/groups-store";
 import { SessionIndexRepository } from "../persistence/session-index";
 
 const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
@@ -64,8 +65,10 @@ function transcriptLine(role: string, text: string): string {
 describe("CLI search commands", () => {
   beforeEach(async () => {
     testDir = await mkdtemp(join(tmpdir(), "curort-cli-search-"));
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
+    const dataDir = join(testDir, "data");
+    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
     process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    await mkdir(dataDir, { recursive: true });
     logs = [];
     errors = [];
     logSpy = spyOn(console, "log").mockImplementation((message?: unknown) => {
@@ -542,5 +545,350 @@ describe("CLI search commands", () => {
     ]);
     expect(missing).toBe(3);
     expect(errors[0]).toBe("session not found");
+  });
+
+  test("supports group pause, resume, delete, and JSON output", async () => {
+    const createExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "create",
+      "lifecycle",
+    ]);
+    expect(createExit).toBe(0);
+
+    logs = [];
+    const pauseExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "pause",
+      "lifecycle",
+      "--json",
+    ]);
+    expect(pauseExit).toBe(0);
+    expect(JSON.parse(logs.join("\n"))).toMatchObject({
+      name: "lifecycle",
+      lifecycleState: "paused",
+    });
+
+    logs = [];
+    const resumeExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "resume",
+      "lifecycle",
+      "--json",
+    ]);
+    expect(resumeExit).toBe(0);
+    expect(JSON.parse(logs.join("\n"))).toMatchObject({
+      name: "lifecycle",
+      lifecycleState: "active",
+    });
+
+    logs = [];
+    const deleteExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "delete",
+      "lifecycle",
+      "--json",
+    ]);
+    expect(deleteExit).toBe(0);
+    expect(JSON.parse(logs.join("\n"))).toMatchObject({
+      deleted: true,
+      group: { name: "lifecycle" },
+    });
+  });
+
+  test("guards paused group runs before launching Cursor", async () => {
+    await runCli(["bun", "curort-cli-agent", "group", "create", "paused-run"]);
+    await runCli(["bun", "curort-cli-agent", "group", "pause", "paused-run"]);
+    logs = [];
+    errors = [];
+
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "run",
+      "paused-run",
+      "--prompt",
+      "should not launch",
+    ]);
+
+    expect(exit).toBe(1);
+    expect(errors[0]).toBe("group run: group is paused");
+    logs = [];
+    const showExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "show",
+      "paused-run",
+      "--json",
+    ]);
+    expect(showExit).toBe(0);
+    expect(JSON.parse(logs.join("\n")).lastRun).toBeUndefined();
+  });
+
+  test("stops scheduling after a mid-run pause and persists revealed session ids", async () => {
+    let runCount = 0;
+    const restore = setCliTestOverrides({
+      runHeadlessStreaming: async (_options, onLine) => {
+        runCount += 1;
+        onLine(
+          JSON.stringify({
+            type: "system",
+            subtype: "init",
+            session_id: `mid-run-session-${runCount}`,
+            cwd: `/tmp/mid-run-${runCount}`,
+          }),
+        );
+        for (let attempt = 0; attempt < 20; attempt += 1) {
+          const group = await groupsStore.getGroup("mid-run");
+          const workspace = group?.lastRun?.workspaces.find(
+            (record) => record.localSessionId === "mid-run-session-1",
+          );
+          if (workspace !== undefined) {
+            break;
+          }
+          await new Promise((resolvePoll) => {
+            setTimeout(resolvePoll, 1);
+          });
+        }
+        await groupsStore.pauseGroup("mid-run");
+        return { code: 0, signal: null, stdout: "", stderr: "" };
+      },
+    });
+    try {
+      await runCli(["bun", "curort-cli-agent", "group", "create", "mid-run"]);
+      await runCli([
+        "bun",
+        "curort-cli-agent",
+        "group",
+        "add",
+        "mid-run",
+        "--workspace",
+        "/tmp/mid-run-1",
+      ]);
+      await runCli([
+        "bun",
+        "curort-cli-agent",
+        "group",
+        "add",
+        "mid-run",
+        "--workspace",
+        "/tmp/mid-run-2",
+      ]);
+      logs = [];
+      errors = [];
+
+      const exit = await runCli([
+        "bun",
+        "curort-cli-agent",
+        "group",
+        "run",
+        "mid-run",
+        "--prompt",
+        "pause after first workspace",
+      ]);
+
+      expect(exit).toBe(0);
+      expect(runCount).toBe(1);
+      const group = await groupsStore.getGroup("mid-run");
+      expect(group?.lifecycleState).toBe("paused");
+      expect(group?.lastRun?.status).toBe("paused");
+      expect(group?.lastRun?.workspaces[0]?.localSessionId).toBe(
+        "mid-run-session-1",
+      );
+      expect(group?.lastRun?.workspaces[0]?.status).toBe("completed");
+      expect(group?.lastRun?.workspaces[1]?.status).toBe("pending");
+    } finally {
+      restore();
+    }
+  });
+
+  test("rejects deleting a running latest run unless forced", async () => {
+    const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    if (dataDir === undefined) {
+      throw new Error("test data dir was not configured");
+    }
+    await writeFile(
+      join(dataDir, "groups.json"),
+      JSON.stringify({
+        groups: [
+          {
+            name: "running",
+            workspaces: ["/tmp/a"],
+            lifecycleState: "active",
+            lastRun: {
+              id: "run-1",
+              status: "running",
+              startedAt: "2026-05-06T00:00:00.000Z",
+              updatedAt: "2026-05-06T00:00:00.000Z",
+              workspaces: [
+                {
+                  workspace: "/tmp/a",
+                  status: "running",
+                  updatedAt: "2026-05-06T00:00:00.000Z",
+                },
+              ],
+            },
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const blocked = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "delete",
+      "running",
+    ]);
+    expect(blocked).toBe(1);
+    expect(errors[0]).toBe("group delete: latest run is running; use --force");
+
+    logs = [];
+    errors = [];
+    const forced = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "delete",
+      "running",
+      "--force",
+      "--json",
+    ]);
+    expect(forced).toBe(0);
+    expect(JSON.parse(logs.join("\n")).deleted).toBe(true);
+  });
+
+  test("renders one-shot group watch snapshots from activity", async () => {
+    const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    if (dataDir === undefined) {
+      throw new Error("test data dir was not configured");
+    }
+    await writeFile(
+      join(dataDir, "groups.json"),
+      JSON.stringify({
+        groups: [
+          {
+            name: "watching",
+            workspaces: ["/tmp/watch"],
+            lifecycleState: "active",
+            lastRun: {
+              id: "run-watch",
+              status: "running",
+              startedAt: "2026-05-06T00:00:00.000Z",
+              updatedAt: "2026-05-06T00:00:00.000Z",
+              workspaces: [
+                {
+                  workspace: "/tmp/watch",
+                  localSessionId: "watch-session",
+                  status: "pending",
+                  updatedAt: "2026-05-06T00:00:00.000Z",
+                },
+              ],
+            },
+          },
+        ],
+      }),
+      "utf8",
+    );
+    await seedSessionIndex([
+      {
+        recordId: "rec-watch",
+        localSessionId: "watch-session",
+        identityState: "transcript_only",
+        workspaceSlug: "tmp-watch",
+        workspacePath: resolve("/tmp/watch"),
+        createdAt: "2026-05-06T00:00:00.000Z",
+        updatedAt: "2026-05-06T00:02:00.000Z",
+        source: "headless",
+        status: "active",
+      },
+    ]);
+
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "watch",
+      "watching",
+      "--once",
+      "--json",
+    ]);
+
+    expect(exit).toBe(0);
+    const snapshot = JSON.parse(logs.join("\n")) as {
+      provenance: string;
+      totals: { running: number };
+      run: { workspaces: Array<{ status: string }> };
+    };
+    expect(snapshot.provenance).toBe("group-store+activity");
+    expect(snapshot.totals.running).toBe(1);
+    expect(snapshot.run.workspaces[0]?.status).toBe("running");
+  });
+
+  test("renders polling group watch JSON as newline-delimited compact objects", async () => {
+    const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    if (dataDir === undefined) {
+      throw new Error("test data dir was not configured");
+    }
+    await writeFile(
+      join(dataDir, "groups.json"),
+      JSON.stringify({
+        groups: [
+          {
+            name: "watch-lines",
+            workspaces: ["/tmp/watch-lines"],
+            lifecycleState: "completed",
+            lastRun: {
+              id: "run-watch-lines",
+              status: "completed",
+              startedAt: "2026-05-06T00:00:00.000Z",
+              updatedAt: "2026-05-06T00:01:00.000Z",
+              completedAt: "2026-05-06T00:01:00.000Z",
+              workspaces: [
+                {
+                  workspace: "/tmp/watch-lines",
+                  status: "completed",
+                  updatedAt: "2026-05-06T00:01:00.000Z",
+                  completedAt: "2026-05-06T00:01:00.000Z",
+                  exitCode: 0,
+                },
+              ],
+            },
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "group",
+      "watch",
+      "watch-lines",
+      "--json",
+    ]);
+
+    expect(exit).toBe(0);
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).not.toContain("\n");
+    const snapshot = JSON.parse(logs[0] ?? "") as {
+      group: { name: string };
+      provenance: string;
+      totals: { completed: number };
+    };
+    expect(snapshot.group.name).toBe("watch-lines");
+    expect(snapshot.provenance).toBe("group-store+activity");
+    expect(snapshot.totals.completed).toBe(1);
   });
 });

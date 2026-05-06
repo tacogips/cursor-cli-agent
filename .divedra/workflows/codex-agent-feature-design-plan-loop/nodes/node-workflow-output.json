@@ -1,0 +1,12 @@
+{
+  "id": "workflow-output",
+  "description": "Publish the feature-local design and implementation-plan result with the latest review decision preserved.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/publish-feature-output.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return JSON with accepted feature id, design document paths, implementation-plan paths, dependencies, verification, and residual risks."
+  }
+}

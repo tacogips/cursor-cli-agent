@@ -11,6 +11,7 @@ import {
   stateDbPath,
 } from "../config/paths";
 import { createActivityManager } from "../activity/manager";
+import { deriveGroupProgressSnapshot } from "../group/progress";
 import {
   BookmarkInputError,
   BookmarkNotFoundError,
@@ -50,10 +51,34 @@ import { isBookmarkType } from "../types/bookmark";
 import type { SessionSearchOptions } from "../types/session-search";
 import type { SessionMode, SessionStatus } from "../types/session-record";
 import type {
+  GroupLifecycleState,
+  GroupProgressSnapshot,
+  GroupRecord,
+  GroupRunRecord,
+  GroupRunStatus,
+  GroupRunWorkspaceRecord,
+} from "../types/group";
+import type {
   TranscriptSearchOptions,
   TranscriptSearchResult,
   TranscriptSearchRole,
 } from "../types/transcript-search";
+
+type HeadlessStreamingRunner = typeof runHeadlessStreaming;
+
+let runHeadlessStreamingImpl: HeadlessStreamingRunner = runHeadlessStreaming;
+
+export function setCliTestOverrides(overrides: {
+  readonly runHeadlessStreaming?: HeadlessStreamingRunner;
+}): () => void {
+  const previousRunHeadlessStreaming = runHeadlessStreamingImpl;
+  if (overrides.runHeadlessStreaming !== undefined) {
+    runHeadlessStreamingImpl = overrides.runHeadlessStreaming;
+  }
+  return () => {
+    runHeadlessStreamingImpl = previousRunHeadlessStreaming;
+  };
+}
 
 const EXIT = {
   OK: 0,
@@ -613,6 +638,88 @@ function printJson(v: unknown): void {
   console.log(JSON.stringify(v, null, 2));
 }
 
+function renderGroupProgressHuman(snapshot: GroupProgressSnapshot): void {
+  console.log(
+    `${snapshot.group.name}  lifecycle=${snapshot.group.lifecycleState}  run=${snapshot.run?.status ?? "none"}  updated=${snapshot.updatedAt}`,
+  );
+  console.log(
+    `totals pending=${snapshot.totals.pending} running=${snapshot.totals.running} waiting=${snapshot.totals.waiting} completed=${snapshot.totals.completed} failed=${snapshot.totals.failed} unknown=${snapshot.totals.unknown}`,
+  );
+  for (const workspace of snapshot.run?.workspaces ?? []) {
+    const session = workspace.localSessionId ?? workspace.cursorChatId ?? "-";
+    console.log(`${workspace.workspace}  ${workspace.status}  ${session}`);
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolveSleep) => {
+    setTimeout(resolveSleep, ms);
+  });
+}
+
+function isTerminalRunStatus(status: GroupRunStatus): boolean {
+  return status === "completed" || status === "failed" || status === "paused";
+}
+
+function runId(name: string, startedAt: string): string {
+  const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return `${safeName}-${startedAt.replace(/[^0-9]/g, "")}`;
+}
+
+function promptPreview(prompt: string): string {
+  return prompt.length <= 120 ? prompt : `${prompt.slice(0, 117)}...`;
+}
+
+function initialRunRecord(group: GroupRecord, prompt: string): GroupRunRecord {
+  const startedAt = new Date().toISOString();
+  return {
+    id: runId(group.name, startedAt),
+    status: "running",
+    promptPreview: promptPreview(prompt),
+    startedAt,
+    updatedAt: startedAt,
+    workspaces: group.workspaces.map((workspace) => ({
+      workspace,
+      status: "pending",
+      updatedAt: startedAt,
+    })),
+  };
+}
+
+function updateRunWorkspace(
+  run: GroupRunRecord,
+  workspace: string,
+  update: Partial<GroupRunWorkspaceRecord>,
+): GroupRunRecord {
+  const updatedAt = new Date().toISOString();
+  return {
+    ...run,
+    updatedAt,
+    workspaces: run.workspaces.map((record) =>
+      record.workspace === workspace
+        ? {
+            ...record,
+            ...update,
+            updatedAt,
+          }
+        : record,
+    ),
+  };
+}
+
+function finishRunRecord(
+  run: GroupRunRecord,
+  status: GroupRunStatus,
+): GroupRunRecord {
+  const completedAt = new Date().toISOString();
+  return {
+    ...run,
+    status,
+    updatedAt: completedAt,
+    completedAt,
+  };
+}
+
 function printEvents(events: readonly AgentEvent[], json: boolean): void {
   if (json) {
     for (const e of events) {
@@ -728,6 +835,10 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent bookmark delete <id> [--json]
   curort-cli-agent bookmark search <query> [--limit N] [--json]
   curort-cli-agent group <subcommand> ...
+    create <name> | list | show <name> | add <name> [--workspace <path>] | remove <name> [--workspace <path>]
+    pause <name> [--json] | resume <name> [--json] | delete <name> [--force] [--json]
+    watch <name> [--interval <seconds>] [--once] [--json]
+    run <name> --prompt <text> [--stream <text|json|events>] [--json]
   curort-cli-agent queue <subcommand> ...
   curort-cli-agent skill list [--workspace <path>] [--json]
   curort-cli-agent skill show <name> [--workspace <path>] [--json]
@@ -1541,6 +1652,118 @@ async function runGroup(argv: string[]): Promise<number> {
     }
     return EXIT.OK;
   }
+  if (sub === "pause") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("group pause: missing name");
+      return EXIT.USAGE;
+    }
+    const g = await groupsStore.pauseGroup(name);
+    if (g === undefined) {
+      console.error("group not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(g);
+    } else {
+      console.log(`paused ${g.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "resume") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("group resume: missing name");
+      return EXIT.USAGE;
+    }
+    const g = await groupsStore.resumeGroup(name);
+    if (g === undefined) {
+      console.error("group not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(g);
+    } else {
+      console.log(`resumed ${g.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "delete") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("group delete: missing name");
+      return EXIT.USAGE;
+    }
+    const g = await groupsStore.getGroup(name);
+    if (g === undefined) {
+      console.error("group not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (g.lastRun?.status === "running" && flags["force"] !== true) {
+      console.error("group delete: latest run is running; use --force");
+      return EXIT.ERR;
+    }
+    const deleted = await groupsStore.deleteGroup(name);
+    if (deleted === undefined) {
+      console.error("group not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson({ deleted: true, group: deleted });
+    } else {
+      console.log(`deleted ${deleted.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "watch") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("group watch: missing name");
+      return EXIT.USAGE;
+    }
+    const intervalSeconds = parsePositiveIntegerFlag(flags, "interval", 2);
+    if (intervalSeconds === undefined) {
+      console.error("group watch: --interval must be a positive integer");
+      return EXIT.USAGE;
+    }
+    const repo = await openRepo();
+    try {
+      await repo.importTranscriptsFromFilesystem();
+      const activityManager = createActivityManager({ sessions: repo });
+      while (true) {
+        const g = await groupsStore.getGroup(name);
+        if (g === undefined) {
+          console.error("group not found");
+          return EXIT.NOT_FOUND;
+        }
+        const snapshot = await deriveGroupProgressSnapshot(g, {
+          getActivity: (sessionId) =>
+            activityManager.getSessionActivity(sessionId),
+          now: () => new Date().toISOString(),
+        });
+        if (json) {
+          if (flags["once"] === true) {
+            printJson(snapshot);
+          } else {
+            console.log(JSON.stringify(snapshot));
+          }
+        } else {
+          renderGroupProgressHuman(snapshot);
+        }
+        if (
+          flags["once"] === true ||
+          snapshot.run === undefined ||
+          isTerminalRunStatus(snapshot.run.status)
+        ) {
+          return EXIT.OK;
+        }
+        await sleep(intervalSeconds * 1000);
+        await repo.importTranscriptsFromFilesystem();
+      }
+    } finally {
+      repo.close();
+    }
+  }
   if (sub === "add") {
     const name = pos[0];
     if (name === undefined) {
@@ -1578,6 +1801,10 @@ async function runGroup(argv: string[]): Promise<number> {
       console.error("group not found");
       return EXIT.NOT_FOUND;
     }
+    if (g.lifecycleState === "paused") {
+      console.error("group run: group is paused");
+      return EXIT.ERR;
+    }
     const sm = resolveStreamMode(flags);
     if ("error" in sm) {
       console.error("group run: --stream must be text, json, or events");
@@ -1587,7 +1814,36 @@ async function runGroup(argv: string[]): Promise<number> {
     const repo = await openRepo();
     const activityManager = createActivityManager({ sessions: repo });
     const activityClassifier = createActivitySignalClassifier();
+    let groupWriteChain: Promise<void> = Promise.resolve();
+    const enqueueGroupRunUpdate = (
+      nextRun: GroupRunRecord,
+      lifecycleState?: GroupLifecycleState,
+    ): void => {
+      groupWriteChain = groupWriteChain.then(async () => {
+        await groupsStore.updateGroupRun(name, {
+          ...(lifecycleState !== undefined ? { lifecycleState } : {}),
+          lastRun: nextRun,
+        });
+      });
+    };
+    let run = initialRunRecord(g, prompt);
+    enqueueGroupRunUpdate(run, "active");
+    await groupWriteChain;
     for (const w of g.workspaces) {
+      const latest = await groupsStore.getGroup(name);
+      if (latest?.lifecycleState === "paused") {
+        run = finishRunRecord(run, "paused");
+        enqueueGroupRunUpdate(run, "paused");
+        await groupWriteChain;
+        return EXIT.OK;
+      }
+      const startedAt = new Date().toISOString();
+      run = updateRunWorkspace(run, w, {
+        status: "running",
+        startedAt,
+      });
+      enqueueGroupRunUpdate(run);
+      await groupWriteChain;
       const norm = new StreamNormalizerState();
       const textState: TextStreamRenderState = {
         lastAssistantBySession: new Map(),
@@ -1602,7 +1858,7 @@ async function runGroup(argv: string[]): Promise<number> {
           recordActivitySignal(activityManager, sessionId, signal),
         );
       };
-      const exit = await runHeadlessStreaming(
+      const exit = await runHeadlessStreamingImpl(
         buildHeadlessRunOptions(resolve(w), prompt, flags),
         (line) => {
           const events = norm.processLine(line);
@@ -1611,6 +1867,11 @@ async function runGroup(argv: string[]): Promise<number> {
             const sessionId = sessionIdFromEvent(event);
             if (sessionId !== undefined) {
               lastSessionId = sessionId;
+              run = updateRunWorkspace(run, w, {
+                localSessionId: sessionId,
+                status: "running",
+              });
+              enqueueGroupRunUpdate(run);
             }
             enqueueActivitySignal(
               sessionId,
@@ -1619,6 +1880,21 @@ async function runGroup(argv: string[]): Promise<number> {
           }
         },
       );
+      const completedAt = new Date().toISOString();
+      const workspaceUpdate: Partial<GroupRunWorkspaceRecord> = {
+        status: exit.code === 0 || exit.code === null ? "completed" : "failed",
+        completedAt,
+      };
+      if (exit.code !== null) {
+        run = updateRunWorkspace(run, w, {
+          ...workspaceUpdate,
+          exitCode: exit.code,
+        });
+      } else {
+        run = updateRunWorkspace(run, w, workspaceUpdate);
+      }
+      enqueueGroupRunUpdate(run);
+      await groupWriteChain;
       enqueueActivitySignal(
         lastSessionId,
         activityClassifier.classifyProcessResult(
@@ -1629,15 +1905,24 @@ async function runGroup(argv: string[]): Promise<number> {
       );
       await activityWriteChain;
       if (isTrustFailureMessage(exit.stderr)) {
+        run = finishRunRecord(run, "failed");
+        enqueueGroupRunUpdate(run, "failed");
+        await groupWriteChain;
         console.error(exit.stderr);
         return EXIT.TRUST;
       }
       if (exit.code !== 0 && exit.code !== null) {
+        run = finishRunRecord(run, "failed");
+        enqueueGroupRunUpdate(run, "failed");
+        await groupWriteChain;
         console.error(exit.stderr || `run failed in ${w}`);
         return EXIT.CURSOR;
       }
       await repo.importTranscriptsFromFilesystem();
     }
+    run = finishRunRecord(run, "completed");
+    enqueueGroupRunUpdate(run, "completed");
+    await groupWriteChain;
     return EXIT.OK;
   }
 

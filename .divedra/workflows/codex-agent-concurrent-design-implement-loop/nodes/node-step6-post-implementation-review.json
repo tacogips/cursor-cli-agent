@@ -1,0 +1,11 @@
+{
+  "id": "step6-post-implementation-review",
+  "description": "Review the delegated implementation result for the selected plan.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step6-post-implementation-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_revision true only when the selected plan needs another delegated implementation pass."
+  }
+}
