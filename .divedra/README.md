@@ -96,6 +96,15 @@ task divedra-global-parity -- \
   --output json
 ```
 
+Run the bundled global parity design-plan workflow for the phase-4 HTTP server
+slice with at most one delegated implementation:
+
+```bash
+task divedra-global-parity -- \
+  --variables '{"targetPhases":["4"],"maxItemsPerRun":1,"referenceRepositoryRoot":"/g/gits/tacogips/codex-agent"}' \
+  --output json
+```
+
 Run the bundled codex-agent concurrent design/implementation workflow with at
 most one delegated implementation:
 
@@ -136,3 +145,12 @@ from Cursor `scored_commits` plus file-intelligence attribution, explicit
 provenance and completeness notes, repository-owned analytics indexes, valid
 `0%` AI preservation, TEXT numeric column handling, and degraded-state
 reporting.
+
+For `P4-HTTP-SERVER`, it covers `curort-cli-agent server start`, foreground
+Bun HTTP server startup/shutdown, loopback tokenless operation, non-loopback
+static bearer token requirements, `GET /api/health`, `GET /api/version`,
+normalized `GET /api/sessions`, `GET /api/sessions/:id`, `GET
+/api/sessions/:id/messages`, `GET /api/search/sessions?q=<query>`, `GET
+/api/search/transcripts?q=<query>`, shared JSON error envelopes, and the
+accepted sandbox limitation that real socket smoke checks may need to be rerun
+outside restricted workflow execution environments.

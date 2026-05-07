@@ -56,6 +56,11 @@ import { FileIntelligenceIndex } from "../persistence/file-intelligence-index";
 import { RepositoryAnalyticsIndex } from "../persistence/repository-analytics-index";
 import { SessionIndexRepository } from "../persistence/session-index";
 import { createRepositoryAnalyticsService } from "../repository-analytics";
+import {
+  resolveHttpServerConfig,
+  startHttpServer,
+  type ServerStartResult,
+} from "../server";
 import type { AgentEvent } from "../types/agent-event";
 import type {
   BookmarkFilter,
@@ -105,18 +110,26 @@ import type {
 } from "../types/repository-analytics";
 
 type HeadlessStreamingRunner = typeof runHeadlessStreaming;
+type HttpServerStarter = typeof startHttpServer;
 
 let runHeadlessStreamingImpl: HeadlessStreamingRunner = runHeadlessStreaming;
+let startHttpServerImpl: HttpServerStarter = startHttpServer;
 
 export function setCliTestOverrides(overrides: {
   readonly runHeadlessStreaming?: HeadlessStreamingRunner;
+  readonly startHttpServer?: HttpServerStarter;
 }): () => void {
   const previousRunHeadlessStreaming = runHeadlessStreamingImpl;
+  const previousStartHttpServer = startHttpServerImpl;
   if (overrides.runHeadlessStreaming !== undefined) {
     runHeadlessStreamingImpl = overrides.runHeadlessStreaming;
   }
+  if (overrides.startHttpServer !== undefined) {
+    startHttpServerImpl = overrides.startHttpServer;
+  }
   return () => {
     runHeadlessStreamingImpl = previousRunHeadlessStreaming;
+    startHttpServerImpl = previousStartHttpServer;
   };
 }
 
@@ -326,6 +339,64 @@ function parseNonNegativeIntegerFlag(
     return undefined;
   }
   return parsed;
+}
+
+export interface ServerStartArgs {
+  readonly host?: string;
+  readonly port?: number;
+  readonly token?: string;
+  readonly json?: boolean;
+}
+
+function parseTcpPortFlag(
+  flags: Record<string, string | boolean>,
+): number | undefined | null {
+  const value = flags["port"];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (
+    !Number.isInteger(parsed) ||
+    !Number.isFinite(parsed) ||
+    parsed < 0 ||
+    parsed > 65535
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+export function parseServerStartArgs(
+  argv: readonly string[],
+): { args: ServerStartArgs } | { error: string } {
+  const { rest: pos, flags } = parseFlags([...argv]);
+  if (pos.length > 0) {
+    return { error: "server start: unexpected positional arguments" };
+  }
+  const host = flags["host"];
+  if (host !== undefined && typeof host !== "string") {
+    return { error: "server start: --host requires a host" };
+  }
+  const token = flags["token"];
+  if (token !== undefined && typeof token !== "string") {
+    return { error: "server start: --token requires a token" };
+  }
+  const port = parseTcpPortFlag(flags);
+  if (port === null) {
+    return { error: "server start: --port must be an integer from 0 to 65535" };
+  }
+  return {
+    args: {
+      ...(typeof host === "string" ? { host } : {}),
+      ...(port !== undefined ? { port } : {}),
+      ...(typeof token === "string" ? { token } : {}),
+      ...(flags["json"] === true ? { json: true } : {}),
+    },
+  };
 }
 
 function parseSessionSearchOptions(
@@ -884,6 +955,18 @@ function printJson(v: unknown): void {
   console.log(JSON.stringify(v, null, 2));
 }
 
+export function renderServerStartResult(
+  result: ServerStartResult,
+  json: boolean,
+): void {
+  if (json) {
+    printJson(result);
+    return;
+  }
+  console.log(`Server listening on ${result.url}`);
+  console.log(`Auth: ${result.auth}`);
+}
+
 function renderGroupProgressHuman(snapshot: GroupProgressSnapshot): void {
   console.log(
     `${snapshot.group.name}  lifecycle=${snapshot.group.lifecycleState}  run=${snapshot.run?.status ?? "none"}  updated=${snapshot.updatedAt}`,
@@ -1204,7 +1287,7 @@ export async function runCli(argv: string[]): Promise<number> {
     run <name> [--stream <text|json|events>] [--json]
   curort-cli-agent skill list [--workspace <path>] [--json]
   curort-cli-agent skill show <name> [--workspace <path>] [--json]
-  curort-cli-agent server ...  (phase 2; not implemented yet)
+  curort-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--json]
   curort-cli-agent daemon ...  (phase 2; not implemented yet)
 `);
     return EXIT.USAGE;
@@ -1215,7 +1298,11 @@ export async function runCli(argv: string[]): Promise<number> {
     return EXIT.OK;
   }
 
-  if (cmd === "server" || cmd === "daemon") {
+  if (cmd === "server") {
+    return runServer(tail);
+  }
+
+  if (cmd === "daemon") {
     console.error(
       `${cmd}: not implemented in phase 1 (planned for phase 2; see design-docs/specs/command.md)`,
     );
@@ -1255,6 +1342,61 @@ export async function runCli(argv: string[]): Promise<number> {
 
   console.error(`Unknown command: ${cmd}`);
   return EXIT.USAGE;
+}
+
+async function waitForTerminationSignal(): Promise<void> {
+  await new Promise<void>((resolveWait) => {
+    const cleanup = (): void => {
+      process.off("SIGINT", onSignal);
+      process.off("SIGTERM", onSignal);
+    };
+    const onSignal = (): void => {
+      cleanup();
+      resolveWait();
+    };
+    process.once("SIGINT", onSignal);
+    process.once("SIGTERM", onSignal);
+  });
+}
+
+async function runServer(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub !== "start") {
+    console.error(
+      sub === undefined
+        ? "server: missing subcommand"
+        : `Unknown server subcommand: ${sub}`,
+    );
+    return EXIT.USAGE;
+  }
+  const parsed = parseServerStartArgs(rest);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+  try {
+    const config = resolveHttpServerConfig(parsed.args);
+    const handle = await startHttpServerImpl(config);
+    const result: ServerStartResult = {
+      status: "running",
+      host: handle.host,
+      port: handle.port,
+      url: handle.url,
+      auth: config.token === undefined ? "none" : "bearer",
+    };
+    renderServerStartResult(result, parsed.args.json === true);
+    try {
+      await waitForTerminationSignal();
+      return EXIT.OK;
+    } finally {
+      await handle.stop();
+    }
+  } catch (error) {
+    console.error(
+      error instanceof Error ? error.message : "server start failed",
+    );
+    return EXIT.ERR;
+  }
 }
 
 async function runActivity(argv: string[]): Promise<number> {

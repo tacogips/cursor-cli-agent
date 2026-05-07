@@ -14,6 +14,7 @@ import {
 import { Database } from "bun:sqlite";
 
 import { runCli, setCliTestOverrides } from "./cli";
+import { parseServerStartArgs, renderServerStartResult } from "./cli";
 import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
@@ -1286,6 +1287,130 @@ CREATE TABLE tracked_file_content (
     expect(snapshot.group.name).toBe("watch-lines");
     expect(snapshot.provenance).toBe("group-store+activity");
     expect(snapshot.totals.completed).toBe(1);
+  });
+});
+
+describe("CLI server command", () => {
+  beforeEach(async () => {
+    testDir = await mkdtemp(join(tmpdir(), "curort-cli-server-"));
+    process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
+    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    logs = [];
+    errors = [];
+    logSpy = spyOn(console, "log").mockImplementation((message?: unknown) => {
+      logs.push(String(message ?? ""));
+    });
+    errorSpy = spyOn(console, "error").mockImplementation(
+      (message?: unknown) => {
+        errors.push(String(message ?? ""));
+      },
+    );
+  });
+
+  afterEach(async () => {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    restoreEnv();
+    await rm(testDir, { recursive: true, force: true });
+  });
+
+  test("parses server start flags and validates TCP port range", () => {
+    const parsed = parseServerStartArgs([
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "0",
+      "--token",
+      "secret",
+      "--json",
+    ]);
+    expect("args" in parsed ? parsed.args : undefined).toEqual({
+      host: "127.0.0.1",
+      port: 0,
+      token: "secret",
+      json: true,
+    });
+
+    const invalid = parseServerStartArgs(["--port", "65536"]);
+    expect("error" in invalid ? invalid.error : undefined).toBe(
+      "server start: --port must be an integer from 0 to 65535",
+    );
+  });
+
+  test("renders server start output in JSON and human modes", () => {
+    renderServerStartResult(
+      {
+        status: "running",
+        host: "127.0.0.1",
+        port: 1234,
+        url: "http://127.0.0.1:1234",
+        auth: "bearer",
+      },
+      true,
+    );
+    expect(JSON.parse(logs[0] ?? "{}")).toEqual({
+      status: "running",
+      host: "127.0.0.1",
+      port: 1234,
+      url: "http://127.0.0.1:1234",
+      auth: "bearer",
+    });
+
+    logs = [];
+    renderServerStartResult(
+      {
+        status: "running",
+        host: "127.0.0.1",
+        port: 4321,
+        url: "http://127.0.0.1:4321",
+        auth: "none",
+      },
+      false,
+    );
+    expect(logs).toEqual([
+      "Server listening on http://127.0.0.1:4321",
+      "Auth: none",
+    ]);
+  });
+
+  test("starts server command and stops on SIGTERM", async () => {
+    let stopped = false;
+    const restore = setCliTestOverrides({
+      startHttpServer: async (config) => ({
+        host: config.host,
+        port: 3210,
+        url: `http://${config.host}:3210`,
+        async stop(): Promise<void> {
+          stopped = true;
+        },
+      }),
+    });
+    try {
+      const run = runCli([
+        "bun",
+        "curort-cli-agent",
+        "server",
+        "start",
+        "--port",
+        "0",
+        "--json",
+      ]);
+      await new Promise<void>((resolveWait) => {
+        setTimeout(resolveWait, 0);
+      });
+      process.emit("SIGTERM");
+      const exit = await run;
+      expect(exit).toBe(0);
+      expect(stopped).toBe(true);
+      expect(JSON.parse(logs.join("\n"))).toMatchObject({
+        status: "running",
+        host: "127.0.0.1",
+        port: 3210,
+        auth: "none",
+      });
+    } finally {
+      restore();
+    }
   });
 });
 

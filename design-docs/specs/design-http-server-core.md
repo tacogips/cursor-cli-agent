@@ -11,17 +11,20 @@ The HTTP server exposes repository-owned Cursor session models through local RES
 - Backlog ID: `P4-HTTP-SERVER`
 - Target feature area: `http server`
 - Requested behavior: normalized local REST server runtime, configuration, health/version routes, session detail/list/search routes, error envelope, and CLI server start behavior
-- Dependencies: `P1-CORE-FOUNDATION`, `P2-SESSION-SEARCH`, `P2-TRANSCRIPT-SEARCH`
+- Dependencies: `P2-BOOKMARKS`, `P3-GROUP-LIFECYCLE`, `P3-QUEUE-LIFECYCLE`, `P3-FILE-INTELLIGENCE`
 
 ## Codex Reference Mapping
 
-Use `/Users/taco/gits/tacogips/codex-agent` as the parity reference.
+Use `/g/gits/tacogips/codex-agent` as the parity reference for this delegated workflow run.
 
 Relevant reference files:
 
-- `/Users/taco/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`
-- `/Users/taco/gits/tacogips/codex-agent/design-docs/specs/design-codex-session-management.md`
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.ts`
+- `/g/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`
+- `/g/gits/tacogips/codex-agent/design-docs/specs/design-codex-session-management.md`
+- `/g/gits/tacogips/codex-agent/src/session/index.ts`
+- `/g/gits/tacogips/codex-agent/src/session/sqlite.ts`
+- `/g/gits/tacogips/codex-agent/src/types/session.ts`
+- `/g/gits/tacogips/codex-agent/src/graphql/index.ts`
 
 Reference behavior to preserve:
 
