@@ -71,7 +71,15 @@ import {
   startHttpServer,
   type ServerStartResult,
 } from "../server";
+import { createDaemonManager, type DaemonManager } from "../daemon/manager";
 import type { AgentEvent } from "../types/agent-event";
+import type {
+  DaemonStartOptions,
+  DaemonStartResult,
+  DaemonStatusResult,
+  DaemonStopOptions,
+  DaemonStopResult,
+} from "../types/daemon";
 import type {
   BookmarkFilter,
   BookmarkSearchOptions,
@@ -124,22 +132,29 @@ type HttpServerStarter = typeof startHttpServer;
 
 let runHeadlessStreamingImpl: HeadlessStreamingRunner = runHeadlessStreaming;
 let startHttpServerImpl: HttpServerStarter = startHttpServer;
+let daemonManagerImpl: DaemonManager | undefined;
 
 export function setCliTestOverrides(overrides: {
   readonly runHeadlessStreaming?: HeadlessStreamingRunner;
   readonly startHttpServer?: HttpServerStarter;
+  readonly daemonManager?: DaemonManager;
 }): () => void {
   const previousRunHeadlessStreaming = runHeadlessStreamingImpl;
   const previousStartHttpServer = startHttpServerImpl;
+  const previousDaemonManager = daemonManagerImpl;
   if (overrides.runHeadlessStreaming !== undefined) {
     runHeadlessStreamingImpl = overrides.runHeadlessStreaming;
   }
   if (overrides.startHttpServer !== undefined) {
     startHttpServerImpl = overrides.startHttpServer;
   }
+  if (overrides.daemonManager !== undefined) {
+    daemonManagerImpl = overrides.daemonManager;
+  }
   return () => {
     runHeadlessStreamingImpl = previousRunHeadlessStreaming;
     startHttpServerImpl = previousStartHttpServer;
+    daemonManagerImpl = previousDaemonManager;
   };
 }
 
@@ -358,6 +373,14 @@ export interface ServerStartArgs {
   readonly json?: boolean;
 }
 
+interface DaemonStartArgs extends DaemonStartOptions {
+  readonly json?: boolean;
+}
+
+interface DaemonStopArgs extends DaemonStopOptions {
+  readonly json?: boolean;
+}
+
 interface TokenCreateArgs {
   readonly name: string;
   readonly permissions?: readonly AuthPermission[];
@@ -472,6 +495,62 @@ export function parseServerStartArgs(
       ...(typeof host === "string" ? { host } : {}),
       ...(port !== undefined ? { port } : {}),
       ...(typeof token === "string" ? { token } : {}),
+      ...(flags["json"] === true ? { json: true } : {}),
+    },
+  };
+}
+
+export function parseDaemonStartArgs(
+  argv: readonly string[],
+): { args: DaemonStartArgs } | { error: string } {
+  const { rest: pos, flags } = parseFlags([...argv]);
+  if (pos.length > 0) {
+    return { error: "daemon start: unexpected positional arguments" };
+  }
+  const host = flags["host"];
+  if (host !== undefined && typeof host !== "string") {
+    return { error: "daemon start: --host requires a host" };
+  }
+  const token = flags["token"];
+  if (token !== undefined && typeof token !== "string") {
+    return { error: "daemon start: --token requires a token" };
+  }
+  const port = parseTcpPortFlag(flags);
+  if (port === null) {
+    return { error: "daemon start: --port must be an integer from 0 to 65535" };
+  }
+  const timeoutMs = parseOptionalPositiveIntegerFlag(flags, "timeout-ms");
+  if (timeoutMs === null) {
+    return { error: "daemon start: --timeout-ms must be a positive integer" };
+  }
+  return {
+    args: {
+      ...(typeof host === "string" ? { host } : {}),
+      ...(port !== undefined ? { port } : {}),
+      ...(typeof token === "string" ? { token } : {}),
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      ...(flags["json"] === true ? { json: true } : {}),
+    },
+  };
+}
+
+function parseDaemonStopArgs(
+  argv: readonly string[],
+): { args: DaemonStopArgs } | { error: string } {
+  const { rest: pos, flags } = parseFlags([...argv]);
+  if (pos.length > 0) {
+    return { error: "daemon stop: unexpected positional arguments" };
+  }
+  if (flags["force"] === true) {
+    return { error: "daemon stop: --force is not supported" };
+  }
+  const timeoutMs = parseOptionalPositiveIntegerFlag(flags, "timeout-ms");
+  if (timeoutMs === null) {
+    return { error: "daemon stop: --timeout-ms must be a positive integer" };
+  }
+  return {
+    args: {
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
       ...(flags["json"] === true ? { json: true } : {}),
     },
   };
@@ -1065,6 +1144,70 @@ export function renderServerStartResult(
   console.log(`Auth: ${result.auth}`);
 }
 
+export function renderDaemonStartResult(
+  result: DaemonStartResult,
+  json: boolean,
+): void {
+  if (json) {
+    printJson(result);
+    return;
+  }
+  if (result.state === "running" && result.metadata !== undefined) {
+    console.log(
+      `Daemon running pid=${result.metadata.pid} url=${result.metadata.baseUrl}`,
+    );
+    console.log(`Auth: ${result.metadata.auth.mode}`);
+    return;
+  }
+  console.log(`Daemon failed: ${result.staleReason ?? "readiness failed"}`);
+}
+
+function renderDaemonStatusResult(
+  result: DaemonStatusResult,
+  json: boolean,
+): void {
+  if (json) {
+    printJson(result);
+    return;
+  }
+  if (result.metadata === undefined) {
+    console.log(`Daemon ${result.state}`);
+    if (result.staleReason !== undefined) {
+      console.log(`Reason: ${result.staleReason}`);
+    }
+    return;
+  }
+  console.log(
+    `Daemon ${result.state} pid=${result.metadata.pid} url=${result.metadata.baseUrl}`,
+  );
+  console.log(`Started: ${result.metadata.startedAt}`);
+  if (result.staleReason !== undefined) {
+    console.log(`Reason: ${result.staleReason}`);
+  }
+}
+
+function renderDaemonStopResult(result: DaemonStopResult, json: boolean): void {
+  if (json) {
+    printJson(result);
+    return;
+  }
+  if (result.stopped) {
+    console.log(
+      `Daemon stopped${result.metadata !== undefined ? ` pid=${result.metadata.pid}` : ""}`,
+    );
+    return;
+  }
+  if (result.state === "stopped") {
+    console.log("Daemon stopped");
+    return;
+  }
+  if (result.state === "stale") {
+    console.log(`Daemon stale: ${result.staleReason}`);
+    return;
+  }
+  console.log(`Daemon failed: ${result.reason}`);
+}
+
 function renderGroupProgressHuman(snapshot: GroupProgressSnapshot): void {
   console.log(
     `${snapshot.group.name}  lifecycle=${snapshot.group.lifecycleState}  run=${snapshot.run?.status ?? "none"}  updated=${snapshot.updatedAt}`,
@@ -1390,7 +1533,9 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent token revoke <id> [--json]
   curort-cli-agent token rotate <id> [--json]
   curort-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--json]
-  curort-cli-agent daemon ...  (phase 2; not implemented yet)
+  curort-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms N] [--json]
+  curort-cli-agent daemon stop [--timeout-ms N] [--json]
+  curort-cli-agent daemon status [--token <token>] [--json]
 `);
     return EXIT.USAGE;
   }
@@ -1409,10 +1554,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   if (cmd === "daemon") {
-    console.error(
-      `${cmd}: not implemented in phase 1 (planned for phase 2; see design-docs/specs/command.md)`,
-    );
-    return EXIT.ERR;
+    return runDaemon(tail);
   }
 
   if (cmd === "session") {
@@ -1503,6 +1645,77 @@ async function runServer(argv: string[]): Promise<number> {
     );
     return EXIT.ERR;
   }
+}
+
+async function runDaemon(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  const manager = daemonManagerImpl ?? createDaemonManager();
+  if (sub === "start") {
+    const parsed = parseDaemonStartArgs(rest);
+    if ("error" in parsed) {
+      console.error(parsed.error);
+      return EXIT.USAGE;
+    }
+    try {
+      const { json, ...options } = parsed.args;
+      const result = await manager.start(options);
+      renderDaemonStartResult(result, json === true);
+      return result.state === "running" ? EXIT.OK : EXIT.ERR;
+    } catch (error) {
+      console.error(
+        error instanceof Error ? error.message : "daemon start failed",
+      );
+      return EXIT.ERR;
+    }
+  }
+  if (sub === "stop") {
+    const parsed = parseDaemonStopArgs(rest);
+    if ("error" in parsed) {
+      console.error(parsed.error);
+      return EXIT.USAGE;
+    }
+    try {
+      const { json, ...options } = parsed.args;
+      const result = await manager.stop(options);
+      renderDaemonStopResult(result, json === true);
+      return result.state === "failed" ? EXIT.ERR : EXIT.OK;
+    } catch (error) {
+      console.error(
+        error instanceof Error ? error.message : "daemon stop failed",
+      );
+      return EXIT.ERR;
+    }
+  }
+  if (sub === "status") {
+    const { rest: pos, flags } = parseFlags(rest);
+    if (pos.length > 0) {
+      console.error("daemon status: unexpected positional arguments");
+      return EXIT.USAGE;
+    }
+    const token = flags["token"];
+    if (token !== undefined && typeof token !== "string") {
+      console.error("daemon status: --token requires a token");
+      return EXIT.USAGE;
+    }
+    try {
+      const result = await manager.status({
+        ...(typeof token === "string" ? { token } : {}),
+      });
+      renderDaemonStatusResult(result, flags["json"] === true);
+      return EXIT.OK;
+    } catch (error) {
+      console.error(
+        error instanceof Error ? error.message : "daemon status failed",
+      );
+      return EXIT.ERR;
+    }
+  }
+  console.error(
+    sub === undefined
+      ? "daemon: missing subcommand"
+      : `Unknown daemon subcommand: ${sub}`,
+  );
+  return EXIT.USAGE;
 }
 
 async function runToken(argv: string[]): Promise<number> {

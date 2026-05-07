@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, and live server event streaming have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, and daemon lifecycle commands have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -64,6 +64,7 @@ Implemented capabilities:
 - Local API token management: `token create`, `token list`, `token revoke`, and `token rotate` persist repository-owned token metadata under the config directory, store only secret hashes, return raw secrets exactly once, support default `session:read` plus route-facing permissions, and expose metadata-only JSON/human output
 - Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
 - Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
+- Local daemon lifecycle: `daemon start`, `daemon status`, and `daemon stop` supervise the local HTTP/SSE server in a repository-owned background process, persist PID metadata under the config directory, write JSONL lifecycle diagnostics under the data directory, refuse foreign PID termination, and expose stable human/JSON output without raw token values
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -72,7 +73,6 @@ Implemented capabilities:
 Planned capabilities:
 
 - Markdown/task extraction from transcript content
-- Optional daemon lifecycle surface after core CLI stabilizes
 
 Bookmark command examples:
 
@@ -223,6 +223,28 @@ Event routes return `text/event-stream` frames with `id`, `event`, and JSON
 `lastEventId=<event-id>`; the standard `Last-Event-ID` request header takes
 precedence over the query fallback.
 
+Daemon command examples:
+
+```bash
+bun run src/main.ts daemon start --port 0 --json
+bun run src/main.ts daemon status --json
+bun run src/main.ts daemon status --token <token-create-output> --json
+bun run src/main.ts daemon stop --json
+```
+
+`daemon start` launches the same local HTTP/SSE server as `server start` in a
+repository-owned background process. It defaults to host `127.0.0.1` and port
+`0`, records the actual bound URL in `~/.config/curort-cli-agent/daemon.json`
+or `CURORT_CLI_AGENT_CONFIG_DIR`, writes JSONL lifecycle entries to
+`~/.local/share/curort-cli-agent/daemon.log` or `CURORT_CLI_AGENT_DATA_DIR`,
+and waits for `GET /api/health` before reporting success. `daemon status`
+reports `stopped`, `running`, `stale`, or failure states without exposing raw
+token values; when auth is required, pass `--token <token>` or set
+`CURORT_CLI_AGENT_SERVER_TOKEN` so the status health probe can authenticate.
+`daemon stop` removes metadata after owned shutdown and refuses foreign or
+PID-reused processes; ownership requires the daemon process environment to match
+the metadata marker. `daemon stop --force` is intentionally outside this slice.
+
 ## Design Documents
 
 - `design-docs/specs/architecture.md`
@@ -238,6 +260,7 @@ precedence over the query fallback.
 - `design-docs/specs/design-http-server-core.md`
 - `design-docs/specs/design-token-auth.md`
 - `design-docs/specs/design-server-event-streaming.md`
+- `design-docs/specs/design-daemon-lifecycle.md`
 
 ## Implementation Plan
 
@@ -255,6 +278,7 @@ precedence over the query fallback.
 - `impl-plans/active/http-server-core.md`
 - `impl-plans/active/token-auth.md`
 - `impl-plans/active/server-event-streaming.md`
+- `impl-plans/active/daemon-lifecycle.md`
 
 ## Reference Project
 

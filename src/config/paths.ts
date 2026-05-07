@@ -88,6 +88,14 @@ export function activitySignalsJsonPath(): string {
   return join(getDataDir(), "activity-signals.json");
 }
 
+export function daemonMetadataPath(): string {
+  return join(getConfigDir(), "daemon.json");
+}
+
+export function daemonLifecycleLogPath(): string {
+  return join(getDataDir(), "daemon.log");
+}
+
 export function cursorProjectsRoot(): string {
   return join(getCursorHome(), "projects");
 }

@@ -23,11 +23,13 @@ This design maps the `codex-agent` Phase 4 daemon/app-server behavior onto this 
 
 ## Codex-Agent Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Requested reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: daemon type contracts, start/stop/status lifecycle, readiness probing, stale PID recovery, and CLI integration.
-- `/Users/taco/gits/tacogips/codex-agent/design-docs/specs/design-codex-session-management.md`: Codex server, persistence, and process-manager architecture used as structural reference only.
-- `/Users/taco/gits/tacogips/codex-agent/README.md`: user-facing command families and development verification commands.
+Inspected reference repository root: `/g/gits/tacogips/codex-agent`
+
+- `/g/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: daemon type contracts, start/stop/status lifecycle, readiness probing, stale PID recovery, and CLI integration.
+- `/g/gits/tacogips/codex-agent/design-docs/specs/design-codex-session-management.md`: Codex server, persistence, and process-manager architecture used as structural reference only.
+- `/g/gits/tacogips/codex-agent/src/session/index.ts`, `/g/gits/tacogips/codex-agent/src/session/sqlite.ts`, and `/g/gits/tacogips/codex-agent/src/types/session.ts`: local state discovery, read-only SQLite access, typed row mapping, and strict domain/result type patterns.
 
 Intentional divergences:
 
@@ -42,6 +44,7 @@ Included:
 
 - daemon metadata model and atomic PID file lifecycle
 - `daemon start`, `daemon stop`, and `daemon status` CLI commands
+- default `daemon start` host/port behavior matching `P4-HTTP-SERVER`
 - stale PID detection and cleanup before start/status
 - background server process spawning and termination
 - readiness polling against the HTTP server health endpoint
@@ -54,6 +57,7 @@ Excluded:
 - implementing SSE event derivation from `P4-SSE`
 - implementing token creation, rotation, or permission checks from `P4-AUTH`
 - remote daemon management across hosts
+- force-killing unknown, foreign, or PID-reused processes
 - direct writes to Cursor transcript, skill, or AI tracking locations
 - cancellation of already-running `cursor-agent` subprocesses beyond server shutdown
 
@@ -92,20 +96,20 @@ Stale cleanup rules:
 4. If the PID is alive but the marker does not match, status is `stale` and the process must not be killed.
 5. If the PID is alive and the marker matches but health fails, status is `stale` or `failed` depending on whether the process is still within startup grace.
 
-`daemon start` should clean stale metadata by default before binding a new server. `daemon stop` should refuse to kill unknown PID owners unless `--force` is explicitly added in a later design.
+`daemon start` should clean stale metadata by default before binding a new server. When `--port` is omitted, it uses the `P4-HTTP-SERVER` default of port `0` so the local runtime selects an available port and records the actual bound port in metadata. `daemon stop` must refuse to kill unknown PID owners; `--force` is out of scope for `P4-DAEMON` and unsafe cleanup remains a manual operator action.
 
 ## Server Supervision
 
 The daemon starts the same server runtime defined by `P4-HTTP-SERVER`. It passes normalized configuration:
 
-- host and port
+- host and port, defaulting to `127.0.0.1` and port `0` through the `P4-HTTP-SERVER` contract when CLI options are omitted
 - data directory and config directory
 - Cursor home override
 - auth configuration from `P4-AUTH`
 - SSE enablement from `P4-SSE`
 - log path and shutdown timeout
 
-The server process should be a detached child of the CLI start command, but still write structured lifecycle diagnostics to repository-owned logs. Supervision for this slice is intentionally simple: one daemon process owns one server process. Automatic restart loops are out of scope unless a later review explicitly requests them.
+The server process should be a detached child of the CLI start command, but still write structured JSONL lifecycle diagnostics to repository-owned logs. Supervision for this slice is intentionally simple: one daemon process owns one server process. Automatic restart loops are out of scope unless a later review explicitly requests them.
 
 ## Readiness Checks
 
@@ -113,7 +117,7 @@ Readiness must be observable by CLI and tests. A start command succeeds only aft
 
 1. PID metadata exists and is parseable.
 2. The process is alive and still matches the daemon marker.
-3. `GET /api/health` or the selected health endpoint returns a successful response.
+3. `GET /api/health`, the health endpoint defined by `P4-HTTP-SERVER`, returns a successful response.
 4. When auth is enabled, the probe uses the configured bearer token and verifies unauthorized probes fail in server/auth tests.
 
 Timeout, interval, and endpoint settings should have defaults and CLI overrides. Readiness failures must terminate the started process when ownership is known and report a clear failure status.
@@ -141,7 +145,7 @@ JSON output must expose stable fields and omit raw token values.
 Default paths:
 
 - metadata: `getConfigDir()/daemon.json`
-- logs: `getDataDir()/daemon.log` and server logs under `getDataDir()/logs/`
+- logs: JSONL daemon lifecycle records at `getDataDir()/daemon.log` and server logs under `getDataDir()/logs/`
 
 The path module should expose helpers rather than scattering path strings through CLI code. Tests should use `CURORT_CLI_AGENT_CONFIG_DIR` and `CURORT_CLI_AGENT_DATA_DIR` overrides.
 
@@ -151,7 +155,7 @@ The path module should expose helpers rather than scattering path strings throug
 |---|---|
 | `P4-HTTP-SERVER` | startable server entrypoint, health endpoint, host/port config, graceful close |
 | `P4-SSE` | optional event stream route that the daemon can leave enabled without owning event semantics |
-| `P4-AUTH` | token validation middleware and safe token config propagation |
+| `P4-AUTH` | token validation middleware and safe token config propagation; the active implementation plan may refer to this same accepted backlog slice as `P4-TOKEN-AUTH` |
 | Phase 1-3 local features | normalized sessions, search, group, queue, bookmark, activity, and file APIs exposed by server |
 
 ## Verification
@@ -159,7 +163,7 @@ The path module should expose helpers rather than scattering path strings throug
 Planned verification commands:
 
 ```bash
-bun test src/daemon/manager.test.ts src/cli/cli.test.ts
+bun test src/daemon/manager.test.ts src/persistence/daemon-metadata-store.test.ts src/cli/cli.test.ts
 task typecheck
 task test
 task ci
@@ -183,11 +187,13 @@ bun run src/main.ts daemon stop --json
 - Parallel feature branches may define route or token names differently; this daemon plan must use dependency contracts when those plans land.
 - Detached process behavior and signal handling can vary across local shells and CI environments.
 
-## Open Questions
+## Resolved Decisions
 
-- Should `daemon start` choose a free port by default or require the server-core default port?
-- Should `daemon stop` ever support `--force`, or should unsafe process ownership always require manual cleanup?
-- Should logs be plain text, JSONL, or both for server dashboard consumption?
+- `daemon start` uses the `P4-HTTP-SERVER` default host `127.0.0.1` and port `0` when omitted; the bound port is persisted in daemon metadata.
+- `daemon stop --force` is not part of `P4-DAEMON`; the daemon must not terminate unknown, foreign, or PID-reused processes.
+- Daemon lifecycle logs are JSONL so later server dashboard or diagnostics work can parse them without changing the daemon contract.
+- Readiness probes use `GET /api/health` and inherit auth behavior from the accepted `P4-AUTH` contract.
+- No user-QA item is required for this slice after these decisions.
 
 ## References
 

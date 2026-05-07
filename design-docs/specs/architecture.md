@@ -252,7 +252,7 @@ and batch implementation planning.
 | `P4-HTTP-SERVER` | `server start` REST JSON surface | server route handlers over domain services | normalized local REST, not raw Cursor or Codex GraphQL payloads |
 | `P4-SSE` | live server event stream | event stream gateway over normalized agent/activity events | SSE is best-effort local event fanout; Cursor stream payloads stay private |
 | `P4-AUTH` | local token lifecycle and bearer checks | token repository and server auth middleware | loopback local mode can remain tokenless; non-loopback requires auth |
-| `P4-DAEMON` | `daemon start/stop/status` | daemon manager supervising server and background watchers | supervision covers this wrapper's processes, not Cursor GUI state |
+| `P4-DAEMON` | `daemon start/stop/status` | daemon manager supervising the local HTTP/SSE server | supervision covers this wrapper's processes, not Cursor GUI state |
 | `P4-PUBLIC-SDK` | import-safe package facade | SDK barrels over domain types, runners, server helpers, testing mocks | raw Cursor transcript and stream payloads are not public contracts |
 | `P5-COMPAT-BRIDGE` | optional GraphQL/app-server-style command bridge | compatibility dispatcher over SDK/domain services | unsupported Codex-only commands report structured capability errors |
 | `P5-TOOL-REGISTRY` | tool/model/version/usage helpers | local tool registry, bounded subprocess helpers, session/activity indexes | no undocumented Cursor cloud model catalog dependency |

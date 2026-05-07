@@ -14,7 +14,12 @@ import {
 import { Database } from "bun:sqlite";
 
 import { runCli, setCliTestOverrides } from "./cli";
-import { parseServerStartArgs, renderServerStartResult } from "./cli";
+import {
+  parseDaemonStartArgs,
+  parseServerStartArgs,
+  renderDaemonStartResult,
+  renderServerStartResult,
+} from "./cli";
 import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
@@ -1878,5 +1883,154 @@ describe("CLI queue lifecycle commands", () => {
     } finally {
       restore();
     }
+  });
+
+  test("parses daemon start flags and validates port and timeout", () => {
+    const parsed = parseDaemonStartArgs([
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "0",
+      "--token",
+      "secret",
+      "--timeout-ms",
+      "2500",
+      "--json",
+    ]);
+    expect("args" in parsed ? parsed.args : undefined).toEqual({
+      host: "127.0.0.1",
+      port: 0,
+      token: "secret",
+      timeoutMs: 2500,
+      json: true,
+    });
+
+    const invalidPort = parseDaemonStartArgs(["--port", "65536"]);
+    expect("error" in invalidPort ? invalidPort.error : undefined).toBe(
+      "daemon start: --port must be an integer from 0 to 65535",
+    );
+    const invalidTimeout = parseDaemonStartArgs(["--timeout-ms", "0"]);
+    expect("error" in invalidTimeout ? invalidTimeout.error : undefined).toBe(
+      "daemon start: --timeout-ms must be a positive integer",
+    );
+  });
+
+  test("renders daemon start output without raw token values", () => {
+    renderDaemonStartResult(
+      {
+        state: "running",
+        metadata: {
+          schemaVersion: 1,
+          state: "running",
+          pid: 123,
+          parentPid: 1,
+          marker: "marker",
+          commandPath: "/bin/bun",
+          host: "127.0.0.1",
+          port: 4444,
+          baseUrl: "http://127.0.0.1:4444",
+          dataDir: "/tmp/data",
+          configDir: "/tmp/config",
+          serverMode: "http",
+          startedAt: "2026-05-07T00:00:00.000Z",
+          auth: { mode: "required", tokenConfigured: true },
+        },
+        readiness: { ready: true, statusCode: 200 },
+      },
+      true,
+    );
+    const parsed = JSON.parse(logs[0] ?? "{}") as {
+      metadata: { auth: { tokenConfigured: boolean }; token?: string };
+    };
+    expect(parsed.metadata.auth.tokenConfigured).toBe(true);
+    expect(parsed.metadata.token).toBeUndefined();
+  });
+
+  test("runs daemon CLI commands through manager override", async () => {
+    const restore = setCliTestOverrides({
+      daemonManager: {
+        async start(options) {
+          expect(options?.port).toBe(0);
+          return {
+            state: "running",
+            metadata: {
+              schemaVersion: 1,
+              state: "running",
+              pid: 456,
+              parentPid: 1,
+              marker: "marker",
+              commandPath: "/bin/bun",
+              host: "127.0.0.1",
+              port: 3210,
+              baseUrl: "http://127.0.0.1:3210",
+              dataDir: "/tmp/data",
+              configDir: "/tmp/config",
+              serverMode: "http",
+              startedAt: "2026-05-07T00:00:00.000Z",
+              auth: { mode: "disabled", tokenConfigured: false },
+            },
+            readiness: { ready: true, statusCode: 200 },
+          };
+        },
+        async status(options) {
+          expect(options?.token).toBe("status-token");
+          return { state: "running" };
+        },
+        async stop() {
+          return { state: "stopped", stopped: true };
+        },
+      },
+    });
+    try {
+      const startExit = await runCli([
+        "bun",
+        "curort-cli-agent",
+        "daemon",
+        "start",
+        "--port",
+        "0",
+        "--json",
+      ]);
+      expect(startExit).toBe(0);
+      expect(JSON.parse(logs.join("\n")).metadata.port).toBe(3210);
+
+      logs = [];
+      const statusExit = await runCli([
+        "bun",
+        "curort-cli-agent",
+        "daemon",
+        "status",
+        "--token",
+        "status-token",
+        "--json",
+      ]);
+      expect(statusExit).toBe(0);
+      expect(JSON.parse(logs.join("\n")).state).toBe("running");
+
+      logs = [];
+      const stopExit = await runCli([
+        "bun",
+        "curort-cli-agent",
+        "daemon",
+        "stop",
+        "--json",
+      ]);
+      expect(stopExit).toBe(0);
+      expect(JSON.parse(logs.join("\n")).stopped).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+
+  test("rejects daemon force stop in this slice", async () => {
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "daemon",
+      "stop",
+      "--force",
+    ]);
+    expect(exit).toBe(2);
+    expect(errors[0]).toBe("daemon stop: --force is not supported");
   });
 });

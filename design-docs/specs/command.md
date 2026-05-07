@@ -337,7 +337,10 @@ Phase-4 scope:
 - `daemon stop`
 - `daemon status`
 
-Phase-1 behavior: invoking `daemon` prints a short message and exits with a non-zero code (feature not yet implemented).
+`P4-DAEMON` replaces the earlier placeholder behavior. The command contract is
+defined in `design-docs/specs/design-daemon-lifecycle.md`: start supervises the
+local HTTP/SSE server, status reports stable human or JSON fields, and stop only
+terminates repository-owned daemon processes.
 
 ## Tool, Model, and Usage Commands
 

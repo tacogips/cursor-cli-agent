@@ -176,3 +176,14 @@ group and queue progress snapshots, `replay=latest|none`, `heartbeatMs`,
 `startOffset`, standard `Last-Event-ID` resume support with `lastEventId` query
 fallback, and the accepted sandbox limitation that real curl SSE smoke checks
 may need to be rerun outside restricted workflow execution environments.
+
+For `P4-DAEMON`, it covers `curort-cli-agent daemon start`, `daemon status`,
+and `daemon stop` on top of the existing local HTTP/SSE server. The refresh
+includes config-owned PID metadata at `daemon.json`, data-owned JSONL lifecycle
+logs at `daemon.log`, default host `127.0.0.1`, default port `0` with actual
+bound port persistence, `GET /api/health` readiness, auth-aware start/status
+probes using runtime token input without persisting raw token values, stale
+metadata cleanup, and the accepted safety rule that foreign or PID-reused
+processes are never terminated because ownership requires a daemon process
+environment marker matching metadata. `daemon stop --force` remains
+intentionally out of scope.
