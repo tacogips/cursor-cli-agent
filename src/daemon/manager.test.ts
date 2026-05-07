@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildCliServerArgs, createDaemonManager } from "./manager";
+import { isAbsolute } from "node:path";
+
+import {
+  buildCliServerArgs,
+  createDaemonManager,
+  resolveCliServerEntrypoint,
+} from "./manager";
 import type { DaemonProcessInspector } from "./process";
 import type { DaemonReadinessProbe } from "./readiness";
 import type {
@@ -93,10 +99,11 @@ describe("daemon manager", () => {
         port: 0,
         token: "secret",
         marker: "marker",
+        cliEntrypoint: "/repo/src/bin.ts",
       }),
     ).toEqual([
       "run",
-      "src/bin.ts",
+      "/repo/src/bin.ts",
       "server",
       "start",
       "--host",
@@ -107,6 +114,13 @@ describe("daemon manager", () => {
       "--token",
       "secret",
     ]);
+  });
+
+  test("resolves an absolute source entrypoint for non-repository daemon cwd", () => {
+    const entrypoint = resolveCliServerEntrypoint();
+
+    expect(isAbsolute(entrypoint)).toBe(true);
+    expect(entrypoint.endsWith("/src/bin.ts")).toBe(true);
   });
 
   test("starts server, writes starting metadata, then promotes to running", async () => {

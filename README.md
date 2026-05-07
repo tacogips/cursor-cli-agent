@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, and daemon lifecycle commands have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, and the public SDK facade have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -65,6 +65,7 @@ Implemented capabilities:
 - Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
 - Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
 - Local daemon lifecycle: `daemon start`, `daemon status`, and `daemon stop` supervise the local HTTP/SSE server in a repository-owned background process, persist PID metadata under the config directory, write JSONL lifecycle diagnostics under the data directory, refuse foreign PID termination, and expose stable human/JSON output without raw token values
+- Public SDK facade: root package, `./sdk`, `./sdk/testing`, `./server`, and `./types` package exports are import-safe and expose normalized Cursor-domain contracts for sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, and deterministic test mocks
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -73,6 +74,24 @@ Implemented capabilities:
 Planned capabilities:
 
 - Markdown/task extraction from transcript content
+
+Public SDK examples:
+
+```ts
+import { createCursorAgentSdk } from "curort-cli-agent";
+import type { CursorAgentSdk } from "curort-cli-agent/types";
+import { createResourceHandlers } from "curort-cli-agent/server";
+import { createMockCursorAgentSdk } from "curort-cli-agent/sdk/testing";
+
+const sdk: CursorAgentSdk = createCursorAgentSdk();
+const sessions = await sdk.sessions.list({ limit: 20 });
+const handlers = createResourceHandlers(createMockCursorAgentSdk());
+```
+
+Importing `curort-cli-agent` or any SDK subpath does not parse CLI arguments,
+spawn Cursor, start the daemon, or write state by itself. CLI execution remains
+behind `src/bin.ts` and the published `curort-cli-agent` binary, while
+`src/main.ts` exposes callable CLI entrypoints for programmatic use.
 
 Bookmark command examples:
 
@@ -237,7 +256,10 @@ repository-owned background process. It defaults to host `127.0.0.1` and port
 `0`, records the actual bound URL in `~/.config/curort-cli-agent/daemon.json`
 or `CURORT_CLI_AGENT_CONFIG_DIR`, writes JSONL lifecycle entries to
 `~/.local/share/curort-cli-agent/daemon.log` or `CURORT_CLI_AGENT_DATA_DIR`,
-and waits for `GET /api/health` before reporting success. `daemon status`
+resolves the executable server entrypoint as an absolute `src/bin.ts` or
+`dist/bin.js` path so daemon startup does not depend on the caller's current
+working directory, and waits for `GET /api/health` before reporting success.
+`daemon status`
 reports `stopped`, `running`, `stale`, or failure states without exposing raw
 token values; when auth is required, pass `--token <token>` or set
 `CURORT_CLI_AGENT_SERVER_TOKEN` so the status health probe can authenticate.
@@ -261,6 +283,7 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 - `design-docs/specs/design-token-auth.md`
 - `design-docs/specs/design-server-event-streaming.md`
 - `design-docs/specs/design-daemon-lifecycle.md`
+- `design-docs/specs/design-public-sdk.md`
 
 ## Implementation Plan
 
@@ -279,6 +302,7 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 - `impl-plans/active/token-auth.md`
 - `impl-plans/active/server-event-streaming.md`
 - `impl-plans/active/daemon-lifecycle.md`
+- `impl-plans/active/public-sdk.md`
 
 ## Reference Project
 

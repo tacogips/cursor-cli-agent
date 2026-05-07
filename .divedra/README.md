@@ -187,3 +187,15 @@ metadata cleanup, and the accepted safety rule that foreign or PID-reused
 processes are never terminated because ownership requires a daemon process
 environment marker matching metadata. `daemon stop --force` remains
 intentionally out of scope.
+
+For `P4-PUBLIC-SDK`, it covers the import-safe public package facade and
+package exports for `.`, `./sdk`, `./sdk/testing`, `./server`, and `./types`.
+The refresh includes `createCursorAgentSdk`, normalized Cursor-domain SDK
+contracts for sessions, search, groups, queues, bookmarks, files, activity, and
+runner events, deterministic `createMockCursorAgentSdk` testing helpers, server
+helper exports such as `createResourceHandlers`, and the rule that public SDK
+imports must not parse CLI arguments, spawn Cursor, start the daemon, or expose
+raw `src/cursor` adapter payloads. It also covers the accepted daemon startup
+regression fix: daemon server startup resolves an absolute executable
+`src/bin.ts` or `dist/bin.js` entrypoint so module resolution does not depend on
+the caller's current working directory.

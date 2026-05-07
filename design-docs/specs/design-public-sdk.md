@@ -196,6 +196,10 @@ Mocks must be deterministic under strict TypeScript and must not touch Cursor-ma
 
 - Add a library entrypoint separate from the CLI bootstrap.
 - Update `package.json` `exports` after the new compiled entrypoints exist.
+- Daemon/server startup must invoke the executable CLI entrypoint, not the
+  import-safe library entrypoint. Source-mode daemon starts should use
+  `src/bin.ts` so starting the built or source CLI from a non-repository working
+  directory does not fail by resolving the SDK barrel as the process target.
 - Keep Bun and TypeScript strictness unchanged.
 - Avoid adding dependencies unless the server-resource or SSE plans already introduced them.
 - Keep public exports stable, named, and tree-shakeable; avoid exporting entire internal modules with wildcard barrels when that would expose adapters.
@@ -237,6 +241,8 @@ The root import smoke test must not execute CLI behavior.
 ## Risks
 
 - The current package entrypoint is CLI-oriented; SDK implementation must split import-safe library entrypoints from executable startup.
+- Daemon startup can regress if it points at the import-safe `src/main.ts`
+  library wrapper instead of the executable `src/bin.ts` process entrypoint.
 - Public exports can freeze unstable internal shapes too early if adapter types leak.
 - Queue, file, server, and SSE contracts may still be in flight; SDK implementation must gate incomplete surfaces behind dependency completion.
 - Mock helpers can accidentally diverge from real manager behavior unless tests exercise both through shared contracts.

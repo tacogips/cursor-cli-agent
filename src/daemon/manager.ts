@@ -1,8 +1,10 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, appendFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 
 import {
   daemonLifecycleLogPath,
@@ -66,12 +68,13 @@ export interface SpawnServerOptions {
   readonly port: number;
   readonly token?: string;
   readonly marker: string;
+  readonly cliEntrypoint?: string;
 }
 
 export function buildCliServerArgs(options: SpawnServerOptions): string[] {
   const args = [
     "run",
-    "src/bin.ts",
+    options.cliEntrypoint ?? resolveCliServerEntrypoint(),
     "server",
     "start",
     "--host",
@@ -84,6 +87,24 @@ export function buildCliServerArgs(options: SpawnServerOptions): string[] {
     args.push("--token", options.token);
   }
   return args;
+}
+
+function isBinEntrypoint(path: string): boolean {
+  return /(?:^|[/\\])bin\.(?:ts|js)$/.test(path);
+}
+
+export function resolveCliServerEntrypoint(): string {
+  const argvEntrypoint = process.argv[1];
+  if (argvEntrypoint !== undefined && isBinEntrypoint(argvEntrypoint)) {
+    return resolve(argvEntrypoint);
+  }
+
+  const sourceEntrypoint = fileURLToPath(new URL("../bin.ts", import.meta.url));
+  if (existsSync(sourceEntrypoint)) {
+    return sourceEntrypoint;
+  }
+
+  return fileURLToPath(new URL("../bin.js", import.meta.url));
 }
 
 interface ServerStdoutResult {
