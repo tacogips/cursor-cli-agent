@@ -32,6 +32,7 @@ function streamLines(
 export interface HeadlessRunOptions {
   readonly workspace: string;
   readonly prompt: string;
+  readonly cursorBinary?: string;
   readonly model?: string;
   readonly mode?: "default" | "plan" | "ask";
   readonly trust?: boolean;
@@ -53,6 +54,13 @@ export type CursorAgentExit = {
   readonly stdout: string;
   readonly stderr: string;
 };
+
+export interface CursorAgentStreamingProcess {
+  readonly done: Promise<CursorAgentExit>;
+  readonly pid?: number;
+  cancel(): Promise<void>;
+  interrupt(): Promise<void>;
+}
 
 function appendWorktreeArgs(
   args: string[],
@@ -161,8 +169,38 @@ export async function runHeadlessStreaming(
   opts: HeadlessRunOptions,
   onLine: (line: string) => void,
 ): Promise<CursorAgentExit> {
+  return startHeadlessStreaming(opts, onLine).done;
+}
+
+function controlledProcess(
+  proc: ReturnType<typeof spawn>,
+  done: Promise<CursorAgentExit>,
+): CursorAgentStreamingProcess {
+  const control: CursorAgentStreamingProcess = {
+    done,
+    ...(proc.pid !== undefined ? { pid: proc.pid } : {}),
+    async cancel(): Promise<void> {
+      if (proc.killed) {
+        return;
+      }
+      proc.kill("SIGTERM");
+    },
+    async interrupt(): Promise<void> {
+      if (proc.killed) {
+        return;
+      }
+      proc.kill("SIGINT");
+    },
+  };
+  return control;
+}
+
+export function startHeadlessStreaming(
+  opts: HeadlessRunOptions,
+  onLine: (line: string) => void,
+): CursorAgentStreamingProcess {
   const args = buildHeadlessArgs(opts);
-  const proc = spawn("cursor-agent", args, {
+  const proc = spawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -174,12 +212,15 @@ export async function runHeadlessStreaming(
   const linesDone = streamLines(proc, onLine, (chunk) => {
     stdout += chunk;
   });
-  const [code, signal] = (await once(proc, "close")) as [
-    number | null,
-    NodeJS.Signals | null,
-  ];
-  await linesDone;
-  return { code, signal, stdout, stderr };
+  const done = (async (): Promise<CursorAgentExit> => {
+    const [code, signal] = (await once(proc, "close")) as [
+      number | null,
+      NodeJS.Signals | null,
+    ];
+    await linesDone;
+    return { code, signal, stdout, stderr };
+  })();
+  return controlledProcess(proc, done);
 }
 
 export interface ResumeRunOptions extends Omit<HeadlessRunOptions, "prompt"> {
@@ -230,8 +271,15 @@ export async function resumeStreaming(
   opts: ResumeRunOptions,
   onLine: (line: string) => void,
 ): Promise<CursorAgentExit> {
+  return startResumeStreaming(opts, onLine).done;
+}
+
+export function startResumeStreaming(
+  opts: ResumeRunOptions,
+  onLine: (line: string) => void,
+): CursorAgentStreamingProcess {
   const args = buildResumeArgs(opts);
-  const proc = spawn("cursor-agent", args, {
+  const proc = spawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -243,12 +291,15 @@ export async function resumeStreaming(
   const linesDone = streamLines(proc, onLine, (chunk) => {
     stdout += chunk;
   });
-  const [code, signal] = (await once(proc, "close")) as [
-    number | null,
-    NodeJS.Signals | null,
-  ];
-  await linesDone;
-  return { code, signal, stdout, stderr };
+  const done = (async (): Promise<CursorAgentExit> => {
+    const [code, signal] = (await once(proc, "close")) as [
+      number | null,
+      NodeJS.Signals | null,
+    ];
+    await linesDone;
+    return { code, signal, stdout, stderr };
+  })();
+  return controlledProcess(proc, done);
 }
 
 export function isTrustFailureMessage(text: string): boolean {

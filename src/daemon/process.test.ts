@@ -33,7 +33,7 @@ describe("node daemon process inspector", () => {
       },
       async readProcField(_pid, field) {
         if (field === "cmdline") {
-          return "/bin/bun\0run\0src/main.ts\0server\0start\0";
+          return "/bin/bun\0run\0src/bin.ts\0server\0start\0";
         }
         return "PATH=/usr/bin";
       },

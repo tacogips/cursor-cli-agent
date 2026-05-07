@@ -208,8 +208,8 @@ async function save(path: string, data: FileShape): Promise<void> {
 async function mutateQueue(
   name: string,
   update: (queue: QueueRecord, now: string) => QueueRecord,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  const path = queuesJsonPath();
   const data = await load(path);
   const idx = data.queues.findIndex((q) => q.name === name);
   if (idx < 0) {
@@ -226,21 +226,26 @@ async function mutateQueue(
   return updated;
 }
 
-export async function listQueues(): Promise<readonly QueueRecord[]> {
-  const data = await load(queuesJsonPath());
+export async function listQueues(
+  path = queuesJsonPath(),
+): Promise<readonly QueueRecord[]> {
+  const data = await load(path);
   return data.queues;
 }
 
-export async function getQueue(name: string): Promise<QueueRecord | undefined> {
-  const data = await load(queuesJsonPath());
+export async function getQueue(
+  name: string,
+  path = queuesJsonPath(),
+): Promise<QueueRecord | undefined> {
+  const data = await load(path);
   return data.queues.find((q) => q.name === name);
 }
 
 export async function createQueue(
   name: string,
   workspace: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord> {
-  const path = queuesJsonPath();
   const data = await load(path);
   if (data.queues.some((q) => q.name === name)) {
     throw new Error(`queue '${name}' already exists`);
@@ -261,24 +266,29 @@ export async function createQueue(
 export async function addQueueItem(
   name: string,
   prompt: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord> {
-  const updated = await mutateQueue(name, (q, now) => ({
-    ...q,
-    lifecycleState:
-      q.lifecycleState === "completed" ? "active" : q.lifecycleState,
-    updatedAt: now,
-    items: [
-      ...q.items,
-      {
-        id: randomUUID(),
-        prompt,
-        status: "pending",
-        mode: "auto",
-        createdAt: now,
-        updatedAt: now,
-      },
-    ],
-  }));
+  const updated = await mutateQueue(
+    name,
+    (q, now) => ({
+      ...q,
+      lifecycleState:
+        q.lifecycleState === "completed" ? "active" : q.lifecycleState,
+      updatedAt: now,
+      items: [
+        ...q.items,
+        {
+          id: randomUUID(),
+          prompt,
+          status: "pending",
+          mode: "auto",
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    }),
+    path,
+  );
   if (updated === undefined) {
     throw new Error(`queue '${name}' not found`);
   }
@@ -288,12 +298,17 @@ export async function addQueueItem(
 export async function removeQueueItem(
   name: string,
   itemId: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord> {
-  const updated = await mutateQueue(name, (q, now) => ({
-    ...q,
-    updatedAt: now,
-    items: q.items.filter((i) => i.id !== itemId),
-  }));
+  const updated = await mutateQueue(
+    name,
+    (q, now) => ({
+      ...q,
+      updatedAt: now,
+      items: q.items.filter((i) => i.id !== itemId),
+    }),
+    path,
+  );
   if (updated === undefined) {
     throw new Error(`queue '${name}' not found`);
   }
@@ -302,8 +317,8 @@ export async function removeQueueItem(
 
 export async function deleteQueue(
   name: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  const path = queuesJsonPath();
   const data = await load(path);
   const idx = data.queues.findIndex((q) => q.name === name);
   if (idx < 0) {
@@ -319,121 +334,149 @@ export async function deleteQueue(
 
 export async function pauseQueue(
   name: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  return updateQueueRun(name, { lifecycleState: "paused" });
+  return updateQueueRun(name, { lifecycleState: "paused" }, path);
 }
 
 export async function resumeQueue(
   name: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  return updateQueueRun(name, {
-    lifecycleState: "active",
-    stopRequestedAt: undefined,
-  });
+  return updateQueueRun(
+    name,
+    {
+      lifecycleState: "active",
+      stopRequestedAt: undefined,
+    },
+    path,
+  );
 }
 
 export async function requestQueueStop(
   name: string,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  const queue = await getQueue(name);
+  const queue = await getQueue(name, path);
   if (queue === undefined) {
     return undefined;
   }
   if (queue.lastRun?.status !== "running") {
     return queue;
   }
-  return updateQueueRun(name, {
-    lifecycleState: "stopped",
-    stopRequestedAt: new Date().toISOString(),
-  });
+  return updateQueueRun(
+    name,
+    {
+      lifecycleState: "stopped",
+      stopRequestedAt: new Date().toISOString(),
+    },
+    path,
+  );
 }
 
 export async function updateQueueItem(
   name: string,
   itemId: string,
   patch: QueueItemPatch,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  return mutateQueue(name, (q, now) => ({
-    ...q,
-    updatedAt: now,
-    items: q.items.map((item) => {
-      if (item.id !== itemId) {
-        return item;
-      }
-      const status = patch.status ?? item.status;
-      const updated: QueueItemRecord = {
-        id: item.id,
-        prompt: patch.prompt ?? item.prompt,
-        status,
-        mode: patch.mode ?? item.mode,
-        createdAt: item.createdAt,
-        updatedAt: now,
-      };
-      if (status === "pending") {
-        return updated;
-      }
-      return {
-        ...updated,
-        ...(item.startedAt !== undefined ? { startedAt: item.startedAt } : {}),
-        ...(item.completedAt !== undefined
-          ? { completedAt: item.completedAt }
-          : {}),
-        ...(item.localSessionId !== undefined
-          ? { localSessionId: item.localSessionId }
-          : {}),
-        ...(item.cursorChatId !== undefined
-          ? { cursorChatId: item.cursorChatId }
-          : {}),
-        ...(item.result !== undefined ? { result: item.result } : {}),
-      };
+  return mutateQueue(
+    name,
+    (q, now) => ({
+      ...q,
+      updatedAt: now,
+      items: q.items.map((item) => {
+        if (item.id !== itemId) {
+          return item;
+        }
+        const status = patch.status ?? item.status;
+        const updated: QueueItemRecord = {
+          id: item.id,
+          prompt: patch.prompt ?? item.prompt,
+          status,
+          mode: patch.mode ?? item.mode,
+          createdAt: item.createdAt,
+          updatedAt: now,
+        };
+        if (status === "pending") {
+          return updated;
+        }
+        return {
+          ...updated,
+          ...(item.startedAt !== undefined
+            ? { startedAt: item.startedAt }
+            : {}),
+          ...(item.completedAt !== undefined
+            ? { completedAt: item.completedAt }
+            : {}),
+          ...(item.localSessionId !== undefined
+            ? { localSessionId: item.localSessionId }
+            : {}),
+          ...(item.cursorChatId !== undefined
+            ? { cursorChatId: item.cursorChatId }
+            : {}),
+          ...(item.result !== undefined ? { result: item.result } : {}),
+        };
+      }),
     }),
-  }));
+    path,
+  );
 }
 
 export async function moveQueueItem(
   name: string,
   from: number,
   to: number,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  return mutateQueue(name, (q, now) => {
-    const item = q.items[from];
-    if (item === undefined) {
-      return q;
-    }
-    const without = q.items.filter((_, index) => index !== from);
-    return {
-      ...q,
-      updatedAt: now,
-      items: [...without.slice(0, to), item, ...without.slice(to)],
-    };
-  });
+  return mutateQueue(
+    name,
+    (q, now) => {
+      const item = q.items[from];
+      if (item === undefined) {
+        return q;
+      }
+      const without = q.items.filter((_, index) => index !== from);
+      return {
+        ...q,
+        updatedAt: now,
+        items: [...without.slice(0, to), item, ...without.slice(to)],
+      };
+    },
+    path,
+  );
 }
 
 export async function updateQueueRun(
   name: string,
   update: QueueStoreUpdate,
+  path = queuesJsonPath(),
 ): Promise<QueueRecord | undefined> {
-  return mutateQueue(name, (q, now) => {
-    const updated: QueueRecord = {
-      name: q.name,
-      workspace: q.workspace,
-      lifecycleState: update.lifecycleState ?? q.lifecycleState,
-      ...(q.createdAt !== undefined ? { createdAt: q.createdAt } : {}),
-      updatedAt: now,
-      ...(update.lastRun !== undefined
-        ? { lastRun: update.lastRun }
-        : q.lastRun !== undefined
-          ? { lastRun: q.lastRun }
-          : {}),
-      items: update.items ?? q.items,
-    };
-    const hasStopRequest = Object.hasOwn(update, "stopRequestedAt");
-    if (!hasStopRequest && q.stopRequestedAt !== undefined) {
-      return { ...updated, stopRequestedAt: q.stopRequestedAt };
-    }
-    if (hasStopRequest && update.stopRequestedAt !== undefined) {
-      return { ...updated, stopRequestedAt: update.stopRequestedAt };
-    }
-    return updated;
-  });
+  return mutateQueue(
+    name,
+    (q, now) => {
+      const updated: QueueRecord = {
+        name: q.name,
+        workspace: q.workspace,
+        lifecycleState: update.lifecycleState ?? q.lifecycleState,
+        ...(q.createdAt !== undefined ? { createdAt: q.createdAt } : {}),
+        updatedAt: now,
+        ...(update.lastRun !== undefined
+          ? { lastRun: update.lastRun }
+          : q.lastRun !== undefined
+            ? { lastRun: q.lastRun }
+            : {}),
+        items: update.items ?? q.items,
+      };
+      const hasStopRequest = Object.hasOwn(update, "stopRequestedAt");
+      if (!hasStopRequest && q.stopRequestedAt !== undefined) {
+        return { ...updated, stopRequestedAt: q.stopRequestedAt };
+      }
+      if (hasStopRequest && update.stopRequestedAt !== undefined) {
+        return { ...updated, stopRequestedAt: update.stopRequestedAt };
+      }
+      return updated;
+    },
+    path,
+  );
 }

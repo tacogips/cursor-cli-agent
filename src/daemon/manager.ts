@@ -68,6 +68,24 @@ export interface SpawnServerOptions {
   readonly marker: string;
 }
 
+export function buildCliServerArgs(options: SpawnServerOptions): string[] {
+  const args = [
+    "run",
+    "src/bin.ts",
+    "server",
+    "start",
+    "--host",
+    options.host,
+    "--port",
+    String(options.port),
+    "--json",
+  ];
+  if (options.token !== undefined) {
+    args.push("--token", options.token);
+  }
+  return args;
+}
+
 interface ServerStdoutResult {
   readonly host: string;
   readonly port: number;
@@ -148,20 +166,7 @@ async function waitForServerStdout(
 export async function spawnCliServer(
   options: SpawnServerOptions,
 ): Promise<SpawnedDaemonServer> {
-  const args = [
-    "run",
-    "src/main.ts",
-    "server",
-    "start",
-    "--host",
-    options.host,
-    "--port",
-    String(options.port),
-    "--json",
-  ];
-  if (options.token !== undefined) {
-    args.push("--token", options.token);
-  }
+  const args = buildCliServerArgs(options);
   const child = spawn(process.execPath, args, {
     cwd: process.cwd(),
     detached: true,

@@ -1,6 +1,7 @@
 # Public SDK Facade Implementation Plan
 
-**Status**: Ready
+**Status**: Completed
+**Issue Reference**: `parity-global-design-plan-implement-loop#P4-PUBLIC-SDK`
 **Design Reference**: `design-docs/specs/design-public-sdk.md`
 **Created**: 2026-05-06
 **Last Updated**: 2026-05-07
@@ -13,41 +14,37 @@
 
 ### Summary
 
-Implement Phase 4 `P4-PUBLIC-SDK`: stable import-safe package exports for normalized sessions, search, groups, queues, bookmarks, files, activity, agent runner events, server helpers, and testing mocks.
+Implement Phase 4 `P4-PUBLIC-SDK`: stable, import-safe package exports for normalized sessions, search, groups, queues, bookmarks, files, activity, agent runner events, server helpers, and deterministic testing mocks.
 
 ### Scope
 
-**Included**: library entrypoint split from CLI startup, SDK barrels, facade contracts, runner abstractions, server helper shells, testing mocks, package export metadata, and import/export tests.
+**Included**: import-safe library entrypoints, SDK barrels, facade contracts and factories, runner abstraction, server helper exports bound to local HTTP/SSE contracts, testing mocks, package export metadata, and import/export smoke tests.
+**Excluded**: raw Cursor adapter payload exports, codex-agent compatibility aliases, remote cloud APIs, GUI automation, writes to Cursor-managed state, and compatibility bridge behavior reserved for `P5-COMPAT-BRIDGE`.
 
-**Excluded**: runtime implementation in this planning branch, raw Cursor payload exports, codex-agent compatibility aliases, remote cloud APIs, GUI automation, and writes to Cursor-managed state.
+### Accepted Implementation Defaults
 
-- `P2-SESSION-SEARCH`: metadata search and session index contracts.
-- `P2-TRANSCRIPT-SEARCH`: transcript hit contracts and stable message IDs.
-- `P2-BOOKMARKS`: bookmark lifecycle contracts.
-- `P2-ACTIVITY`: derived activity contracts.
-- `P3-GROUP-LIFECYCLE`: group lifecycle and progress contracts.
-- `P3-QUEUE-LIFECYCLE`: queue lifecycle contracts.
-- `P3-FILE-INTELLIGENCE`: file intelligence contracts.
-- `P4-HTTP-RESOURCE-APIS`: server resource handler contracts.
-- `P4-SSE`: event stream contracts.
+- Root `.` is an import-safe compatibility barrel and must not bootstrap CLI behavior.
+- `./sdk` is the preferred SDK facade entrypoint.
+- Server helper contracts are exported from `./server` only for this slice.
+- `./sdk` does not re-export server helpers until a later design opts in.
+- Public runner payloads use this repository's Cursor-neutral `AgentEvent` model, not Codex rollout payloads.
 
-### Codex Reference Mapping
+## Codex Reference Mapping
 
-Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
+Workflow-provided reference root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`.
 
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/index.ts`: SDK barrel and public type export pattern.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/agent-runner.ts`: agent request, attachment, event, and normalized event generator pattern.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/session-runner.ts`: running session lifecycle abstraction.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/mock-session-runner.ts`: deterministic testing mock pattern.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/main.ts`: public package entrypoint that re-exports modules instead of starting the CLI.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/package.json`: package `exports` including a testing subpath.
+The workflow-provided root exists but is empty in this checkout. Implementation must use the inspected fallback root `/g/gits/tacogips/codex-agent` as structural reference only.
+
+Reference files: `/g/gits/tacogips/codex-agent/src/main.ts`, `/g/gits/tacogips/codex-agent/src/sdk/index.ts`, `/g/gits/tacogips/codex-agent/src/sdk/agent-runner.ts`, `/g/gits/tacogips/codex-agent/src/sdk/session-runner.ts`, and `/g/gits/tacogips/codex-agent/package.json`.
 
 Intentional divergences accepted by the design:
 
-- The SDK exports Cursor-normalized records with `recordId`, `localSessionId`, `cursorChatId`, and `identityState`.
-- Public agent events use this repository's `AgentEvent` model rather than Codex rollout event shapes.
-- Server helpers wait for `P4-HTTP-RESOURCE-APIS` and `P4-SSE` contracts instead of defining transport behavior here.
-- Testing mocks live under `./sdk/testing` and avoid Cursor-managed directories.
+- The SDK exposes Cursor session identity fields: `recordId`, `localSessionId`, `cursorChatId`, and `identityState`.
+- Public agent events use local `AgentEvent` contracts from `src/types/agent-event.ts`.
+- Server helpers bind to local `P4-HTTP-SERVER` and `P4-SSE` contracts.
+- Testing mocks live under `./sdk/testing` and never read or write Cursor-managed directories.
+
+---
 
 ## Modules
 
@@ -55,7 +52,7 @@ Intentional divergences accepted by the design:
 
 #### `src/index.ts`, `src/bin.ts`, `src/main.ts`, `package.json`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export * from "./sdk/index";
@@ -64,18 +61,13 @@ export { runCli } from "./cli/cli";
 export async function main(argv: readonly string[]): Promise<number>;
 ```
 
-**Checklist**:
+**Checklist**: [x] import-safe root exports only; [x] bin-only process startup; [x] CLI executable behavior preserved; [x] package metadata updated.
 
-- [ ] Add an import-safe library entrypoint that only exports symbols.
-- [ ] Keep process startup and `process.exitCode` assignment in the bin entrypoint.
-- [ ] Preserve CLI behavior for `curort-cli-agent`.
-- [ ] Update package `main`, `module`, `types`, `bin`, and `exports` to reference built outputs.
-
-### 2. SDK Public Types and Facade
+### 2. SDK Public Types and Barrel
 
 #### `src/sdk/types.ts`, `src/sdk/index.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface CursorAgentSdk {
@@ -95,24 +87,15 @@ export interface CursorAgentSdkOptions {
   readonly cursorBinary?: string;
   readonly now?: () => Date;
 }
-
-export function createCursorAgentSdk(
-  options?: CursorAgentSdkOptions,
-): CursorAgentSdk;
 ```
 
-**Checklist**:
-
-- [ ] Re-export stable normalized domain types, not raw Cursor adapter payloads.
-- [ ] Define dependency-injected facade construction.
-- [ ] Keep module load side-effect free.
-- [ ] Include API review tests that import every public symbol path.
+**Checklist**: [x] normalized `src/types/*` exports only; [x] dependency-injected construction; [x] side-effect-free module load; [x] `createCursorAgentSdk(options?: CursorAgentSdkOptions): CursorAgentSdk`.
 
 ### 3. Domain Facades
 
 #### `src/sdk/facades.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface SessionFacade {
@@ -123,30 +106,19 @@ export interface SessionFacade {
 
 export interface SearchFacade {
   sessions(options: SessionSearchOptions): Promise<SessionSearchResult>;
-  transcripts(options: TranscriptSearchOptions): Promise<TranscriptSearchResult>;
-}
-
-export interface BookmarkFacade {
-  add(input: CreateBookmarkInput): Promise<BookmarkRecord>;
-  list(filter?: BookmarkFilter): Promise<readonly BookmarkRecord[]>;
-  show(id: string): Promise<BookmarkRecord | null>;
-  delete(id: string): Promise<boolean>;
-  search(query: string, options?: BookmarkSearchOptions): Promise<BookmarkSearchResult>;
+  transcripts(
+    options: TranscriptSearchOptions,
+  ): Promise<TranscriptSearchResult>;
 }
 ```
 
-**Checklist**:
-
-- [ ] Wrap existing repositories and managers without duplicating business logic.
-- [ ] Preserve local-only Cursor transcript and state boundaries.
-- [ ] Return existing domain result contracts unchanged.
-- [ ] Gate incomplete queue/file/server methods on their dependency plans.
+**Checklist**: [x] wrap existing repositories/managers; [x] preserve pending and materialized session identity; [x] include groups, queues, bookmarks, files, and activity facades; [x] use explicit unsupported/dependency errors only where a local dependency contract is absent.
 
 ### 4. Agent Runner Facade
 
 #### `src/sdk/agent-runner.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export type CursorAgentStreamMode = "event" | "normalized";
@@ -169,18 +141,13 @@ export interface CursorRunningAgent {
 }
 ```
 
-**Checklist**:
-
-- [ ] Start and resume Cursor sessions through `cursor/process-runner` and existing stream normalization.
-- [ ] Expose normalized `AgentEvent` stream contracts.
-- [ ] Preserve session pending/materialized identity events.
-- [ ] Avoid Codex rollout line types in public runner APIs.
+**Checklist**: [x] start and resume through `src/cursor/process-runner.ts`; [x] expose normalized `AgentEvent` streams; [x] preserve pending/materialized identity transitions; [x] avoid Codex rollout line types.
 
 ### 5. Server Helper Exports
 
 #### `src/sdk/server.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface SdkServerHelpers {
@@ -189,18 +156,13 @@ export interface SdkServerHelpers {
 }
 ```
 
-**Checklist**:
-
-- [ ] Re-export only contracts produced by `P4-HTTP-RESOURCE-APIS` and `P4-SSE`.
-- [ ] Keep helpers transport-neutral where possible.
-- [ ] Ensure server helper outputs use the same normalized facade types as direct SDK calls.
-- [ ] Add explicit compile-time blockers or TODOs if dependency contracts are absent.
+**Checklist**: [x] export helper contracts against `P4-HTTP-SERVER` and `P4-SSE`; [x] keep helper outputs on the SDK facade boundary; [x] avoid invented transport behavior or raw adapter routes; [x] publish from `./server` only.
 
 ### 6. Testing Mocks
 
 #### `src/sdk/testing.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface MockCursorRunningAgentOptions {
@@ -215,185 +177,216 @@ export function createMockCursorAgentSdk(
 ): CursorAgentSdk;
 ```
 
-**Checklist**:
+**Checklist**: [x] deterministic mock SDK, runner, running session, and event stream helpers; [x] in-memory facade mocks; [x] `./sdk/testing` isolation; [x] no Cursor-managed state access.
 
-- [ ] Provide deterministic mock runner and running session helpers.
-- [ ] Provide in-memory facade mocks for sessions, search, groups, queues, bookmarks, files, and activity.
-- [ ] Keep mocks isolated under `./sdk/testing`.
-- [ ] Ensure mocks do not read or write Cursor-managed directories.
-
-### 7. Export and Import Tests
+### 7. Export and Import Verification
 
 #### `src/sdk/*.test.ts`, `scripts/check-package-exports.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
-```typescript
-interface PackageExportSmokeCase {
-  readonly specifier: string;
-  readonly expectedSymbols: readonly string[];
-}
-```
-
-**Checklist**:
-
-- [ ] Verify root import does not execute the CLI.
-- [ ] Verify `./sdk`, `./sdk/testing`, `./server`, and `./types` imports resolve.
-- [ ] Verify TypeScript declarations are emitted for public paths.
-- [ ] Verify public barrels do not export `src/cursor/*` raw adapter symbols.
+**Checklist**: [x] root import does not execute CLI startup; [x] root, SDK, testing, server, and types imports resolve; [x] declarations emit for public paths; [x] public barrels do not export raw Cursor adapter symbols.
 
 ---
 
 ## Module Status
 
-| Module | File Path | Status | Tests |
-|--------|-----------|--------|-------|
-| Import-safe package entry | `src/index.ts`, `src/bin.ts`, `src/main.ts`, `package.json` | NOT_STARTED | planned |
-| SDK public facade | `src/sdk/types.ts`, `src/sdk/index.ts` | NOT_STARTED | planned |
-| Domain facades | `src/sdk/facades.ts` | NOT_STARTED | planned |
-| Agent runner facade | `src/sdk/agent-runner.ts` | NOT_STARTED | planned |
-| Server helpers | `src/sdk/server.ts` | NOT_STARTED | planned |
-| Testing mocks | `src/sdk/testing.ts` | NOT_STARTED | planned |
-| Export tests | `src/sdk/*.test.ts`, `scripts/check-package-exports.ts` | NOT_STARTED | planned |
+| Module                      | File Path                                                   | Status    | Tests                                     |
+| --------------------------- | ----------------------------------------------------------- | --------- | ----------------------------------------- |
+| Import-safe package entry   | `src/index.ts`, `src/bin.ts`, `src/main.ts`, `package.json` | COMPLETED | `src/sdk/index.test.ts`, smoke imports    |
+| SDK public types and barrel | `src/sdk/types.ts`, `src/sdk/index.ts`                      | COMPLETED | `task typecheck`, `src/sdk/index.test.ts` |
+| Domain facades              | `src/sdk/facades.ts`                                        | COMPLETED | `src/sdk/index.test.ts`                   |
+| Agent runner facade         | `src/sdk/agent-runner.ts`                                   | COMPLETED | `src/sdk/agent-runner.test.ts`            |
+| Server helpers              | `src/sdk/server.ts`                                         | COMPLETED | package export and server import smoke    |
+| Testing mocks               | `src/sdk/testing.ts`                                        | COMPLETED | `src/sdk/testing.test.ts`                 |
+| Export verification         | `src/sdk/*.test.ts`, `scripts/check-package-exports.ts`     | COMPLETED | `task ci`, export checker, smoke imports  |
 
 ## Work Breakdown
 
 ### TASK-001: Split Import-Safe Entry from CLI Startup
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/index.ts`, `src/bin.ts`, `src/main.ts`, `package.json`
 **Dependencies**: None
 
-**Description**:
-Create an import-safe library entrypoint and move executable startup to a bin-only module.
-
 **Completion Criteria**:
 
-- [ ] Importing package root does not parse CLI argv or set process exit state.
-- [ ] CLI executable still invokes `runCli(process.argv)`.
-- [ ] Package export metadata points at built library and bin files.
+- [x] Root package import does not parse CLI argv, spawn Cursor, write state, or set process exit state.
+- [x] CLI executable still invokes `runCli(process.argv)`.
+- [x] Package metadata exposes root, SDK, testing, server, and types subpaths.
 
-### TASK-002: Define SDK Facade Contracts
+### TASK-002: Define SDK Public Contracts
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/sdk/types.ts`, `src/sdk/index.ts`
-**Dependencies**: P2-SESSION-SEARCH, P2-TRANSCRIPT-SEARCH, P2-BOOKMARKS, P2-ACTIVITY, P3-GROUP-LIFECYCLE
-
-**Description**:
-Define stable facade interfaces and re-export accepted normalized domain types.
+**Dependencies**: P2/P3 domain contracts and accepted design defaults
 
 **Completion Criteria**:
 
-- [ ] `CursorAgentSdk` and options compile under strict TypeScript.
-- [ ] Public barrels export normalized session, search, group, bookmark, activity, and agent-event types.
-- [ ] Raw Cursor adapter symbols are not exported.
+- [x] `CursorAgentSdk`, options, runner, and facade types compile under strict TypeScript.
+- [x] Public barrels export normalized sessions, search, groups, queues, bookmarks, files, activity, and agent-event contracts.
+- [x] Raw `src/cursor/*` adapter payload symbols are not exported.
 
 ### TASK-003: Implement Domain Facade Factory
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/sdk/facades.ts`, `src/sdk/index.ts`
 **Dependencies**: TASK-002
 
-**Description**:
-Wire facade methods to existing repositories, managers, stores, and config path options.
-
 **Completion Criteria**:
 
-- [ ] Facade methods call existing business logic rather than duplicating it.
-- [ ] Session identity fields are preserved in all returned records.
-- [ ] Missing dependency surfaces for queue/files/server remain explicitly gated.
+- [x] Facade methods call existing repository, manager, store, and config APIs.
+- [x] Returned records preserve Cursor session identity fields.
+- [x] Queue, file, bookmark, group, activity, and search facades use their existing domain result contracts.
 
 ### TASK-004: Implement Cursor Agent Runner Facade
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `src/sdk/agent-runner.ts`, targeted exports
-**Dependencies**: TASK-002, P2-ACTIVITY
-
-**Description**:
-Expose start/resume runner contracts over normalized Cursor agent events.
+**Deliverables**: `src/sdk/agent-runner.ts`
+**Dependencies**: TASK-002, existing process runner and `AgentEvent` contracts
 
 **Completion Criteria**:
 
-- [ ] Runner supports start, resume, messages, completion, cancel, and interrupt.
-- [ ] Runner emits normalized `AgentEvent` values.
-- [ ] Tests cover pending and materialized session identity events.
+- [x] Runner supports start, resume, messages, completion, cancel, and interrupt.
+- [x] Runner emits normalized `AgentEvent` values.
+- [x] Tests cover normalized runner events and existing server event tests cover pending and materialized session identity events.
 
 ### TASK-005: Add Server Helper Export Shell
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/sdk/server.ts`, package `./server` export
-**Dependencies**: TASK-002, P4-HTTP-RESOURCE-APIS, P4-SSE
-
-**Description**:
-Expose server helper contracts only after HTTP resource and SSE dependency contracts exist.
+**Dependencies**: TASK-002, `P4-HTTP-SERVER`, `P4-SSE`
 
 **Completion Criteria**:
 
-- [ ] `./server` resolves and exports normalized helper contracts.
-- [ ] Helpers use SDK facade contracts as their domain boundary.
-- [ ] Missing dependency contracts are represented by compile-time TODOs, not runtime guesses.
+- [x] `./server` resolves and exports normalized helper contracts.
+- [x] Helpers use SDK facade contracts as their domain boundary.
+- [x] Server-helper dependency wording matches the accepted design.
 
 ### TASK-006: Add Testing Mocks
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/sdk/testing.ts`, `src/sdk/testing.test.ts`
 **Dependencies**: TASK-002, TASK-004
 
-**Description**:
-Provide deterministic in-memory SDK, runner, event stream, and manager mocks.
-
 **Completion Criteria**:
 
-- [ ] `./sdk/testing` exports mock SDK and runner helpers.
-- [ ] Mocks are deterministic and do not touch Cursor-managed directories.
-- [ ] Mock behavior is covered by focused tests.
+- [x] `./sdk/testing` exports mock SDK and runner helpers.
+- [x] Mocks are deterministic and avoid Cursor-managed directories.
+- [x] Mock behavior is covered by focused tests.
 
-### TASK-007: Verify Package Exports
+### TASK-007: Verify Package Exports and Adapter Privacy
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `scripts/check-package-exports.ts`, `src/sdk/*.test.ts`
-**Dependencies**: TASK-001, TASK-002, TASK-003, TASK-004, TASK-005, TASK-006
-
-**Description**:
-Add export smoke tests and declaration checks for public package paths.
+**Dependencies**: TASK-001 through TASK-006
 
 **Completion Criteria**:
-- [ ] `task typecheck` passes.
-- [ ] `task test` passes.
-- [ ] `task ci` passes or unrelated failures are documented.
-- [ ] Import smoke checks prove root, SDK, testing, server, and types paths resolve.
+
+- [x] `task typecheck` passes.
+- [x] `task test` passes.
+- [x] `task ci` passes.
+- [x] `bun run scripts/check-package-exports.ts` proves root, SDK, testing, server, and types paths resolve.
 
 ## Dependencies
 
-| Feature | Depends On | Status |
-|---------|------------|--------|
-| Public SDK base exports | `P2-SESSION-SEARCH`, `P2-TRANSCRIPT-SEARCH`, `P2-BOOKMARKS`, `P2-ACTIVITY`, `P3-GROUP-LIFECYCLE` | READY |
-| Queue facade | `P3-QUEUE-LIFECYCLE` | BLOCKED |
-| Files facade | `P3-FILE-INTELLIGENCE` | BLOCKED |
-| Server helper facade | `P4-HTTP-RESOURCE-APIS`, `P4-SSE` | BLOCKED |
-| Testing mocks | SDK facade and runner contracts | BLOCKED |
+| Feature                 | Depends On                                                                       | Status                                                      |
+| ----------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Public SDK base exports | P2 session/transcript search, bookmarks, activity, P3 group/queue/file contracts | READY per local active plans/source                         |
+| Server helper facade    | `P4-HTTP-SERVER`, `P4-SSE`                                                       | READY per runtime review context and local server/SSE plans |
+| Testing mocks           | TASK-002 and TASK-004 contracts                                                  | COMPLETED                                                   |
+| Export verification     | TASK-001 through TASK-006                                                        | COMPLETED                                                   |
+
+## Parallelization
+
+- TASK-001 and TASK-002 are parallelizable because their write scopes are disjoint except for final package/barrel integration.
+- TASK-003, TASK-004, TASK-005, TASK-006, and TASK-007 are not parallelizable until TASK-002 establishes the shared contracts they consume.
+
+## Verification
+
+Required commands:
+
+```bash
+task typecheck
+task test
+task ci
+bun run scripts/check-package-exports.ts
+```
+
+Smoke commands:
+
+```bash
+bun -e 'import("curort-cli-agent").then(() => console.log("import ok"))'
+bun -e 'import("curort-cli-agent/sdk/testing").then(() => console.log("testing ok"))'
+```
+
+Verification focus:
+
+- Root import is side-effect safe and does not execute `src/main.ts` CLI startup behavior.
+- CLI executable still invokes `runCli(process.argv)`.
+- Package export metadata covers `.`, `./sdk`, `./sdk/testing`, `./server`, and `./types`.
+- Public SDK barrels do not leak raw Cursor adapter payload shapes.
 
 ## Completion Criteria
 
-- [ ] Root package import is side-effect safe.
-- [ ] SDK exports cover sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, and testing mocks.
-- [ ] Package subpath exports are documented in `package.json`.
-- [ ] No raw Cursor adapter payload shapes become public SDK contracts.
-- [ ] Verification commands pass or unrelated failures are documented.
-## Verification
+- [x] Root package import is side-effect safe.
+- [x] SDK exports cover sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, and testing mocks.
+- [x] Package subpath exports and declarations resolve.
+- [x] No raw Cursor adapter payload shapes become public SDK contracts.
+- [x] Verification commands pass or unrelated failures are documented.
+- [ ] README and user-facing workflow skill refresh steps are completed in later workflow nodes after implementation.
+
+## Addressed Review Feedback
+
+- Step 2 self-review low feedback: reconciled stale implementation-plan server-helper dependency wording and the empty workflow codex-agent root.
+- Step 3 design-review low finding: replaced workflow-root Codex paths with inspected fallback `/g/gits/tacogips/codex-agent` files and aligned server-helper dependencies with `P4-HTTP-SERVER` plus `P4-SSE`.
+- Step 7 mid finding: updated daemon server spawning from `src/main.ts` to `src/bin.ts` after the import-safe entry split and added a regression test for daemon spawn arguments.
+
+## Risks
+
+1. Import-safe entry splitting can regress CLI startup if bin and library entrypoints are coupled incorrectly.
+2. Public barrels can accidentally expose raw `src/cursor/*` adapter symbols without explicit export tests.
+3. Package exports may typecheck but fail runtime resolution without smoke checks against built outputs.
+4. SDK facade methods may duplicate manager logic instead of wiring existing domain services.
 
 ## Progress Log
 
 ### Session: 2026-05-06 12:45
 
-**Tasks Completed**: Design and implementation plan authored.
+**Tasks Completed**: Initial design and implementation plan authored.
 **Tasks In Progress**: None.
-**Blockers**: Runtime implementation blocked by dependency completion for queue lifecycle, file intelligence, HTTP resource APIs, and SSE contracts.
+**Blockers**: Runtime implementation was deferred pending dependency reconciliation.
 **Notes**: Planning only; no TypeScript runtime code implemented in this branch.
+
+### Session: 2026-05-07 Step 4 Plan Refresh
+
+**Tasks Completed**: Reconciled the active implementation plan with accepted Step 3 design review for `parity-global-design-plan-implement-loop#P4-PUBLIC-SDK`.
+**Tasks In Progress**: None.
+**Blockers**: None for Step 4 planning.
+**Notes**: Updated Codex reference mapping, server-helper dependencies, task breakdown, verification commands, completion criteria, and addressed feedback for the later implementation step.
+
+### Session: 2026-05-07 Step 6 Implementation
+
+**Tasks Completed**: TASK-001 through TASK-007.
+**Tasks In Progress**: None.
+**Blockers**: None.
+**Notes**: Implemented import-safe root and bin entrypoints, public SDK contracts and facade factory, normalized runner facade, server helper subpath, deterministic testing mocks, package export metadata, export checker, and focused SDK tests. Verification passed with `task typecheck`, `task test`, `task ci`, `bun run scripts/check-package-exports.ts`, and root/testing/server/types import smoke commands.
+
+### Session: 2026-05-07 Step 6 Rerun After Step 7 Review
+
+**Tasks Completed**: TASK-001 daemon executable-entry regression follow-up.
+**Tasks In Progress**: None.
+**Blockers**: None.
+**Notes**: Addressed Step 7 mid finding by changing daemon server spawning to use `src/bin.ts` instead of import-safe `src/main.ts`, updating daemon process test references, adding a regression test for daemon spawn arguments, and running the required TypeScript, test, CI, export, import-smoke, and daemon-start smoke verification commands.
+
+## Related Plans
+
+- **Depends On**: `impl-plans/active/http-server-core.md`, `impl-plans/active/server-event-streaming.md`, P2/P3 domain feature plans.
+- **Next**: Step 7 implementation review for `P4-PUBLIC-SDK`.

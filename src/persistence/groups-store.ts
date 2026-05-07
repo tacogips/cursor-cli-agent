@@ -188,18 +188,25 @@ async function save(path: string, data: FileShape): Promise<void> {
   await writeFile(path, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
-export async function listGroups(): Promise<readonly GroupRecord[]> {
-  const data = await load(groupsJsonPath());
+export async function listGroups(
+  path = groupsJsonPath(),
+): Promise<readonly GroupRecord[]> {
+  const data = await load(path);
   return data.groups;
 }
 
-export async function getGroup(name: string): Promise<GroupRecord | undefined> {
-  const data = await load(groupsJsonPath());
+export async function getGroup(
+  name: string,
+  path = groupsJsonPath(),
+): Promise<GroupRecord | undefined> {
+  const data = await load(path);
   return data.groups.find((g) => g.name === name);
 }
 
-export async function createGroup(name: string): Promise<GroupRecord> {
-  const path = groupsJsonPath();
+export async function createGroup(
+  name: string,
+  path = groupsJsonPath(),
+): Promise<GroupRecord> {
   const data = await load(path);
   if (data.groups.some((g) => g.name === name)) {
     throw new Error(`group '${name}' already exists`);
@@ -220,8 +227,8 @@ export async function createGroup(name: string): Promise<GroupRecord> {
 export async function addWorkspaceToGroup(
   name: string,
   workspace: string,
+  path = groupsJsonPath(),
 ): Promise<GroupRecord> {
-  const path = groupsJsonPath();
   const data = await load(path);
   const idx = data.groups.findIndex((g) => g.name === name);
   if (idx < 0) {
@@ -248,8 +255,8 @@ export async function addWorkspaceToGroup(
 export async function removeWorkspaceFromGroup(
   name: string,
   workspace: string,
+  path = groupsJsonPath(),
 ): Promise<GroupRecord> {
-  const path = groupsJsonPath();
   const data = await load(path);
   const idx = data.groups.findIndex((g) => g.name === name);
   if (idx < 0) {
@@ -272,8 +279,8 @@ export async function removeWorkspaceFromGroup(
 
 export async function deleteGroup(
   name: string,
+  path = groupsJsonPath(),
 ): Promise<GroupRecord | undefined> {
-  const path = groupsJsonPath();
   const data = await load(path);
   const idx = data.groups.findIndex((g) => g.name === name);
   if (idx < 0) {
@@ -291,21 +298,23 @@ export async function deleteGroup(
 
 export async function pauseGroup(
   name: string,
+  path = groupsJsonPath(),
 ): Promise<GroupRecord | undefined> {
-  return updateGroupRun(name, { lifecycleState: "paused" });
+  return updateGroupRun(name, { lifecycleState: "paused" }, path);
 }
 
 export async function resumeGroup(
   name: string,
+  path = groupsJsonPath(),
 ): Promise<GroupRecord | undefined> {
-  return updateGroupRun(name, { lifecycleState: "active" });
+  return updateGroupRun(name, { lifecycleState: "active" }, path);
 }
 
 export async function updateGroupRun(
   name: string,
   update: GroupStoreUpdate,
+  path = groupsJsonPath(),
 ): Promise<GroupRecord | undefined> {
-  const path = groupsJsonPath();
   const data = await load(path);
   const idx = data.groups.findIndex((g) => g.name === name);
   if (idx < 0) {

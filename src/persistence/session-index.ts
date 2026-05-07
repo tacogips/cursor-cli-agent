@@ -177,10 +177,15 @@ CREATE INDEX IF NOT EXISTS idx_sessions_workspace ON sessions(workspace_slug);
 
 export class SessionIndexRepository {
   private readonly db: Database;
+  private readonly projectsRoot: string | undefined;
 
-  constructor(dbPath: string) {
+  constructor(
+    dbPath: string,
+    options: { readonly cursorProjectsRoot?: string } = {},
+  ) {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new Database(dbPath, { create: true });
+    this.projectsRoot = options.cursorProjectsRoot;
     this.db.run("PRAGMA journal_mode = WAL;");
     this.db.run(MIGRATION);
   }
@@ -395,7 +400,7 @@ ON CONFLICT(record_id) DO UPDATE SET
    */
   async importTranscriptsFromFilesystem(): Promise<number> {
     let count = 0;
-    const root = cursorProjectsRoot();
+    const root = this.projectsRoot ?? cursorProjectsRoot();
     let projectDirs: Awaited<ReturnType<typeof readdir>>;
     try {
       projectDirs = await readdir(root, { withFileTypes: true });

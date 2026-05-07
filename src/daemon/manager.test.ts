@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createDaemonManager } from "./manager";
+import { buildCliServerArgs, createDaemonManager } from "./manager";
 import type { DaemonProcessInspector } from "./process";
 import type { DaemonReadinessProbe } from "./readiness";
 import type {
@@ -86,6 +86,29 @@ function createReadinessProbe(ready: boolean): DaemonReadinessProbe {
 }
 
 describe("daemon manager", () => {
+  test("spawns the daemon server through the executable source entrypoint", () => {
+    expect(
+      buildCliServerArgs({
+        host: "127.0.0.1",
+        port: 0,
+        token: "secret",
+        marker: "marker",
+      }),
+    ).toEqual([
+      "run",
+      "src/bin.ts",
+      "server",
+      "start",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "0",
+      "--json",
+      "--token",
+      "secret",
+    ]);
+  });
+
   test("starts server, writes starting metadata, then promotes to running", async () => {
     const store = createMemoryStore();
     const manager = createDaemonManager({

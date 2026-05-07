@@ -33,16 +33,18 @@ Excluded:
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Workflow-provided reference root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`.
+
+The workflow-provided root exists but is empty in this checkout, so this design
+uses the inspected fallback reference root `/g/gits/tacogips/codex-agent`.
 
 Relevant reference files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/index.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/agent-runner.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/session-runner.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/mock-session-runner.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/main.ts`
-- `/Users/taco/gits/tacogips/codex-agent/package.json`
+- `/g/gits/tacogips/codex-agent/src/sdk/index.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/agent-runner.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/session-runner.ts`
+- `/g/gits/tacogips/codex-agent/src/main.ts`
+- `/g/gits/tacogips/codex-agent/package.json`
 
 Reference behavior to preserve:
 
@@ -70,7 +72,7 @@ Package exports should be stable and explicit:
   "./sdk": "./dist/sdk/index.js",
   "./sdk/testing": "./dist/sdk/testing.js",
   "./server": "./dist/sdk/server.js",
-  "./types": "./dist/types/index.js"
+  "./types": "./dist/sdk/types.js"
 }
 ```
 
@@ -78,7 +80,7 @@ Design rules:
 
 1. `.` and `./sdk` are import-safe and must not call `process.exit`, parse CLI argv, spawn Cursor, or write state during module load.
 2. The executable entrypoint remains the only place that invokes `runCli(process.argv)`.
-3. Type declarations are emitted for every public export path.
+3. Type declarations are emitted for every public export path; `./types` maps to the SDK public type module emitted from `src/sdk/types.ts`.
 4. Internal adapter modules under `src/cursor/` remain private unless a type is explicitly normalized for public use.
 5. Testing helpers are exported from `./sdk/testing` so production imports avoid mock-only symbols.
 
@@ -167,7 +169,7 @@ Codex-style normalized event names may inform the design, but the exported event
 
 ### Server Helpers
 
-Server helpers should be exported only after `P4-HTTP-RESOURCE-APIS` and `P4-SSE` define the concrete contracts. The SDK may then export helper factories such as:
+Server helpers should be exported only against the concrete `P4-HTTP-SERVER` and `P4-SSE` contracts. The SDK may then export helper factories such as:
 
 ```typescript
 export interface SdkServerHelpers {
@@ -209,7 +211,7 @@ Mocks must be deterministic under strict TypeScript and must not touch Cursor-ma
 | `P3-GROUP-LIFECYCLE` | Provides group lifecycle and progress snapshots. |
 | `P3-QUEUE-LIFECYCLE` | Required before queue lifecycle exports can be complete. |
 | `P3-FILE-INTELLIGENCE` | Required before files facade exports can be complete. |
-| `P4-HTTP-RESOURCE-APIS` | Required before server resource helpers are final. |
+| `P4-HTTP-SERVER` | Required before server resource helpers are final. |
 | `P4-SSE` | Required before event-stream helper exports are final. |
 
 ## Verification
@@ -239,11 +241,19 @@ The root import smoke test must not execute CLI behavior.
 - Queue, file, server, and SSE contracts may still be in flight; SDK implementation must gate incomplete surfaces behind dependency completion.
 - Mock helpers can accidentally diverge from real manager behavior unless tests exercise both through shared contracts.
 
-## Open Questions
+## Implementation Defaults
 
-- Should the root `.` export equal `./sdk`, or should `./sdk` be the preferred public facade with root kept as a compatibility barrel?
-- Should server helpers be exported from `./server` only, or re-exported from `./sdk` after the HTTP/SSE contracts stabilize?
-- Should a later `P5-COMPAT-BRIDGE` expose Codex-compatible event names in addition to the Cursor-native SDK events?
+No unresolved user decisions block `P4-PUBLIC-SDK`.
+
+- The root `.` export is an import-safe compatibility barrel that may re-export
+  `./sdk` and `runCli`, but it must not become the CLI bootstrap.
+- `./sdk` is the preferred public facade entrypoint for SDK consumers.
+- Server helper contracts are exported from `./server` only for this slice.
+  Re-exporting server helpers from `./sdk` is deferred until HTTP/SSE contracts
+  stabilize and a later design explicitly opts in.
+- Codex-compatible event aliases remain out of scope. A later
+  `P5-COMPAT-BRIDGE` may add them without changing the Cursor-native
+  `AgentEvent` contracts defined here.
 
 ## References
 
