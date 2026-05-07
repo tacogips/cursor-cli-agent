@@ -242,6 +242,55 @@ Each delegated run into `design-and-implement-review-loop` must use
 This keeps the child workflow bounded to a single slice while preserving the
 larger parity-program context.
 
+For `parity-global-design-plan-implement-loop`, Step 6 must include this
+reviewed global-design context in every delegated input:
+
+```json
+{
+  "executionMode": "issue-resolution",
+  "issueTitle": "<backlog-id>: <title>",
+  "targetFeatureArea": "<targetFeatureArea>",
+  "requestedBehavior": "<single backlog item behavior>",
+  "reviewContext": {
+    "workflowMode": "global-design-plan-implement",
+    "backlogItem": "<backlog-id>",
+    "designDocPath": "design-docs/specs/design-<topic>.md",
+    "implementationPlanPath": "impl-plans/active/<topic>.md",
+    "remainingDependencies": [],
+    "sourceReferences": [],
+    "codexAgentReferences": []
+  }
+}
+```
+
+The child workflow must not broaden the scope beyond the selected backlog item.
+If it finds a missing design or plan dependency, it should return a blocking
+finding instead of implementing adjacent backlog items.
+
+## Global Workflow Plan Path Expectations
+
+Step 3 must create or update exactly one active implementation plan per selected
+backlog item, using the path below unless a review-approved rename is recorded.
+
+| Backlog ID | Active implementation plan | Design doc |
+|---|---|---|
+| `P2-SESSION-SEARCH` | `impl-plans/active/session-search.md` | `design-docs/specs/design-session-search.md` |
+| `P2-TRANSCRIPT-SEARCH` | `impl-plans/active/transcript-search.md` | `design-docs/specs/design-transcript-search.md` |
+| `P2-BOOKMARKS` | `impl-plans/active/bookmarks.md` | `design-docs/specs/design-bookmarks.md` |
+| `P2-ACTIVITY` | `impl-plans/active/activity.md` | `design-docs/specs/design-activity.md` |
+| `P2-MARKDOWN-TASKS` | `impl-plans/active/markdown-tasks.md` | `design-docs/specs/design-markdown-tasks.md` |
+| `P3-GROUP-LIFECYCLE` | `impl-plans/active/group-lifecycle.md` | `design-docs/specs/design-group-lifecycle.md` |
+| `P3-QUEUE-LIFECYCLE` | `impl-plans/active/queue-lifecycle.md` | `design-docs/specs/design-queue-lifecycle.md` |
+| `P3-FILE-INTELLIGENCE` | `impl-plans/active/file-intelligence.md` | `design-docs/specs/design-file-intelligence.md` |
+| `P3-REPO-ANALYTICS` | `impl-plans/active/repository-analytics.md` | `design-docs/specs/design-repository-analytics.md` |
+| `P4-HTTP-SERVER` | `impl-plans/active/http-server-core.md` | `design-docs/specs/design-http-server-core.md` |
+| `P4-SSE` | `impl-plans/active/server-event-streaming.md` | `design-docs/specs/design-server-event-streaming.md` |
+| `P4-AUTH` | `impl-plans/active/token-auth.md` | `design-docs/specs/design-token-auth.md` |
+| `P4-DAEMON` | `impl-plans/active/daemon-lifecycle.md` | `design-docs/specs/design-daemon-lifecycle.md` |
+| `P4-PUBLIC-SDK` | `impl-plans/active/public-sdk.md` | `design-docs/specs/design-public-sdk.md` |
+| `P5-COMPAT-BRIDGE` | `impl-plans/active/compat-bridge.md` | `design-docs/specs/design-compat-bridge.md` |
+| `P5-TOOL-REGISTRY` | `impl-plans/active/tool-registry-model-helpers.md` | `design-docs/specs/design-tool-registry-model-helpers.md` |
+
 ## Operational Notes
 
 - The backlog workflow is an orchestrator, not an implementation surface.

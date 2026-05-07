@@ -3,7 +3,7 @@
 **Status**: Completed
 **Design Reference**: `design-docs/specs/design-session-search.md`
 **Created**: 2026-05-05
-**Last Updated**: 2026-05-05
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,12 +23,12 @@ Implement backlog slice `P2-SESSION-SEARCH`: metadata-only `session search <quer
 
 ### Codex Reference Mapping
 
-- `/Users/taco/gits/tacogips/codex-agent/src/session/search.ts`: query validation, paginated result shape, deterministic candidate ordering, and SQLite-first candidate filtering.
-- `/Users/taco/gits/tacogips/codex-agent/src/session/search.test.ts`: empty query rejection, filter coverage, pagination coverage, and deterministic search behavior.
-- `/Users/taco/gits/tacogips/codex-agent/src/types/session.ts`: search option and result contracts.
-- `/Users/taco/gits/tacogips/codex-agent/src/session/sqlite.ts`: SQLite-backed session metadata persistence pattern.
-- `/Users/taco/gits/tacogips/codex-agent/src/session/index.ts`: session API boundary and search export placement.
-- `/Users/taco/gits/tacogips/codex-agent/src/server/handlers/sessions.ts`: server search validation/result mapping reference only; server APIs remain excluded for this Cursor slice.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/search.ts`: query validation, paginated result shape, deterministic candidate ordering, and SQLite-first candidate filtering.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/search.test.ts`: empty query rejection, filter coverage, pagination coverage, and deterministic search behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/types/session.ts`: search option and result contracts.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/sqlite.ts`: SQLite-backed session metadata persistence pattern.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/index.ts`: session API boundary and search export placement.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/server/handlers/sessions.ts`: server search validation/result mapping reference only; server APIs remain excluded for this Cursor slice.
 
 Intentional divergence: this Cursor slice searches indexed metadata fields in `state.db` and returns `CursorSessionRecord` results with `recordId`, `localSessionId`, `cursorChatId`, and `identityState`; it does not scan transcript content.
 

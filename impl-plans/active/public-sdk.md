@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-public-sdk.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -33,14 +33,14 @@ Implement Phase 4 `P4-PUBLIC-SDK`: stable import-safe package exports for normal
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/index.ts`: SDK barrel and public type export pattern.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/agent-runner.ts`: agent request, attachment, event, and normalized event generator pattern.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/session-runner.ts`: running session lifecycle abstraction.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/mock-session-runner.ts`: deterministic testing mock pattern.
-- `/Users/taco/gits/tacogips/codex-agent/src/main.ts`: public package entrypoint that re-exports modules instead of starting the CLI.
-- `/Users/taco/gits/tacogips/codex-agent/package.json`: package `exports` including a testing subpath.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/index.ts`: SDK barrel and public type export pattern.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/agent-runner.ts`: agent request, attachment, event, and normalized event generator pattern.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/session-runner.ts`: running session lifecycle abstraction.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/mock-session-runner.ts`: deterministic testing mock pattern.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/main.ts`: public package entrypoint that re-exports modules instead of starting the CLI.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/package.json`: package `exports` including a testing subpath.
 
 Intentional divergences accepted by the design:
 
@@ -256,7 +256,7 @@ interface PackageExportSmokeCase {
 | Testing mocks | `src/sdk/testing.ts` | NOT_STARTED | planned |
 | Export tests | `src/sdk/*.test.ts`, `scripts/check-package-exports.ts` | NOT_STARTED | planned |
 
-## Task Plan
+## Work Breakdown
 
 ### TASK-001: Split Import-Safe Entry from CLI Startup
 
@@ -387,6 +387,7 @@ Add export smoke tests and declaration checks for public package paths.
 - [ ] Package subpath exports are documented in `package.json`.
 - [ ] No raw Cursor adapter payload shapes become public SDK contracts.
 - [ ] Verification commands pass or unrelated failures are documented.
+## Verification
 
 ## Progress Log
 

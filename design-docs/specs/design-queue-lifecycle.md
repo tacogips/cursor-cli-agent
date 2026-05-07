@@ -209,16 +209,16 @@ Activity mapping is best-effort. If activity reports `waiting_trust` or `waiting
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Reference repository root: `/g/gits/tacogips/codex-agent`.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/queue/types.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/queue/repository.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/queue/runner.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/queue/repository.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/queue/runner.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/codex-agent/src/queue/types.ts`
+- `/g/gits/tacogips/codex-agent/src/queue/repository.ts`
+- `/g/gits/tacogips/codex-agent/src/queue/runner.ts`
+- `/g/gits/tacogips/codex-agent/src/queue/repository.test.ts`
+- `/g/gits/tacogips/codex-agent/src/queue/runner.test.ts`
+- `/g/gits/tacogips/codex-agent/src/cli/index.ts`
 
 Reference behavior to preserve:
 

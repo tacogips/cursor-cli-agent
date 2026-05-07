@@ -6,7 +6,7 @@ This document defines feature `P4-SSE` for live server-sent event streaming in `
 
 The SSE layer exposes normalized live events from the future HTTP server without leaking raw Cursor transcript or `cursor-agent --output-format stream-json` payloads. It should support session watch, activity updates, group progress, queue progress, heartbeat delivery, and graceful disconnect cleanup.
 
-This feature depends on `P4-HTTP-SERVER-CORE` for server routing and request lifecycle primitives, and on `P2-ACTIVITY` for derived activity snapshots. It is a server transport design only; it does not implement daemon supervision, auth policy, or new Cursor runtime behavior.
+This feature depends on `P4-HTTP-SERVER` for server routing and request lifecycle primitives, and on `P2-ACTIVITY` for derived activity snapshots. It is a server transport design only; it does not implement daemon supervision, auth policy, or new Cursor runtime behavior.
 
 Included:
 
@@ -20,7 +20,7 @@ Included:
 
 Excluded:
 
-- HTTP server bootstrap details owned by `P4-HTTP-SERVER-CORE`
+- HTTP server bootstrap details owned by `P4-HTTP-SERVER`
 - bearer-token permission checks owned by `P4-AUTH`
 - daemon lifecycle and background supervision owned by `P4-DAEMON`
 - direct mutation of Cursor transcript files, Cursor `ai-tracking` DBs, or Cursor-managed skill state
@@ -119,7 +119,7 @@ Intentional Cursor divergences:
 
 ## Endpoint Shape
 
-Final paths belong to `P4-HTTP-SERVER-CORE`, but this feature expects these route intents:
+Final paths belong to `P4-HTTP-SERVER`, but this feature expects these route intents:
 
 - `GET /api/events/sessions/:id`
 - `GET /api/events/activity`
@@ -139,7 +139,7 @@ Validation errors should use normal HTTP JSON error responses before the SSE str
 
 | Feature | Required For | Status |
 |---------|--------------|--------|
-| `P4-HTTP-SERVER-CORE` | route registration, response writer, request abort signal | Required |
+| `P4-HTTP-SERVER` | route registration, response writer, request abort signal | Required |
 | `P2-ACTIVITY` | activity and progress snapshots | Completed in local plan history |
 | Group lifecycle model | group progress snapshots | Available in active local plan/code state |
 | Queue run observations | queue progress fidelity | Partial; use best-effort first pass |

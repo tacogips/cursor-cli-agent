@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-daemon-lifecycle.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -30,11 +30,11 @@ Implement backlog slice `P4-DAEMON`: repository-owned daemon metadata, start/sto
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: reference daemon contracts, PID lifecycle, readiness probing, and CLI integration.
-- `/Users/taco/gits/tacogips/codex-agent/design-docs/specs/design-codex-session-management.md`: reference architecture for server/process boundaries.
-- `/Users/taco/gits/tacogips/codex-agent/README.md`: reference CLI command family and verification commands.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: reference daemon contracts, PID lifecycle, readiness probing, and CLI integration.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/design-docs/specs/design-codex-session-management.md`: reference architecture for server/process boundaries.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/README.md`: reference CLI command family and verification commands.
 
 Intentional divergences:
 

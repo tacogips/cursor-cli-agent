@@ -12,12 +12,17 @@ This document defines the planned CLI contract for `curort-cli-agent`.
 
 ```text
 curort-cli-agent session <subcommand>
+curort-cli-agent transcript <subcommand>
 curort-cli-agent group <subcommand>
 curort-cli-agent queue <subcommand>
 curort-cli-agent bookmark <subcommand>
 curort-cli-agent activity [options]
+curort-cli-agent markdown <subcommand>
 curort-cli-agent files <subcommand>
 curort-cli-agent token <subcommand>
+curort-cli-agent tool <subcommand>
+curort-cli-agent model <subcommand>
+curort-cli-agent usage <subcommand>
 curort-cli-agent skill <subcommand>
 curort-cli-agent server <subcommand>
 curort-cli-agent daemon <subcommand>
@@ -210,6 +215,9 @@ Later phases:
 - `queue mode <name> --item <id> --mode <auto|manual>`
 - `queue stop <name>`
 
+See `design-docs/specs/design-queue-lifecycle.md` for the detailed phase-3
+queue lifecycle behavior and dependency on `P2-ACTIVITY`.
+
 ## Bookmark Commands
 
 Phase-2 scope:
@@ -244,6 +252,21 @@ Activity rules:
 - missing optional signals reduce confidence/provenance detail but must not make list or lookup fail
 
 See `design-docs/specs/design-activity.md` for the detailed behavior, validation, Codex-reference mapping, and Cursor-specific boundaries.
+
+## Markdown Commands
+
+Phase-2 scope:
+
+- `markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]`
+
+Markdown rules:
+
+- extraction is read-only over normalized assistant transcript message text
+- stable task records reference Cursor session identity and transcript message IDs
+- no transcript, bookmark, server, or SDK mutation happens in this slice
+
+See `design-docs/specs/design-markdown-tasks.md` for the detailed behavior,
+validation, Codex-reference mapping, and Cursor-specific boundaries.
 
 ## File Commands
 
@@ -293,13 +316,18 @@ Phase-1 behavior: invoking `server` prints a short message and exits with a non-
 
 Target route groups:
 
-- sessions
-- search
-- groups
-- queues
-- bookmarks
-- files
-- health
+- `/api/health`
+- `/api/version`
+- `/api/sessions`
+- `/api/search`
+- `/api/groups`
+- `/api/queues`
+- `/api/bookmarks`
+- `/api/files`
+
+See `design-docs/specs/design-http-server-core.md` for the core route contract.
+Bookmark, group, queue, file, and activity routes are enabled only after their
+local services are implemented and reviewed.
 
 ## Daemon Commands
 
@@ -310,6 +338,28 @@ Phase-4 scope:
 - `daemon status`
 
 Phase-1 behavior: invoking `daemon` prints a short message and exits with a non-zero code (feature not yet implemented).
+
+## Tool, Model, and Usage Commands
+
+Phase-5 scope:
+
+- `tool list [--json]`
+- `tool show <name> [--json]`
+- `tool run <name> --input <json|path> [--json]`
+- `tool versions [--include-git] [--include-bun] [--json] [--timeout-ms <ms>]`
+- `model check --model <model> [--probe] [--json] [--timeout-ms <ms>]`
+- `usage stats [--recent-days <n>] [--json]`
+
+Rules:
+
+- helper commands report repository-owned local tool, version, model, and usage
+  evidence; they do not call undocumented Cursor cloud APIs
+- `model check --probe` may run a bounded Cursor process and must report the
+  result as probe-derived rather than as a durable authorization guarantee
+- all JSON responses include provenance and degraded-state fields when optional
+  local data sources are absent
+
+See `design-docs/specs/design-tool-registry-model-helpers.md`.
 
 ## Shared Flags and Options
 
@@ -357,3 +407,9 @@ Compatibility note:
 - `session create` and `session resume` are separate because Cursor uses a pre-materialized chat ID flow that Codex does not.
 - `skill` commands are read-only because `skills-cursor` is internal Cursor-managed state.
 - `files` commands are designed around `ai-tracking` enrichment, so they provide best-effort intelligence rather than exact tool-log replay.
+- `transcript search` is separate from `session search` so metadata lookup can
+  remain fast and pending chat-only records can remain searchable before
+  transcript materialization.
+- phase-5 GraphQL and app-server-style compatibility commands are optional
+  bridges over normalized local services, not a raw Codex or Cursor protocol
+  clone.

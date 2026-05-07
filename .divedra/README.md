@@ -114,8 +114,15 @@ nix run ./divedra -- workflow list
 ## Implementation Refresh Contract
 
 On the full implementation path, `design-and-implement-review-loop` Step 6
-updates runtime behavior and tests, records active implementation-plan progress,
-and refreshes user-facing documentation before review. For
-`P3-GROUP-LIFECYCLE`, that refresh covers Cursor-local `group pause`, `group
-resume`, `group delete`, `group watch`, paused-run guards, and
-activity-derived watch snapshots.
+updates runtime behavior and tests, Step 7 performs the independent
+implementation review, and Step 8 refreshes README and user-facing workflow
+skill guidance before commit preparation.
+
+For `P3-GROUP-LIFECYCLE`, that refresh covers Cursor-local `group pause`,
+`group resume`, `group delete`, `group watch`, paused-run guards, and
+activity-derived watch snapshots. For `P3-QUEUE-LIFECYCLE`, it covers
+Cursor-local `queue pause`, `queue resume`, `queue delete`, `queue update`,
+`queue move`, `queue mode`, `queue stop`, paused/stopped run guards,
+cooperative stop between queue items, retained completed/failed items,
+manual-mode skips, and queue progress summaries derived from repository-owned
+queue state plus optional activity signals.

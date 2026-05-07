@@ -3,7 +3,7 @@
 **Status**: Completed
 **Design Reference**: `design-docs/specs/design-bookmarks.md`
 **Created**: 2026-05-05
-**Last Updated**: 2026-05-05
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -31,11 +31,11 @@ Implement backlog slice `P2-BOOKMARKS`: local bookmark CRUD and search for repos
 
 ### Codex Reference Mapping
 
-- `/Users/taco/gits/tacogips/codex-agent/src/bookmark/types.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/bookmark/repository.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/bookmark/manager.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/bookmark/manager.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/bookmark/types.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/bookmark/repository.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/bookmark/manager.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/bookmark/manager.test.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`
 
 Reused concepts: target types `session`, `message`, and `range`; local JSON persistence; add/list/show/delete/search lifecycle; tag filtering; text search across bookmark metadata.
 

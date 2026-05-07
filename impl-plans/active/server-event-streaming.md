@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-server-event-streaming.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,12 +23,12 @@ Implement feature `P4-SSE`: reusable server-sent event infrastructure and live s
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`.
 
-- `/Users/taco/gits/tacogips/codex-agent/src/rollout/watcher.ts`: append tailing, start offsets, duplicate watch suppression, cleanup.
-- `/Users/taco/gits/tacogips/codex-agent/src/rollout/watcher.test.ts`: append, replay, duplicate, and stop behavior tests.
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.ts`: async iterable subscription queue and consumer-return cleanup.
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.test.ts`: `session.watch` subscription behavior and `startOffset` coverage.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/rollout/watcher.ts`: append tailing, start offsets, duplicate watch suppression, cleanup.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/rollout/watcher.test.ts`: append, replay, duplicate, and stop behavior tests.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/graphql/index.ts`: async iterable subscription queue and consumer-return cleanup.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/graphql/index.test.ts`: `session.watch` subscription behavior and `startOffset` coverage.
 
 Intentional divergences:
 
@@ -365,6 +365,7 @@ Run focused and full verification after implementation, including disconnect beh
 - [ ] Route adapters are wired into server core without duplicating server bootstrap.
 - [ ] Tests cover replay, fan-out, heartbeat, abort, append, and route validation behavior.
 - [ ] Type checking, tests, CI, and manual smoke verification pass.
+## Verification
 
 ## Progress Log
 

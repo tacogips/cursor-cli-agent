@@ -56,6 +56,36 @@ Status labels:
 | GraphQL or app-server transport bridge | Partial | Phase 5 | optional compatibility layer after REST/SSE and SDK are stable |
 | Tool registry / model-availability helpers | Implemented | Phase 5 | only if Cursor exposes enough stable metadata to justify it |
 
+## Canonical Backlog Coverage
+
+The phase-2 through phase-5 parity backlog is a single dependency graph. Global
+design and batch implementation planning must cover every selected item before
+any one item is implemented.
+
+| Backlog ID | Phase | Design doc | Expected implementation plan | Codex reference areas | Dependencies |
+|---|---:|---|---|---|---|
+| `P2-SESSION-SEARCH` | 2 | `design-docs/specs/design-session-search.md` | `impl-plans/active/session-search.md` | `src/session/search.ts`, `src/session/sqlite.ts`, `src/types/session.ts` | - |
+| `P2-TRANSCRIPT-SEARCH` | 2 | `design-docs/specs/design-transcript-search.md` | `impl-plans/active/transcript-search.md` | `src/session/search.ts`, `src/session/search.test.ts`, `src/types/session.ts` | `P2-SESSION-SEARCH` |
+| `P2-BOOKMARKS` | 2 | `design-docs/specs/design-bookmarks.md` | `impl-plans/active/bookmarks.md` | `src/bookmark/*`, `src/cli/index.ts` bookmark commands | `P2-TRANSCRIPT-SEARCH` |
+| `P2-ACTIVITY` | 2 | `design-docs/specs/design-activity.md` | `impl-plans/active/activity.md` | `src/activity/*`, `src/process/manager.ts` | - |
+| `P2-MARKDOWN-TASKS` | 2 | `design-docs/specs/design-markdown-tasks.md` | `impl-plans/active/markdown-tasks.md` | `src/markdown/*`, `src/cli/index.ts` `session show --tasks` behavior | `P2-TRANSCRIPT-SEARCH` |
+| `P3-GROUP-LIFECYCLE` | 3 | `design-docs/specs/design-group-lifecycle.md` | `impl-plans/active/group-lifecycle.md` | `src/group/*`, `src/cli/index.ts` group commands | `P2-ACTIVITY` |
+| `P3-QUEUE-LIFECYCLE` | 3 | `design-docs/specs/design-queue-lifecycle.md` | `impl-plans/active/queue-lifecycle.md` | `src/queue/*`, `src/cli/index.ts` queue commands | `P2-ACTIVITY` |
+| `P3-FILE-INTELLIGENCE` | 3 | `design-docs/specs/design-file-intelligence.md` | `impl-plans/active/file-intelligence.md` | `src/file-changes/*`, `src/cli/index.ts` files commands | `P2-SESSION-SEARCH` |
+| `P3-REPO-ANALYTICS` | 3 | `design-docs/specs/design-repository-analytics.md` | `impl-plans/active/repository-analytics.md` | `src/file-changes/*`, completed plan `session-file-patch-history.md` | `P3-FILE-INTELLIGENCE` |
+| `P4-HTTP-SERVER` | 4 | `design-docs/specs/design-http-server-core.md` | `impl-plans/active/http-server-core.md` | `src/server/*`, `src/cli/index.ts` server command | `P2-BOOKMARKS`, `P3-GROUP-LIFECYCLE`, `P3-QUEUE-LIFECYCLE`, `P3-FILE-INTELLIGENCE` |
+| `P4-SSE` | 4 | `design-docs/specs/design-server-event-streaming.md` | `impl-plans/active/server-event-streaming.md` | `src/server/sse.ts`, `src/server/websocket.ts`, `src/sdk/events.ts` | `P4-HTTP-SERVER`, `P2-ACTIVITY` |
+| `P4-AUTH` | 4 | `design-docs/specs/design-token-auth.md` | `impl-plans/active/token-auth.md` | `src/auth/*`, `src/server/auth.ts` | `P4-HTTP-SERVER` |
+| `P4-DAEMON` | 4 | `design-docs/specs/design-daemon-lifecycle.md` | `impl-plans/active/daemon-lifecycle.md` | `src/daemon/*`, `src/cli/index.ts` daemon command | `P4-HTTP-SERVER`, `P4-SSE` |
+| `P4-PUBLIC-SDK` | 4 | `design-docs/specs/design-public-sdk.md` | `impl-plans/active/public-sdk.md` | `src/sdk/*`, `src/main.ts`, `package.json` exports | `P4-HTTP-SERVER` |
+| `P5-COMPAT-BRIDGE` | 5 | `design-docs/specs/design-compat-bridge.md` | `impl-plans/active/compat-bridge.md` | `src/graphql/*`, `src/cli/graphql.ts`, server app transport files | `P4-HTTP-SERVER`, `P4-PUBLIC-SDK` |
+| `P5-TOOL-REGISTRY` | 5 | `design-docs/specs/design-tool-registry-model-helpers.md` | `impl-plans/active/tool-registry-model-helpers.md` | `src/sdk/tool-registry.ts`, `src/sdk/model-availability.ts`, `src/sdk/tool-versions.ts` | `P4-PUBLIC-SDK` |
+
+The runtime-provided `referenceRepositoryRoot` should be used when it points to
+a populated `codex-agent` checkout. If the in-repository `codex-agent/`
+placeholder is empty, use `/g/gits/tacogips/codex-agent` as the local reference
+checkout for review and planning evidence.
+
 ## Phase 1 Scope
 
 ### Included
@@ -311,3 +341,28 @@ The server and SDK must expose the repository's normalized models, not raw Curso
 3. Implement phase 3 only after derived indexes and lifecycle states are formalized.
 4. Introduce server/auth/daemon/public SDK as phase 4 once local models are stable.
 5. Treat phase-5 compatibility items as optional expansions, not core release blockers.
+
+## Batch Planning and Review Strategy
+
+For `parity-global-design-plan-implement-loop`, implementation planning is a
+batch gate:
+
+1. Step 1 owns this global design and must keep the backlog table above aligned
+   with the focused `design-*.md` feature docs.
+2. Step 2 reviews the global design for coverage, dependency correctness,
+   adapter isolation, Cursor divergences, and test strategy before plans are
+   authored.
+3. Step 3 creates or updates every selected active plan path listed above before
+   any implementation starts.
+4. Step 4 reviews the complete plan batch. Design-level blockers return to Step
+   1; plan-only blockers return to Step 3.
+5. Step 5 selects the earliest ready active plan whose dependencies are
+   complete, honoring `maxItemsPerRun`.
+6. Step 6 delegates exactly one selected plan to
+   `design-and-implement-review-loop` using `executionMode:
+   "issue-resolution"`.
+
+The child workflow input must include the backlog ID, selected active plan path,
+design doc path, dependency state, requested behavior, and Codex reference files.
+No implementation work should happen in the global design or batch planning
+nodes.

@@ -1,6 +1,6 @@
 # HTTP Server Core
 
-This document defines the `P4-HTTP-SERVER-CORE` design slice for a normalized local REST server over Cursor session state.
+This document defines the canonical `P4-HTTP-SERVER` design slice for a normalized local REST server over Cursor session state.
 
 ## Overview
 
@@ -8,7 +8,7 @@ The HTTP server exposes repository-owned Cursor session models through local RES
 
 ## Source Issue Mapping
 
-- Feature ID: `P4-HTTP-SERVER-CORE`
+- Backlog ID: `P4-HTTP-SERVER`
 - Target feature area: `http server`
 - Requested behavior: normalized local REST server runtime, configuration, health/version routes, session detail/list/search routes, error envelope, and CLI server start behavior
 - Dependencies: `P1-CORE-FOUNDATION`, `P2-SESSION-SEARCH`, `P2-TRANSCRIPT-SEARCH`

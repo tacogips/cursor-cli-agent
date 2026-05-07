@@ -11,7 +11,8 @@ This slice depends on `P2-TRANSCRIPT-SEARCH` for stable transcript message ident
 ## Source Issue Mapping
 
 - Backlog ID: `P2-MARKDOWN-TASKS`
-- Workflow ID: `codex-agent-feature-design-plan-loop`
+- Parent workflow: `parity-global-design-plan-implement-loop`
+- Delegated workflow: `design-and-implement-review-loop`
 - Requested behavior: parse assistant transcript markdown into sections and task lists without mutating Cursor transcripts
 - Scope boundary: read-only local transcript scanning through Cursor adapter modules
 - Dependency: `P2-TRANSCRIPT-SEARCH` must be available so extracted tasks can reference stable transcript message IDs

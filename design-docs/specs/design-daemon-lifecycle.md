@@ -18,7 +18,7 @@ This design maps the `codex-agent` Phase 4 daemon/app-server behavior onto this 
 - Feature id: `P4-DAEMON`
 - Target area: daemon mode
 - Requested behavior: daemon start, stop, status, PID metadata, stale process cleanup, server supervision, readiness checks, and CLI daemon commands
-- Dependencies: `P4-HTTP-SERVER-CORE`, `P4-SSE`, `P4-TOKEN-AUTH`
+- Dependencies: `P4-HTTP-SERVER`, `P4-SSE`, `P4-AUTH`
 - Assigned implementation plan: `impl-plans/active/daemon-lifecycle.md`
 
 ## Codex-Agent Reference Mapping
@@ -50,9 +50,9 @@ Included:
 
 Excluded:
 
-- implementing HTTP route handlers from `P4-HTTP-SERVER-CORE`
+- implementing HTTP route handlers from `P4-HTTP-SERVER`
 - implementing SSE event derivation from `P4-SSE`
-- implementing token creation, rotation, or permission checks from `P4-TOKEN-AUTH`
+- implementing token creation, rotation, or permission checks from `P4-AUTH`
 - remote daemon management across hosts
 - direct writes to Cursor transcript, skill, or AI tracking locations
 - cancellation of already-running `cursor-agent` subprocesses beyond server shutdown
@@ -96,12 +96,12 @@ Stale cleanup rules:
 
 ## Server Supervision
 
-The daemon starts the same server runtime defined by `P4-HTTP-SERVER-CORE`. It passes normalized configuration:
+The daemon starts the same server runtime defined by `P4-HTTP-SERVER`. It passes normalized configuration:
 
 - host and port
 - data directory and config directory
 - Cursor home override
-- auth configuration from `P4-TOKEN-AUTH`
+- auth configuration from `P4-AUTH`
 - SSE enablement from `P4-SSE`
 - log path and shutdown timeout
 
@@ -149,9 +149,9 @@ The path module should expose helpers rather than scattering path strings throug
 
 | Dependency | Required Contract |
 |---|---|
-| `P4-HTTP-SERVER-CORE` | startable server entrypoint, health endpoint, host/port config, graceful close |
+| `P4-HTTP-SERVER` | startable server entrypoint, health endpoint, host/port config, graceful close |
 | `P4-SSE` | optional event stream route that the daemon can leave enabled without owning event semantics |
-| `P4-TOKEN-AUTH` | token validation middleware and safe token config propagation |
+| `P4-AUTH` | token validation middleware and safe token config propagation |
 | Phase 1-3 local features | normalized sessions, search, group, queue, bookmark, activity, and file APIs exposed by server |
 
 ## Verification

@@ -12,6 +12,7 @@ import {
 } from "../config/paths";
 import { createActivityManager } from "../activity/manager";
 import { deriveGroupProgressSnapshot } from "../group/progress";
+import { deriveQueueProgressSnapshot } from "../queue/progress";
 import {
   BookmarkInputError,
   BookmarkNotFoundError,
@@ -33,6 +34,10 @@ import {
 } from "../cursor/transcript-search";
 import { loadAiTrackingEnrichment } from "../cursor/ai-tracking-reader";
 import { findSkillByName, listSkillRecords } from "../cursor/skill-catalog";
+import {
+  createTranscriptMarkdownTaskExtractor,
+  MarkdownTaskNotFoundError,
+} from "../markdown/transcript-tasks";
 import {
   parseTranscriptLine,
   readTranscriptFile,
@@ -59,10 +64,20 @@ import type {
   GroupRunWorkspaceRecord,
 } from "../types/group";
 import type {
+  QueueItemMode,
+  QueueItemRecord,
+  QueueItemStatus,
+  QueueProgressSnapshot,
+  QueueRecord,
+  QueueRunRecord,
+  QueueRunStatus,
+} from "../types/queue";
+import type {
   TranscriptSearchOptions,
   TranscriptSearchResult,
   TranscriptSearchRole,
 } from "../types/transcript-search";
+import type { MarkdownTaskExtractionResult } from "../types/markdown-task";
 
 type HeadlessStreamingRunner = typeof runHeadlessStreaming;
 
@@ -479,6 +494,47 @@ function parseActivityOptions(flags: Record<string, string | boolean>):
   };
 }
 
+function parseMarkdownTaskOptions(flags: Record<string, string | boolean>):
+  | {
+      sessionId: string;
+      messageId?: string;
+      checked?: boolean;
+    }
+  | { error: string } {
+  const sessionId = flags["session"];
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    return { error: "markdown tasks: --session is required" };
+  }
+
+  const messageId = flags["message"];
+  if (messageId !== undefined && typeof messageId !== "string") {
+    return { error: "markdown tasks: --message requires an id" };
+  }
+
+  const checked = flags["checked"];
+  if (checked === undefined) {
+    return {
+      sessionId,
+      ...(typeof messageId === "string" ? { messageId } : {}),
+    };
+  }
+  if (checked === "true") {
+    return {
+      sessionId,
+      ...(typeof messageId === "string" ? { messageId } : {}),
+      checked: true,
+    };
+  }
+  if (checked === "false") {
+    return {
+      sessionId,
+      ...(typeof messageId === "string" ? { messageId } : {}),
+      checked: false,
+    };
+  }
+  return { error: "markdown tasks: --checked must be true or false" };
+}
+
 function parseBookmarkFilter(
   flags: Record<string, string | boolean>,
 ): { filter: BookmarkFilter } | { error: string } {
@@ -620,6 +676,17 @@ function renderTranscriptSearchHuman(result: TranscriptSearchResult): void {
   }
 }
 
+function renderMarkdownTasksHuman(result: MarkdownTaskExtractionResult): void {
+  for (const task of result.tasks) {
+    const marker = task.checked ? "[x]" : "[ ]";
+    const section =
+      task.sectionHeading === undefined || task.sectionHeading.length === 0
+        ? ""
+        : `  ${task.sectionHeading}`;
+    console.log(`${task.messageId}  ${marker}${section}  ${task.text}`);
+  }
+}
+
 function renderActivityHuman(activity: {
   readonly localSessionId?: string;
   readonly cursorChatId?: string;
@@ -648,6 +715,19 @@ function renderGroupProgressHuman(snapshot: GroupProgressSnapshot): void {
   for (const workspace of snapshot.run?.workspaces ?? []) {
     const session = workspace.localSessionId ?? workspace.cursorChatId ?? "-";
     console.log(`${workspace.workspace}  ${workspace.status}  ${session}`);
+  }
+}
+
+function renderQueueProgressLine(snapshot: QueueProgressSnapshot): string {
+  return `${snapshot.queue.name}  lifecycle=${snapshot.queue.lifecycleState}  run=${snapshot.run?.status ?? "none"}  total=${snapshot.queue.items.length}  pending=${snapshot.totals.pending}  running=${snapshot.totals.running}  completed=${snapshot.totals.completed}  failed=${snapshot.totals.failed}  skipped=${snapshot.totals.skipped}  manual=${snapshot.totals.manual}  workspace=${snapshot.queue.workspace}`;
+}
+
+function renderQueueProgressHuman(snapshot: QueueProgressSnapshot): void {
+  console.log(renderQueueProgressLine(snapshot));
+  for (const item of snapshot.queue.items) {
+    console.log(
+      `${item.id}  ${item.status}  mode=${item.mode}  ${promptPreview(item.prompt)}`,
+    );
   }
 }
 
@@ -683,6 +763,81 @@ function initialRunRecord(group: GroupRecord, prompt: string): GroupRunRecord {
       status: "pending",
       updatedAt: startedAt,
     })),
+  };
+}
+
+function initialQueueRunRecord(queue: QueueRecord): QueueRunRecord {
+  const startedAt = new Date().toISOString();
+  const runnable = queue.items.filter(
+    (item) => item.status === "pending" && item.mode === "auto",
+  );
+  return {
+    id: runId(queue.name, startedAt),
+    status: "running",
+    startedAt,
+    updatedAt: startedAt,
+    completedItemIds: [],
+    failedItemIds: [],
+    pendingItemIds: runnable.map((item) => item.id),
+  };
+}
+
+function updateQueueRunItem(
+  run: QueueRunRecord,
+  itemId: string,
+  status: QueueItemStatus,
+): QueueRunRecord {
+  const updatedAt = new Date().toISOString();
+  const completed = new Set(run.completedItemIds);
+  const failed = new Set(run.failedItemIds);
+  const pending = new Set(run.pendingItemIds);
+  pending.delete(itemId);
+  if (status === "completed") {
+    completed.add(itemId);
+    failed.delete(itemId);
+  }
+  if (status === "failed") {
+    failed.add(itemId);
+    completed.delete(itemId);
+  }
+  const currentItemId =
+    status === "running"
+      ? itemId
+      : run.currentItemId === itemId
+        ? undefined
+        : run.currentItemId;
+  const runWithoutCurrent = {
+    id: run.id,
+    status: run.status,
+    startedAt: run.startedAt,
+    updatedAt: run.updatedAt,
+    ...(run.completedAt !== undefined ? { completedAt: run.completedAt } : {}),
+    completedItemIds: run.completedItemIds,
+    failedItemIds: run.failedItemIds,
+    pendingItemIds: run.pendingItemIds,
+    ...(run.stoppedAt !== undefined ? { stoppedAt: run.stoppedAt } : {}),
+  };
+  return {
+    ...runWithoutCurrent,
+    ...(currentItemId !== undefined ? { currentItemId } : {}),
+    updatedAt,
+    completedItemIds: [...completed],
+    failedItemIds: [...failed],
+    pendingItemIds: [...pending],
+  };
+}
+
+function finishQueueRunRecord(
+  run: QueueRunRecord,
+  status: QueueRunStatus,
+): QueueRunRecord {
+  const completedAt = new Date().toISOString();
+  return {
+    ...run,
+    status,
+    updatedAt: completedAt,
+    completedAt,
+    ...(status === "stopped" ? { stoppedAt: completedAt } : {}),
   };
 }
 
@@ -829,6 +984,7 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
   curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
   curort-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
+  curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
   curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
   curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
   curort-cli-agent bookmark show <id> [--json]
@@ -840,6 +996,11 @@ export async function runCli(argv: string[]): Promise<number> {
     watch <name> [--interval <seconds>] [--once] [--json]
     run <name> --prompt <text> [--stream <text|json|events>] [--json]
   curort-cli-agent queue <subcommand> ...
+    create <name> [--workspace <path>] | list | show <name> | add <name> --prompt <text> | remove <name> --item <id>
+    pause <name> [--json] | resume <name> [--json] | delete <name> [--force] [--json]
+    update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
+    move <name> --from <n> --to <n> [--json] | mode <name> --item <id> --mode <auto|manual> [--json] | stop <name> [--json]
+    run <name> [--stream <text|json|events>] [--json]
   curort-cli-agent skill list [--workspace <path>] [--json]
   curort-cli-agent skill show <name> [--workspace <path>] [--json]
   curort-cli-agent server ...  (phase 2; not implemented yet)
@@ -868,6 +1029,9 @@ export async function runCli(argv: string[]): Promise<number> {
   }
   if (cmd === "activity") {
     return runActivity(tail);
+  }
+  if (cmd === "markdown") {
+    return runMarkdown(tail);
   }
   if (cmd === "bookmark") {
     return runBookmark(tail);
@@ -933,6 +1097,52 @@ async function runActivity(argv: string[]): Promise<number> {
       }
     }
     return EXIT.OK;
+  } finally {
+    repo.close();
+  }
+}
+
+async function runMarkdown(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub === undefined) {
+    console.error("markdown: missing subcommand");
+    return EXIT.USAGE;
+  }
+  if (sub !== "tasks") {
+    console.error(`Unknown markdown subcommand: ${sub}`);
+    return EXIT.USAGE;
+  }
+
+  const { rest: pos, flags } = parseFlags(rest);
+  if (pos.length > 0) {
+    console.error("markdown tasks: unexpected positional arguments");
+    return EXIT.USAGE;
+  }
+
+  const parsed = parseMarkdownTaskOptions(flags);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+
+  const json = flags["json"] === true;
+  const repo = await openRepo();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const extractor = createTranscriptMarkdownTaskExtractor(repo);
+    const result = await extractor.extract(parsed);
+    if (json) {
+      printJson(result);
+    } else {
+      renderMarkdownTasksHuman(result);
+    }
+    return EXIT.OK;
+  } catch (error) {
+    if (error instanceof MarkdownTaskNotFoundError) {
+      console.error(error.message);
+      return EXIT.NOT_FOUND;
+    }
+    throw error;
   } finally {
     repo.close();
   }
@@ -1930,6 +2140,41 @@ async function runGroup(argv: string[]): Promise<number> {
   return EXIT.USAGE;
 }
 
+function isQueueItemStatus(value: string): value is QueueItemStatus {
+  return (
+    value === "pending" ||
+    value === "running" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "skipped"
+  );
+}
+
+function isOperatorQueueItemStatus(value: string): value is QueueItemStatus {
+  return (
+    value === "pending" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "skipped"
+  );
+}
+
+function isQueueItemMode(value: string): value is QueueItemMode {
+  return value === "auto" || value === "manual";
+}
+
+function parseQueueIndex(
+  flags: Record<string, string | boolean>,
+  key: string,
+): number | undefined {
+  const value = flags[key];
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 async function runQueue(argv: string[]): Promise<number> {
   const [sub, ...rest] = argv;
   if (sub === undefined) {
@@ -1959,8 +2204,20 @@ async function runQueue(argv: string[]): Promise<number> {
     if (json) {
       printJson({ queues: rows });
     } else {
-      for (const q of rows) {
-        console.log(`${q.name} (${q.workspace}): ${q.items.length} items`);
+      const repo = await openRepo();
+      try {
+        const activityManager = createActivityManager({ sessions: repo });
+        await repo.importTranscriptsFromFilesystem();
+        for (const q of rows) {
+          const snapshot = await deriveQueueProgressSnapshot(q, {
+            getActivity: (sessionId) =>
+              activityManager.getSessionActivity(sessionId),
+            now: () => new Date().toISOString(),
+          });
+          console.log(renderQueueProgressLine(snapshot));
+        }
+      } finally {
+        repo.close();
       }
     }
     return EXIT.OK;
@@ -1979,7 +2236,217 @@ async function runQueue(argv: string[]): Promise<number> {
     if (json) {
       printJson(q);
     } else {
-      console.log(JSON.stringify(q, null, 2));
+      const repo = await openRepo();
+      try {
+        const activityManager = createActivityManager({ sessions: repo });
+        await repo.importTranscriptsFromFilesystem();
+        const snapshot = await deriveQueueProgressSnapshot(q, {
+          getActivity: (sessionId) =>
+            activityManager.getSessionActivity(sessionId),
+          now: () => new Date().toISOString(),
+        });
+        renderQueueProgressHuman(snapshot);
+      } finally {
+        repo.close();
+      }
+    }
+    return EXIT.OK;
+  }
+  if (sub === "pause") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue pause: missing name");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.pauseQueue(name);
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(q);
+    } else {
+      console.log(`paused ${q.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "resume") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue resume: missing name");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.resumeQueue(name);
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(q);
+    } else {
+      console.log(`resumed ${q.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "delete") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue delete: missing name");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.getQueue(name);
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (q.lastRun?.status === "running" && flags["force"] !== true) {
+      console.error("queue delete: latest run is running; use --force");
+      return EXIT.ERR;
+    }
+    const deleted = await queuesStore.deleteQueue(name);
+    if (deleted === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson({ deleted: true, queue: deleted });
+    } else {
+      console.log(`deleted ${deleted.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "update") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue update: missing name");
+      return EXIT.USAGE;
+    }
+    const item = typeof flags["item"] === "string" ? flags["item"] : undefined;
+    if (item === undefined) {
+      console.error("queue update: --item is required");
+      return EXIT.USAGE;
+    }
+    const prompt =
+      typeof flags["prompt"] === "string" ? flags["prompt"] : undefined;
+    const rawStatus = flags["status"];
+    if (
+      rawStatus !== undefined &&
+      (typeof rawStatus !== "string" || !isOperatorQueueItemStatus(rawStatus))
+    ) {
+      console.error(
+        "queue update: --status must be pending, completed, failed, or skipped",
+      );
+      return EXIT.USAGE;
+    }
+    if (prompt === undefined && rawStatus === undefined) {
+      console.error("queue update: --prompt or --status is required");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.updateQueueItem(name, item, {
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(typeof rawStatus === "string" && isQueueItemStatus(rawStatus)
+        ? { status: rawStatus }
+        : {}),
+    });
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (!q.items.some((queueItem) => queueItem.id === item)) {
+      console.error("queue item not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(q);
+    } else {
+      console.log(`updated ${q.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "move") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue move: missing name");
+      return EXIT.USAGE;
+    }
+    const from = parseQueueIndex(flags, "from");
+    const to = parseQueueIndex(flags, "to");
+    if (from === undefined || to === undefined) {
+      console.error("queue move: --from and --to must be zero-based indexes");
+      return EXIT.USAGE;
+    }
+    const before = await queuesStore.getQueue(name);
+    if (before === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (
+      from >= before.items.length ||
+      to >= before.items.length ||
+      before.items.length === 0
+    ) {
+      console.error("queue move: index out of range");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.moveQueueItem(name, from, to);
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(q);
+    } else {
+      console.log(`moved ${q.name}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "mode") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue mode: missing name");
+      return EXIT.USAGE;
+    }
+    const item = typeof flags["item"] === "string" ? flags["item"] : undefined;
+    if (item === undefined) {
+      console.error("queue mode: --item is required");
+      return EXIT.USAGE;
+    }
+    const mode = flags["mode"];
+    if (typeof mode !== "string" || !isQueueItemMode(mode)) {
+      console.error("queue mode: --mode must be auto or manual");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.updateQueueItem(name, item, { mode });
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (!q.items.some((queueItem) => queueItem.id === item)) {
+      console.error("queue item not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(q);
+    } else {
+      console.log(`set ${item} mode=${mode}`);
+    }
+    return EXIT.OK;
+  }
+  if (sub === "stop") {
+    const name = pos[0];
+    if (name === undefined) {
+      console.error("queue stop: missing name");
+      return EXIT.USAGE;
+    }
+    const q = await queuesStore.requestQueueStop(name);
+    if (q === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    if (json) {
+      printJson(q);
+    } else {
+      console.log(`stopped ${q.name}`);
     }
     return EXIT.OK;
   }
@@ -2018,10 +2485,18 @@ async function runQueue(argv: string[]): Promise<number> {
       console.error("queue run: missing name");
       return EXIT.USAGE;
     }
-    const q = await queuesStore.getQueue(name);
-    if (q === undefined) {
+    const initialQueue = await queuesStore.getQueue(name);
+    if (initialQueue === undefined) {
       console.error("queue not found");
       return EXIT.NOT_FOUND;
+    }
+    if (initialQueue.lifecycleState === "paused") {
+      console.error("queue run: queue is paused");
+      return EXIT.ERR;
+    }
+    if (initialQueue.lifecycleState === "stopped") {
+      console.error("queue run: queue is stopped; resume before running");
+      return EXIT.ERR;
     }
     const sm = resolveStreamMode(flags);
     if ("error" in sm) {
@@ -2032,7 +2507,61 @@ async function runQueue(argv: string[]): Promise<number> {
     const repo = await openRepo();
     const activityManager = createActivityManager({ sessions: repo });
     const activityClassifier = createActivitySignalClassifier();
-    for (const item of q.items) {
+    let queueWriteChain: Promise<void> = Promise.resolve();
+    const enqueueQueueRunUpdate = (
+      run: QueueRunRecord,
+      lifecycleState?: QueueRecord["lifecycleState"],
+      items?: readonly QueueItemRecord[],
+    ): void => {
+      queueWriteChain = queueWriteChain.then(async () => {
+        await queuesStore.updateQueueRun(name, {
+          ...(lifecycleState !== undefined ? { lifecycleState } : {}),
+          lastRun: run,
+          ...(items !== undefined ? { items } : {}),
+        });
+      });
+    };
+    let run = initialQueueRunRecord(initialQueue);
+    enqueueQueueRunUpdate(run, "active");
+    await queueWriteChain;
+    for (const item of initialQueue.items) {
+      if (item.status !== "pending" || item.mode === "manual") {
+        continue;
+      }
+      const latest = await queuesStore.getQueue(name);
+      if (latest === undefined) {
+        console.error("queue not found");
+        return EXIT.NOT_FOUND;
+      }
+      if (latest.lifecycleState === "paused") {
+        run = finishQueueRunRecord(run, "paused");
+        enqueueQueueRunUpdate(run, "paused");
+        await queueWriteChain;
+        return EXIT.OK;
+      }
+      if (
+        latest.lifecycleState === "stopped" ||
+        latest.stopRequestedAt !== undefined
+      ) {
+        run = finishQueueRunRecord(run, "stopped");
+        enqueueQueueRunUpdate(run, "stopped");
+        await queueWriteChain;
+        return EXIT.OK;
+      }
+      const startedAt = new Date().toISOString();
+      let currentItems = latest.items.map((queueItem) =>
+        queueItem.id === item.id
+          ? {
+              ...queueItem,
+              status: "running" as const,
+              startedAt,
+              updatedAt: startedAt,
+            }
+          : queueItem,
+      );
+      run = updateQueueRunItem(run, item.id, "running");
+      enqueueQueueRunUpdate(run, undefined, currentItems);
+      await queueWriteChain;
       const norm = new StreamNormalizerState();
       const textState: TextStreamRenderState = {
         lastAssistantBySession: new Map(),
@@ -2047,8 +2576,8 @@ async function runQueue(argv: string[]): Promise<number> {
           recordActivitySignal(activityManager, sessionId, signal),
         );
       };
-      const exit = await runHeadlessStreaming(
-        buildHeadlessRunOptions(q.workspace, item.prompt, flags),
+      const exit = await runHeadlessStreamingImpl(
+        buildHeadlessRunOptions(initialQueue.workspace, item.prompt, flags),
         (line) => {
           const events = norm.processLine(line);
           emitStreamedAgentEvents(stream, events, textState);
@@ -2056,6 +2585,16 @@ async function runQueue(argv: string[]): Promise<number> {
             const sessionId = sessionIdFromEvent(event);
             if (sessionId !== undefined) {
               lastSessionId = sessionId;
+              currentItems = currentItems.map((queueItem) =>
+                queueItem.id === item.id
+                  ? {
+                      ...queueItem,
+                      localSessionId: sessionId,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : queueItem,
+              );
+              enqueueQueueRunUpdate(run, undefined, currentItems);
             }
             enqueueActivitySignal(
               sessionId,
@@ -2073,17 +2612,42 @@ async function runQueue(argv: string[]): Promise<number> {
         ),
       );
       await activityWriteChain;
+      const completedAt = new Date().toISOString();
+      const itemStatus =
+        exit.code === 0 || exit.code === null ? "completed" : "failed";
+      currentItems = currentItems.map((queueItem) =>
+        queueItem.id === item.id
+          ? {
+              ...queueItem,
+              status: itemStatus,
+              completedAt,
+              updatedAt: completedAt,
+              result: { exitCode: exit.code },
+            }
+          : queueItem,
+      );
+      run = updateQueueRunItem(run, item.id, itemStatus);
+      enqueueQueueRunUpdate(run, undefined, currentItems);
+      await queueWriteChain;
       if (isTrustFailureMessage(exit.stderr)) {
+        run = finishQueueRunRecord(run, "failed");
+        enqueueQueueRunUpdate(run, "failed");
+        await queueWriteChain;
         console.error(exit.stderr);
         return EXIT.TRUST;
       }
       if (exit.code !== 0 && exit.code !== null) {
+        run = finishQueueRunRecord(run, "failed");
+        enqueueQueueRunUpdate(run, "failed");
+        await queueWriteChain;
         console.error(exit.stderr || `cursor-agent exited with ${exit.code}`);
         return EXIT.CURSOR;
       }
-      await queuesStore.removeQueueItem(name, item.id);
       await repo.importTranscriptsFromFilesystem();
     }
+    run = finishQueueRunRecord(run, "completed");
+    enqueueQueueRunUpdate(run, "completed");
+    await queueWriteChain;
     return EXIT.OK;
   }
 

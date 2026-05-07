@@ -232,6 +232,35 @@ Design position:
 
 See `design-docs/specs/design-session-search.md` for the phase-2 session metadata search slice and `design-docs/specs/design-transcript-search.md` for the phase-2 transcript full-text search slice.
 
+### Global Parity Behavior Mapping
+
+The remaining parity backlog maps Codex behavior to Cursor-local services as
+follows. These mappings are the architectural contract for global design review
+and batch implementation planning.
+
+| Backlog ID | Cursor CLI behavior | Adapter and persistence boundary | Cursor-specific divergence |
+|---|---|---|---|
+| `P2-SESSION-SEARCH` | `session search` over indexed metadata | `SessionIndexRepository`, workspace resolver, search domain types | metadata-only; preserves `recordId`, `localSessionId`, `cursorChatId`, and `identityState` |
+| `P2-TRANSCRIPT-SEARCH` | `transcript search` over local JSONL message text | `CursorTranscriptReader`, transcript search module, session index | full text is scan-derived, not state-DB native |
+| `P2-BOOKMARKS` | `bookmark add/list/show/delete/search` | bookmark manager/store plus transcript message lookup adapter | pending `chat_only` records allow only session-level bookmarks |
+| `P2-ACTIVITY` | `activity` list and lookup | activity manager/store plus process state, transcript mtimes, stream events | status is derived with provenance and confidence, not a native Cursor state table |
+| `P2-MARKDOWN-TASKS` | `markdown tasks` extraction | transcript reader/search message identity plus markdown parser | read-only assistant-message extraction; no transcript mutation |
+| `P3-GROUP-LIFECYCLE` | `group pause/resume/delete/watch` | group store/progress service and process runner boundaries | groups target workspaces and sessions through Cursor process primitives |
+| `P3-QUEUE-LIFECYCLE` | `queue pause/resume/delete/update/move/mode/stop` | queue store/runner and activity-aware execution checks | queue items carry Cursor execution modes and per-item manual/auto policy |
+| `P3-FILE-INTELLIGENCE` | `files list/snapshots/deleted/find/rebuild` | `CursorAiTrackingReader`, file index repository | best-effort `ai-tracking` enrichment replaces Codex rollout tool logs |
+| `P3-REPO-ANALYTICS` | commit and repository analytics | file index repository plus optional `scored_commits` reads | unavailable joins return degraded/unknown analytics |
+| `P4-HTTP-SERVER` | `server start` REST JSON surface | server route handlers over domain services | normalized local REST, not raw Cursor or Codex GraphQL payloads |
+| `P4-SSE` | live server event stream | event stream gateway over normalized agent/activity events | SSE is best-effort local event fanout; Cursor stream payloads stay private |
+| `P4-AUTH` | local token lifecycle and bearer checks | token repository and server auth middleware | loopback local mode can remain tokenless; non-loopback requires auth |
+| `P4-DAEMON` | `daemon start/stop/status` | daemon manager supervising server and background watchers | supervision covers this wrapper's processes, not Cursor GUI state |
+| `P4-PUBLIC-SDK` | import-safe package facade | SDK barrels over domain types, runners, server helpers, testing mocks | raw Cursor transcript and stream payloads are not public contracts |
+| `P5-COMPAT-BRIDGE` | optional GraphQL/app-server-style command bridge | compatibility dispatcher over SDK/domain services | unsupported Codex-only commands report structured capability errors |
+| `P5-TOOL-REGISTRY` | tool/model/version/usage helpers | local tool registry, bounded subprocess helpers, session/activity indexes | no undocumented Cursor cloud model catalog dependency |
+
+Implementation plans must keep these boundaries intact. Cursor adapters may
+decode raw Cursor files or process output, but domain, server, SDK, and
+compatibility modules consume normalized repository-owned contracts.
+
 ### 2. File Intelligence Index
 
 Purpose:
@@ -404,6 +433,29 @@ Target export families:
 - `daemon`
 
 This public surface should be introduced only after the corresponding local modules stop depending on CLI-only wiring.
+
+## Verification Strategy for Parity Phases
+
+Verification should scale from local pure modules to process and server
+integration:
+
+1. Unit-test adapters and parsers with fixtures for transcript JSONL, stream
+   events, sparse `ai-tracking` rows, malformed rows, and missing optional local
+   files.
+2. Test persistence migrations and repositories with isolated temporary data
+   roots.
+3. Test CLI parsing and JSON output for each backlog item, including invalid
+   usage and degraded-data cases.
+4. Test server, SSE, auth, daemon, and SDK surfaces against domain mocks or
+   temporary local stores before any live Cursor process dependency.
+5. For process-facing behavior, keep bounded integration tests optional or
+   fixture-backed unless the delegated plan explicitly requires a live
+   `cursor-agent` probe.
+
+The standard repository verification entrypoints remain `task test`, `task
+typecheck`, and `task ci`. A delegated plan may use narrower checks while
+developing, but completion evidence must name which checks ran and why any full
+suite was skipped.
 
 ## Key Architecture Decisions
 

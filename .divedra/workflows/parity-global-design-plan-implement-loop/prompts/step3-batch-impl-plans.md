@@ -30,14 +30,14 @@ Preferred plan paths:
 - `P3-GROUP-LIFECYCLE`: `impl-plans/active/group-lifecycle.md`
 - `P3-QUEUE-LIFECYCLE`: `impl-plans/active/queue-lifecycle.md`
 - `P3-FILE-INTELLIGENCE`: `impl-plans/active/file-intelligence.md`
-- `P3-REPO-ANALYTICS`: `impl-plans/active/repo-analytics.md`
-- `P4-HTTP-SERVER`: `impl-plans/active/http-server.md`
-- `P4-SSE`: `impl-plans/active/sse.md`
-- `P4-AUTH`: `impl-plans/active/auth.md`
-- `P4-DAEMON`: `impl-plans/active/daemon.md`
+- `P3-REPO-ANALYTICS`: `impl-plans/active/repository-analytics.md`
+- `P4-HTTP-SERVER`: `impl-plans/active/http-server-core.md`
+- `P4-SSE`: `impl-plans/active/server-event-streaming.md`
+- `P4-AUTH`: `impl-plans/active/token-auth.md`
+- `P4-DAEMON`: `impl-plans/active/daemon-lifecycle.md`
 - `P4-PUBLIC-SDK`: `impl-plans/active/public-sdk.md`
 - `P5-COMPAT-BRIDGE`: `impl-plans/active/compat-bridge.md`
-- `P5-TOOL-REGISTRY`: `impl-plans/active/tool-registry.md`
+- `P5-TOOL-REGISTRY`: `impl-plans/active/tool-registry-model-helpers.md`
 
 Return JSON with:
 - `workflowMode`: `global-design-plan-implement`

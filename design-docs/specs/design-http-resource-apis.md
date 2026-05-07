@@ -177,8 +177,8 @@ Intentional divergences:
 
 | Dependency ID | Required Contract |
 |---------------|-------------------|
-| `P4-HTTP-SERVER-CORE` | route registration, JSON body parsing, query parsing, response/error helpers, server lifecycle |
-| `P4-TOKEN-AUTH` | optional bearer auth middleware and permission checks |
+| `P4-HTTP-SERVER` | route registration, JSON body parsing, query parsing, response/error helpers, server lifecycle |
+| `P4-AUTH` | optional bearer auth middleware and permission checks |
 | `P2-BOOKMARKS` | bookmark manager, store, stable transcript bookmark targets |
 | `P3-GROUP-LIFECYCLE` | group lifecycle records, pause/resume/delete/run/progress behavior |
 | `P3-QUEUE-LIFECYCLE` | queue lifecycle records, item update/move/mode, pause/resume/delete/run behavior |

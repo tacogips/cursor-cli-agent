@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-compat-bridge.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ## Design Document Reference
 
@@ -21,11 +21,11 @@ Implement `P5-COMPAT-BRIDGE-REFRESH`: an optional GraphQL and app-server-like co
 
 ### Codex Reference Mapping
 
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.ts`: JSON scalar schema, command resolver, operation execution, subscription flow, validation helpers.
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.test.ts`: query, mutation, validation, and `session.watch` subscription coverage.
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/graphql.ts`: shorthand command-to-document inference and JSON variable loading.
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/graphql.test.ts`: CLI shorthand and variable parsing tests.
-- `/Users/taco/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: server/app-server transport reference; this repository intentionally exposes only `compat-local`.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/graphql/index.ts`: JSON scalar schema, command resolver, operation execution, subscription flow, validation helpers.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/graphql/index.test.ts`: query, mutation, validation, and `session.watch` subscription coverage.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/graphql.ts`: shorthand command-to-document inference and JSON variable loading.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/graphql.test.ts`: CLI shorthand and variable parsing tests.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: server/app-server transport reference; this repository intentionally exposes only `compat-local`.
 
 Intentional divergences:
 

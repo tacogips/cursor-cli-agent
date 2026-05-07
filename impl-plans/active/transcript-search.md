@@ -3,7 +3,7 @@
 **Status**: Completed
 **Design Reference**: `design-docs/specs/design-transcript-search.md`
 **Created**: 2026-05-05
-**Last Updated**: 2026-05-05
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,9 +23,9 @@ Implement backlog slice `P2-TRANSCRIPT-SEARCH`: read-only full-text search acros
 
 ### Codex Reference Mapping
 
-- `/Users/taco/gits/tacogips/codex-agent/src/session/search.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/session/search.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/types/session.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/search.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/search.test.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/types/session.ts`
 
 Reference behavior to preserve:
 
@@ -214,7 +214,7 @@ describe("transcript full-text search", () => {
 **Completion Criteria**:
 
 - [x] Type contracts compile under strict TypeScript.
-- [x] Service options include timeout input compatible with `/Users/taco/gits/tacogips/codex-agent/src/types/session.ts`.
+- [x] Service options include timeout input compatible with `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/types/session.ts`.
 - [x] Hit contract includes stable message IDs and transcript provenance.
 - [x] Contracts preserve Cursor identity fields needed by bookmarks and markdown tasks.
 
@@ -244,7 +244,7 @@ describe("transcript full-text search", () => {
 - [x] Service scans transcript-backed Cursor sessions through adapter boundaries.
 - [x] `--session` identity narrowing works for record, local session, and Cursor chat IDs.
 - [x] Role filters, pagination, and scan budgets are enforced.
-- [x] Timeout deadline handling follows `/Users/taco/gits/tacogips/codex-agent/src/session/search.ts` by setting `timedOut` and stopping the scan.
+- [x] Timeout deadline handling follows `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/search.ts` by setting `timedOut` and stopping the scan.
 - [x] Pending chat-only records are skipped for transcript content with clear empty results.
 - [x] Result ordering is deterministic across test runs.
 
@@ -328,7 +328,7 @@ describe("transcript full-text search", () => {
 **Tasks Completed**: Addressed Step 5 plan review feedback by adding explicit timeout planning, a service-level `timeoutMs`, default CLI timeout guidance, deadline scan behavior, timeout tests, and completion criteria.
 **Tasks In Progress**: None.
 **Blockers**: None.
-**Notes**: The plan keeps the accepted CLI surface unchanged while mapping timeout behavior to `/Users/taco/gits/tacogips/codex-agent/src/types/session.ts` and `/Users/taco/gits/tacogips/codex-agent/src/session/search.ts`.
+**Notes**: The plan keeps the accepted CLI surface unchanged while mapping timeout behavior to `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/types/session.ts` and `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/search.ts`.
 
 ### Session: 2026-05-05 Step 6 Implementation
 

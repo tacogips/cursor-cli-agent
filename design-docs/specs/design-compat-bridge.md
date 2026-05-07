@@ -1,6 +1,6 @@
 # Compatibility Bridge Readiness Refresh
 
-This document defines feature `P5-COMPAT-BRIDGE-REFRESH` for making the optional GraphQL and app-server compatibility bridge implementation-ready.
+This document defines canonical backlog item `P5-COMPAT-BRIDGE` for making the optional GraphQL and app-server compatibility bridge implementation-ready.
 
 ## Overview
 
@@ -80,12 +80,12 @@ Unsupported or degraded commands return structured compatibility errors or capab
 
 Implementation order:
 
-1. `P4-HTTP-SERVER-CORE` provides request lifecycle, route registration, error envelopes, and server startup policy.
-2. `P4-TOKEN-AUTH` provides bearer verification, request auth context, and permission checks.
+1. `P4-HTTP-SERVER` provides request lifecycle, route registration, error envelopes, and server startup policy.
+2. `P4-AUTH` provides bearer verification, request auth context, and permission checks.
 3. `P4-HTTP-RESOURCE-APIS` provides normalized resource DTOs and route permission vocabulary.
 4. `P4-SSE` provides event stream services used by compatibility subscriptions.
 5. `P4-PUBLIC-SDK` provides import-safe facades for dispatcher dependencies.
-6. `P5-COMPAT-BRIDGE-REFRESH` implements registry, dispatcher, GraphQL executor/CLI, and server/app-server hooks.
+6. `P5-COMPAT-BRIDGE` implements registry, dispatcher, GraphQL executor/CLI, and server/app-server hooks.
 
 The command registry can be implemented first because it is data-only. Dispatcher, GraphQL resolver, and route hooks must wait for the relevant dependency contracts instead of inventing parallel service APIs.
 
@@ -97,7 +97,7 @@ Server transports are gated as follows:
 
 - `/api/graphql` is opt-in and disabled by default until server startup exposes an explicit compatibility flag.
 - When server auth mode is `required`, every command must pass the permission gate in the capability matrix before dispatch.
-- When server auth mode is `optional` or `disabled`, non-loopback startup policy remains owned by `P4-HTTP-SERVER-CORE`; the bridge must not weaken it.
+- When server auth mode is `optional` or `disabled`, non-loopback startup policy remains owned by `P4-HTTP-SERVER`; the bridge must not weaken it.
 - App-server-like compatibility mode uses `mode: "compat-local"` and the same auth gate as `/api/graphql`.
 - Token management commands are not exposed through GraphQL/app-server compatibility in this slice.
 

@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-http-server-core.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,9 +23,9 @@ Implement `P4-HTTP-SERVER-CORE`: a local Bun REST server that exposes normalized
 
 ### Codex Reference Mapping
 
-- `/Users/taco/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: server config/start pattern and CLI integration reference.
-- `/Users/taco/gits/tacogips/codex-agent/design-docs/specs/design-codex-session-management.md`: session management concepts and server/control-plane boundaries.
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.ts`: validation and domain-command dispatch reference only; this Cursor slice uses REST routes, not GraphQL.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`: server config/start pattern and CLI integration reference.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/design-docs/specs/design-codex-session-management.md`: session management concepts and server/control-plane boundaries.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/graphql/index.ts`: validation and domain-command dispatch reference only; this Cursor slice uses REST routes, not GraphQL.
 
 Intentional divergence: REST routes expose `CursorSessionRecord`, `SessionSearchResult`, and `TranscriptSearchResult` from local Cursor adapters and persistence instead of Codex rollout/thread types.
 

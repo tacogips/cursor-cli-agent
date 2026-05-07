@@ -58,6 +58,7 @@ Implemented capabilities:
 - Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
 - Derived `activity` records from the session index, transcript mtimes, wrapper-recorded stream/process signals, and stderr/stdout wait patterns, with explicit `provenance: "derived"` signal details
 - Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
+- Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, legacy queue migration, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -107,6 +108,24 @@ lifecycle before each workspace so a mid-run pause stops additional scheduling.
 `group watch` derives latest-run workspace totals from repository-owned group
 state plus `activity` signals and reports `provenance: "group-store+activity"`.
 
+Queue lifecycle command examples:
+
+```bash
+bun run src/main.ts queue pause <name> --json
+bun run src/main.ts queue resume <name> --json
+bun run src/main.ts queue update <name> --item <id> --status pending --json
+bun run src/main.ts queue move <name> --from 0 --to 1 --json
+bun run src/main.ts queue mode <name> --item <id> --mode manual --json
+bun run src/main.ts queue stop <name> --json
+bun run src/main.ts queue delete <name> --force --json
+```
+
+`queue run` refuses paused or stopped queues before launching Cursor, re-reads
+queue lifecycle before each item, retains completed and failed items with result
+metadata, and skips manual-mode items by default. Queue progress derives item
+totals from repository-owned queue state plus optional `activity` signals and
+reports `provenance: "queue-store+activity"`.
+
 ## Design Documents
 
 - `design-docs/specs/architecture.md`
@@ -116,6 +135,7 @@ state plus `activity` signals and reports `provenance: "group-store+activity"`.
 - `design-docs/specs/design-bookmarks.md`
 - `design-docs/specs/design-activity.md`
 - `design-docs/specs/design-group-lifecycle.md`
+- `design-docs/specs/design-queue-lifecycle.md`
 
 ## Implementation Plan
 
@@ -127,6 +147,7 @@ state plus `activity` signals and reports `provenance: "group-store+activity"`.
 - `impl-plans/active/bookmarks.md`
 - `impl-plans/active/activity.md`
 - `impl-plans/active/group-lifecycle.md`
+- `impl-plans/active/queue-lifecycle.md`
 
 ## Reference Project
 

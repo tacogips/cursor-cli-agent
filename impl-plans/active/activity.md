@@ -3,7 +3,7 @@
 **Status**: Completed
 **Design Reference**: `design-docs/specs/design-activity.md`
 **Created**: 2026-05-05
-**Last Updated**: 2026-05-05
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,13 +23,13 @@ Implement backlog slice `P2-ACTIVITY`: derive best-effort local Cursor session a
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/activity/types.ts`: reference `ActivityStatus` and activity entry shape.
-- `/Users/taco/gits/tacogips/codex-agent/src/activity/manager.ts`: deterministic rollout-line status derivation and unknown-session `null` lookup behavior.
-- `/Users/taco/gits/tacogips/codex-agent/src/activity/manager.test.ts`: tests for running, waiting approval, and failed derivation.
-- `/Users/taco/gits/tacogips/codex-agent/src/activity/index.ts`: activity API export pattern.
-- `/Users/taco/gits/tacogips/codex-agent/src/session/index.ts`: local session lookup fallback pattern.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/activity/types.ts`: reference `ActivityStatus` and activity entry shape.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/activity/manager.ts`: deterministic rollout-line status derivation and unknown-session `null` lookup behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/activity/manager.test.ts`: tests for running, waiting approval, and failed derivation.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/activity/index.ts`: activity API export pattern.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/index.ts`: local session lookup fallback pattern.
 
 Intentional divergences accepted by the design:
 
@@ -330,7 +330,7 @@ describe("activity derivation", () => {
 **Tasks Completed**: Revised `P2-ACTIVITY` implementation plan after Step 3 accepted `design-docs/specs/design-activity.md`.
 **Tasks In Progress**: None.
 **Blockers**: None.
-**Notes**: Plan is scoped to the single backlog slice and traces behavior to `/Users/taco/gits/tacogips/codex-agent/src/activity/*` plus the Cursor-specific divergences accepted in the design.
+**Notes**: Plan is scoped to the single backlog slice and traces behavior to `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/activity/*` plus the Cursor-specific divergences accepted in the design.
 
 ### Session: 2026-05-05 Step 6 Implementation
 

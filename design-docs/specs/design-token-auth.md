@@ -1,6 +1,6 @@
 # Token and Bearer Auth Design
 
-This document defines the Phase 4 design for backlog slice `P4-TOKEN-AUTH`.
+This document defines the Phase 4 design for canonical backlog slice `P4-AUTH`.
 
 ## Overview
 
@@ -85,7 +85,7 @@ family. `server:admin` is reserved for server administration and any future
 remote token-management endpoints. CLI token commands remain local operator
 commands and do not require bearer auth.
 
-Route handlers introduced by `P4-HTTP-SERVER-CORE` must declare their required
+Route handlers introduced by `P4-HTTP-SERVER` must declare their required
 permission before they call domain managers or persistence repositories.
 Handlers expose normalized application entities only and must not pass raw
 Cursor CLI payloads through auth decisions.
@@ -122,7 +122,7 @@ should use owner-only permissions.
 Auth is optional for loopback-only local server use and mandatory when the
 server is exposed beyond loopback.
 
-Server startup policy belongs to `P4-HTTP-SERVER-CORE`, but this feature
+Server startup policy belongs to `P4-HTTP-SERVER`, but this feature
 requires these auth hooks:
 
 - `authMode: "disabled" | "optional" | "required"`
@@ -164,7 +164,7 @@ Intentional divergences:
 
 ## Dependencies
 
-`P4-TOKEN-AUTH` depends on `P4-HTTP-SERVER-CORE` for:
+`P4-AUTH` depends on `P4-HTTP-SERVER` for:
 
 - server startup auth mode wiring
 - request context shape
@@ -183,7 +183,7 @@ Planned verification commands:
 - `task test`
 - `task build`
 - targeted token manager tests once implemented
-- targeted server auth middleware tests once `P4-HTTP-SERVER-CORE` exists
+- targeted server auth middleware tests once `P4-HTTP-SERVER` exists
 
 ## Open Questions
 

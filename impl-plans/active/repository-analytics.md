@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-repository-analytics.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -28,12 +28,12 @@ Implement backlog slice `P3-REPO-ANALYTICS`: local-only repository and commit an
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/types.ts`: reference file operation, summary, history, index, and rebuild stat contracts.
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.ts`: reference session lookup, grouping, rebuildable index, path lookup, and atomic save behavior.
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.test.ts`: reference tests for changed files, rebuild/find, ordered history, and moved/deleted path treatment.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/usage-stats.ts`: reference local aggregation, recent activity bucketing, cache behavior, and graceful missing-source returns.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/types.ts`: reference file operation, summary, history, index, and rebuild stat contracts.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.ts`: reference session lookup, grouping, rebuildable index, path lookup, and atomic save behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.test.ts`: reference tests for changed files, rebuild/find, ordered history, and moved/deleted path treatment.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/usage-stats.ts`: reference local aggregation, recent activity bucketing, cache behavior, and graceful missing-source returns.
 
 Intentional divergences accepted by the design:
 
@@ -235,7 +235,7 @@ interface RepositoryAnalyticsTestMatrix {
 | CLI commands | `src/cli/cli.ts` | NOT_STARTED | planned |
 | Test coverage | `src/**/*.test.ts` | NOT_STARTED | planned |
 
-## Task Plan
+## Work Breakdown
 
 ### TASK-001: Repository Analytics Contracts
 

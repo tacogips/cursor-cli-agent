@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-token-auth.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -29,15 +29,15 @@ mutation of Cursor-owned files or databases.
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/auth/types.ts`: permissions, metadata,
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/auth/types.ts`: permissions, metadata,
   normalization, and wildcard checks.
-- `/Users/taco/gits/tacogips/codex-agent/src/auth/token-manager.ts`: file-backed
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/auth/token-manager.ts`: file-backed
   token lifecycle with hashed secrets.
-- `/Users/taco/gits/tacogips/codex-agent/src/auth/token-manager.test.ts`: lifecycle
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/auth/token-manager.test.ts`: lifecycle
   and permission parsing tests.
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`: token command behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`: token command behavior.
 
 Intentional divergences:
 
@@ -360,6 +360,7 @@ export interface RoutePermissionRegistry {
 - [ ] Bearer verification rejects malformed, revoked, expired, and mismatched tokens.
 - [ ] Route permission guard returns `401` and `403` consistently.
 - [ ] `task typecheck`, `task test`, and `task build` pass.
+## Verification
 
 ## Progress Log
 

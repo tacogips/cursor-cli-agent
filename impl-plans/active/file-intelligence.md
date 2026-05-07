@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-file-intelligence.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -27,13 +27,13 @@ Implement backlog slice `P3-FILE-INTELLIGENCE`: local-only `files list`, `files 
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/types.ts`: reference file operation, summary, history, index, and rebuild stat contracts.
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.ts`: reference session lookup, grouping, rebuildable index, path lookup, and atomic save behavior.
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/index.ts`: reference export boundary.
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.test.ts`: reference tests for changed files, rebuild/find, ordered history, and moved/deleted path treatment.
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`: reference `files list`, `files patches`, `files find`, and `files rebuild` command shape.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/types.ts`: reference file operation, summary, history, index, and rebuild stat contracts.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.ts`: reference session lookup, grouping, rebuildable index, path lookup, and atomic save behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/index.ts`: reference export boundary.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.test.ts`: reference tests for changed files, rebuild/find, ordered history, and moved/deleted path treatment.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`: reference `files list`, `files patches`, `files find`, and `files rebuild` command shape.
 
 Intentional divergences accepted by the design:
 
@@ -241,7 +241,7 @@ interface FileIntelligenceTestMatrix {
 | CLI commands | `src/cli/cli.ts` | NOT_STARTED | planned |
 | Test coverage | `src/**/*.test.ts` | NOT_STARTED | planned |
 
-## Task Plan
+## Work Breakdown
 
 ### TASK-001: File Intelligence Contracts
 

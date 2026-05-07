@@ -1,9 +1,9 @@
 # Markdown Task Extraction Implementation Plan
 
-**Status**: Ready
+**Status**: Completed
 **Design Reference**: `design-docs/specs/design-markdown-tasks.md`
 **Created**: 2026-05-05
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,10 +23,10 @@ Implement backlog slice `P2-MARKDOWN-TASKS`: parse assistant markdown from trans
 
 ### Codex Reference Mapping
 
-- `/Users/taco/gits/tacogips/codex-agent/src/markdown/types.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/markdown/parser.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/markdown/parser.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/README.md`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/markdown/types.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/markdown/parser.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/markdown/parser.test.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/README.md`
 
 Reference behavior to preserve:
 
@@ -51,7 +51,7 @@ Intentional Cursor divergences accepted by the design:
 
 #### `src/types/markdown-task.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface MarkdownSection {
@@ -95,15 +95,15 @@ export interface MarkdownTaskExtractionResult {
 
 **Checklist**:
 
-- [ ] Define immutable section, task, and result contracts.
-- [ ] Preserve Cursor session identity and transcript provenance.
-- [ ] Export types for parser, extractor, CLI, and later bookmark/server reuse.
+- [x] Define immutable section, task, and result contracts.
+- [x] Preserve Cursor session identity and transcript provenance.
+- [x] Export types for parser, extractor, CLI, and later bookmark/server reuse.
 
 ### 2. Pure Markdown Parser
 
 #### `src/markdown/parser.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface MarkdownParseInput {
@@ -127,17 +127,17 @@ export interface MarkdownTaskParser {
 
 **Checklist**:
 
-- [ ] Parse ATX headings into sections with heading level and line ranges.
-- [ ] Return one empty-heading section for markdown without headings.
-- [ ] Parse `- [ ]`, `- [x]`, and `- [X]` task-list items.
-- [ ] Preserve task line numbers relative to the assistant message text.
-- [ ] Avoid rendering, network, or transcript-writing dependencies.
+- [x] Parse ATX headings into sections with heading level and line ranges.
+- [x] Return one empty-heading section for markdown without headings.
+- [x] Parse `- [ ]`, `- [x]`, and `- [X]` task-list items.
+- [x] Preserve task line numbers relative to the assistant message text.
+- [x] Avoid rendering, network, or transcript-writing dependencies.
 
 ### 3. Transcript Task Extraction Service
 
 #### `src/markdown/transcript-tasks.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface TranscriptMarkdownTaskOptions {
@@ -153,18 +153,18 @@ export interface TranscriptMarkdownTaskExtractor {
 
 **Checklist**:
 
-- [ ] Resolve `sessionId` through `SessionIndexRepository.resolveSessionKey`.
-- [ ] Return empty results for unknown or non-materialized `chat_only` records consistently with existing CLI behavior.
-- [ ] Stream transcript rows through `streamTranscriptSearchLines`.
-- [ ] Parse assistant rows only.
-- [ ] Attach stable message IDs from event offset and role.
-- [ ] Apply optional message and checked-state filters deterministically.
+- [x] Resolve `sessionId` through `SessionIndexRepository.resolveSessionKey`.
+- [x] Return empty results for non-materialized `chat_only` records consistently with existing CLI behavior.
+- [x] Stream transcript rows through `streamTranscriptSearchLines`.
+- [x] Parse assistant rows only.
+- [x] Attach stable message IDs from event offset and role.
+- [x] Apply optional message and checked-state filters deterministically.
 
 ### 4. CLI Command
 
 #### `src/cli/cli.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
@@ -172,11 +172,11 @@ curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true
 
 **Checklist**:
 
-- [ ] Add `markdown tasks` command routing and usage.
-- [ ] Validate required `--session`, optional `--message`, and optional `--checked`.
-- [ ] Render human output with checked state, message ID, section heading, and task text.
-- [ ] Emit the full `MarkdownTaskExtractionResult` for `--json`.
-- [ ] Keep existing `transcript search`, `session search`, and bookmark behavior unchanged.
+- [x] Add `markdown tasks` command routing and usage.
+- [x] Validate required `--session`, optional `--message`, and optional `--checked`.
+- [x] Render human output with checked state, message ID, section heading, and task text.
+- [x] Emit the full `MarkdownTaskExtractionResult` for `--json`.
+- [x] Keep existing `transcript search`, `session search`, and bookmark behavior unchanged.
 
 ### 5. Tests and Verification Fixtures
 
@@ -184,7 +184,7 @@ curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true
 #### `src/markdown/transcript-tasks.test.ts`
 #### `src/cli/cli.test.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 describe("markdown task extraction", () => {
@@ -194,11 +194,11 @@ describe("markdown task extraction", () => {
 
 **Checklist**:
 
-- [ ] Cover heading sections, no-heading markdown, and empty markdown.
-- [ ] Cover checked and unchecked task parsing with `-` and `*` bullets.
-- [ ] Cover assistant-only extraction from transcript rows.
-- [ ] Cover message ID and checked-state filtering.
-- [ ] Cover pending `chat_only` records and malformed transcript rows.
+- [x] Cover heading sections, no-heading markdown, and empty markdown.
+- [x] Cover checked and unchecked task parsing with `-` and `*` bullets.
+- [x] Cover assistant-only extraction from transcript rows.
+- [x] Cover message ID and checked-state filtering.
+- [x] Cover pending `chat_only` records and malformed transcript rows.
 
 ---
 
@@ -206,79 +206,79 @@ describe("markdown task extraction", () => {
 
 ### TASK-001: Markdown Task Types
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/types/markdown-task.ts`
 **Dependencies**: `impl-plans/active/transcript-search.md`
 
 **Completion Criteria**:
 
-- [ ] Types compile under strict TypeScript.
-- [ ] Result contracts include Cursor identity, transcript path, stable message ID, line, offset, and provenance fields.
-- [ ] Types are exported for parser, extractor, CLI, and future bookmark/server use.
+- [x] Types compile under strict TypeScript.
+- [x] Result contracts include Cursor identity, transcript path, stable message ID, line, offset, and provenance fields.
+- [x] Types are exported for parser, extractor, CLI, and future bookmark/server use.
 
 ### TASK-002: Pure Parser
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/markdown/parser.ts`, `src/markdown/parser.test.ts`
 **Dependencies**: TASK-001
 
 **Completion Criteria**:
 
-- [ ] Parser extracts headings and task-list items.
-- [ ] Parser preserves line numbers, checked state, heading level, and section heading.
-- [ ] Parser tests cover Codex reference behavior and Cursor-required metadata.
+- [x] Parser extracts headings and task-list items.
+- [x] Parser preserves line numbers, checked state, heading level, and section heading.
+- [x] Parser tests cover Codex reference behavior and Cursor-required metadata.
 
 ### TASK-003: Transcript Extraction
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/markdown/transcript-tasks.ts`, `src/markdown/transcript-tasks.test.ts`
 **Dependencies**: TASK-001, TASK-002, `impl-plans/active/transcript-search.md`
 
 **Completion Criteria**:
 
-- [ ] Extractor reads transcript-backed assistant messages through Cursor adapter boundaries.
-- [ ] Message ID filtering uses stable transcript IDs.
-- [ ] Checked-state filtering is deterministic.
-- [ ] Pending `chat_only` sessions return empty transcript-provenance results without transcript mutation.
+- [x] Extractor reads transcript-backed assistant messages through Cursor adapter boundaries.
+- [x] Message ID filtering uses stable transcript IDs.
+- [x] Checked-state filtering is deterministic.
+- [x] Pending `chat_only` sessions return empty transcript-provenance results without transcript mutation.
 
 ### TASK-004: CLI Integration
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/cli/cli.ts`, `src/cli/cli.test.ts`
 **Dependencies**: TASK-001, TASK-003
 
 **Completion Criteria**:
 
-- [ ] `markdown tasks` command validates all supported flags.
-- [ ] Human and JSON output are deterministic.
-- [ ] Existing CLI commands remain unchanged.
+- [x] `markdown tasks` command validates all supported flags.
+- [x] Human and JSON output are deterministic.
+- [x] Existing CLI commands remain unchanged.
 
 ### TASK-005: Plan Progress and Verification
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `impl-plans/active/markdown-tasks.md`
 **Dependencies**: TASK-001, TASK-002, TASK-003, TASK-004
 
 **Completion Criteria**:
 
-- [ ] Progress log is updated after implementation.
-- [ ] `task typecheck`, `task test`, and `task ci` results are recorded.
-- [ ] Any unresolved user questions are documented before completion.
+- [x] Progress log is updated after implementation.
+- [x] `task typecheck`, `task test`, and `task ci` results are recorded.
+- [x] Any unresolved user questions are documented before completion.
 
 ## Module Status
 
 | Module | File Path | Status | Tests |
 |--------|-----------|--------|-------|
-| Markdown task types | `src/types/markdown-task.ts` | NOT_STARTED | `task typecheck` |
-| Pure markdown parser | `src/markdown/parser.ts` | NOT_STARTED | `src/markdown/parser.test.ts` |
-| Transcript extractor | `src/markdown/transcript-tasks.ts` | NOT_STARTED | `src/markdown/transcript-tasks.test.ts` |
-| CLI command | `src/cli/cli.ts` | NOT_STARTED | `src/cli/cli.test.ts` |
-| Plan progress | `impl-plans/active/markdown-tasks.md` | NOT_STARTED | Review |
+| Markdown task types | `src/types/markdown-task.ts` | Completed | `task typecheck` |
+| Pure markdown parser | `src/markdown/parser.ts` | Completed | `src/markdown/parser.test.ts` |
+| Transcript extractor | `src/markdown/transcript-tasks.ts` | Completed | `src/markdown/transcript-tasks.test.ts` |
+| CLI command | `src/cli/cli.ts` | Completed | `src/cli/cli.test.ts` |
+| Plan progress | `impl-plans/active/markdown-tasks.md` | Completed | Review |
 
 ## Dependencies
 
@@ -299,11 +299,11 @@ describe("markdown task extraction", () => {
 
 ## Completion Criteria
 
-- [ ] Assistant markdown is parsed into sections and tasks.
-- [ ] Extraction reads transcript-backed messages without mutating transcripts.
-- [ ] Results include stable session, message, line, offset, and provenance fields.
-- [ ] Message ID and checked-state filtering work in CLI output.
-- [ ] Empty, malformed, or chat-only inputs return deterministic empty results.
+- [x] Assistant markdown is parsed into sections and tasks.
+- [x] Extraction reads transcript-backed messages without mutating transcripts.
+- [x] Results include stable session, message, line, offset, and provenance fields.
+- [x] Message ID and checked-state filtering work in CLI output.
+- [x] Empty, malformed, or chat-only inputs return deterministic empty results.
 
 ## Progress Log
 
@@ -320,6 +320,13 @@ describe("markdown task extraction", () => {
 **Tasks In Progress**: None.
 **Blockers**: None; `P2-TRANSCRIPT-SEARCH` is completed and provides stable message IDs plus the streaming transcript adapter.
 **Notes**: No runtime code was implemented in this planning branch. The plan remains scoped to read-only assistant transcript markdown extraction.
+
+### Session: 2026-05-07 Workflow Repair and Implementation
+
+**Tasks Completed**: Repaired stale `divedra` parity workflow plan-path references, accepted the workflow-authored global parity design refresh, implemented `P2-MARKDOWN-TASKS`, and added parser/extractor/CLI tests.
+**Tasks In Progress**: None.
+**Blockers**: The attempted `parity-global-design-plan-implement-loop` run stalled after Step 1 repository edits and did not publish its structured step output, so implementation continued locally from the updated design/plan state.
+**Notes**: Verification passed with `bun run typecheck`, focused `bun test src/markdown/parser.test.ts src/markdown/transcript-tasks.test.ts src/cli/cli.test.ts`, `task test`, and `task ci`.
 
 ## Related Plans
 

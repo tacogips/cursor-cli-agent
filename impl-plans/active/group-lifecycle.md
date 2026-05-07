@@ -3,7 +3,7 @@
 **Status**: In Progress
 **Design Reference**: `design-docs/specs/design-group-lifecycle.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -23,13 +23,13 @@ Implement `P3-GROUP-LIFECYCLE`: add explicit Cursor-local group lifecycle state,
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/group/types.ts`: reference group state, group run options, and group event shape.
-- `/Users/taco/gits/tacogips/codex-agent/src/group/repository.ts`: reference durable JSON group storage, delete, pause, and resume behavior.
-- `/Users/taco/gits/tacogips/codex-agent/src/group/manager.ts`: reference paused-run guard and progress event concepts.
-- `/Users/taco/gits/tacogips/codex-agent/src/group/repository.test.ts`: reference persistence and lifecycle test coverage.
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`: reference CLI command names and user-facing lifecycle flow.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/group/types.ts`: reference group state, group run options, and group event shape.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/group/repository.ts`: reference durable JSON group storage, delete, pause, and resume behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/group/manager.ts`: reference paused-run guard and progress event concepts.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/group/repository.test.ts`: reference persistence and lifecycle test coverage.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`: reference CLI command names and user-facing lifecycle flow.
 
 Intentional divergences:
 
@@ -374,6 +374,7 @@ Run focused and full project checks after TypeScript implementation, then refres
 - [x] JSON and human CLI outputs are tested.
 - [ ] README and workflow-skill documentation are refreshed.
 - [x] Type checking, tests, and CI pass.
+## Verification
 
 ## Progress Log
 
@@ -397,17 +398,3 @@ Run focused and full project checks after TypeScript implementation, then refres
 **Tasks In Progress**: TASK-006 workflow-skill refresh remains blocked by filesystem permissions.
 **Blockers**: `.agents/skills/divedra-impl-workflow/SKILL.md` is still not writable; `touch` and `chmod` both failed with `Operation not permitted`.
 **Notes**: Added ordered group-run write chaining so discovered session ids are persisted while the stream is still active, added a focused mid-run pause scheduling test that verifies only the first workspace launches and the second remains pending, and reran `task typecheck`, `task test`, and `task ci` successfully.
-
-## Addressed Review Feedback
-
-- Step 3 accepted the design with no high or mid findings.
-- Step 5 mid finding on missing documentation refresh deliverables was addressed in TASK-006.
-- Low finding: open questions remain in `design-docs/specs/design-group-lifecycle.md#open-questions` instead of `design-docs/user-qa/`; no plan change is required because the current delete guard and pause behavior are already specified for implementation.
-- Step 7 mid finding on in-flight session-id persistence was addressed by ordered group-run write chaining in `src/cli/cli.ts`.
-- Step 7 mid finding on mid-run pause test coverage was addressed in `src/cli/cli.test.ts`.
-- Step 7 mid finding on `.agents/skills/divedra-impl-workflow/SKILL.md` remains blocked by filesystem permissions and is documented in TASK-006.
-
-## Related Plans
-
-- **Depends On**: completed `P2-ACTIVITY` implementation.
-- **Scope Link**: `design-docs/specs/design-group-lifecycle.md`.

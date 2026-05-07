@@ -3,7 +3,7 @@
 **Status**: Ready
 **Design Reference**: `design-docs/specs/design-tool-registry-model-helpers.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-07
 
 ---
 
@@ -30,13 +30,13 @@ Implement Phase 5 `P5-TOOL-REGISTRY`: Cursor-safe helper APIs for a typed tool r
 
 ### Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/tool-registry.ts`: reference generic registry and sorted listing.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/tool-versions.ts`: reference bounded subprocess version checks with structured errors.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/model-availability.ts`: reference structured auth/probe result shapes and CLI exit behavior.
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/usage-stats.ts`: reference local aggregation, recent-day bucketing, cache behavior, and missing-source degradation.
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`: reference `version` and `model check` CLI contracts.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/tool-registry.ts`: reference generic registry and sorted listing.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/tool-versions.ts`: reference bounded subprocess version checks with structured errors.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/model-availability.ts`: reference structured auth/probe result shapes and CLI exit behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/usage-stats.ts`: reference local aggregation, recent-day bucketing, cache behavior, and missing-source degradation.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`: reference `version` and `model check` CLI contracts.
 
 Intentional divergences accepted by the design:
 
