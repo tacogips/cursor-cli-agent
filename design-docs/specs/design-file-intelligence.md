@@ -144,15 +144,19 @@ Behavior:
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Requested reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`.
+
+Inspected fallback reference repository root: `/g/gits/tacogips/codex-agent`.
+
+The requested root is the workflow-provided Codex reference path, but Step 1 intake found that workspace path unavailable for file inspection in this run. Design and implementation planning should therefore preserve the requested-path mapping while using the inspected fallback files as the behavioral reference.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/types.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/index.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/types.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/types.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/service.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/index.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/index.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.test.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/service.test.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts` inspected via `/g/gits/tacogips/codex-agent/src/cli/index.ts`
 
 Reference behavior to preserve:
 

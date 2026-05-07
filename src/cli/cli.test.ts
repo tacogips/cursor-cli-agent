@@ -11,6 +11,7 @@ import {
   test,
   type Mock,
 } from "bun:test";
+import { Database } from "bun:sqlite";
 
 import { runCli, setCliTestOverrides } from "./cli";
 import * as groupsStore from "../persistence/groups-store";
@@ -285,6 +286,137 @@ describe("CLI search commands", () => {
     expect(errors[0]).toBe(
       "transcript search: --max-events must be a positive integer",
     );
+  });
+
+  test("renders files subcommands with ai-tracking provenance and rebuilt index", async () => {
+    const cursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    if (cursorHome === undefined) {
+      throw new Error("test cursor home was not configured");
+    }
+    const workspace = resolve("/tmp/files-cli-workspace");
+    await seedSessionIndex([
+      {
+        recordId: "rec-files",
+        localSessionId: "conv-files",
+        identityState: "transcript_only",
+        workspaceSlug: "tmp-files-cli-workspace",
+        workspacePath: workspace,
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T01:00:00.000Z",
+        source: "headless",
+        status: "completed",
+      },
+    ]);
+    const aiTrackingDir = join(cursorHome, "ai-tracking");
+    await mkdir(aiTrackingDir, { recursive: true });
+    const db = new Database(join(aiTrackingDir, "ai-code-tracking.db"), {
+      create: true,
+    });
+    db.run(`
+CREATE TABLE ai_code_hashes (
+  hash TEXT PRIMARY KEY NOT NULL,
+  source TEXT NOT NULL,
+  fileExtension TEXT,
+  fileName TEXT,
+  requestId TEXT,
+  conversationId TEXT,
+  timestamp INTEGER,
+  model TEXT,
+  createdAt INTEGER NOT NULL
+);
+CREATE TABLE ai_deleted_files (
+  gitPath TEXT NOT NULL,
+  composerId TEXT,
+  conversationId TEXT,
+  model TEXT,
+  deletedAt INTEGER NOT NULL,
+  PRIMARY KEY (gitPath, deletedAt)
+);
+CREATE TABLE tracked_file_content (
+  gitPath TEXT,
+  content TEXT NOT NULL,
+  conversationId TEXT,
+  model TEXT,
+  fileExtension TEXT,
+  createdAt INTEGER NOT NULL,
+  PRIMARY KEY (gitPath)
+);
+`);
+    db.run(
+      `INSERT INTO ai_code_hashes (hash, source, fileName, conversationId, timestamp, createdAt, model)
+       VALUES ('h-files', 'src', ?, 'conv-files', 1000, 1000, 'gpt-5.4')`,
+      [join(workspace, "src/a.ts")],
+    );
+    db.run(
+      `INSERT INTO ai_deleted_files (gitPath, conversationId, deletedAt)
+       VALUES ('src/old.ts', 'conv-files', 2000)`,
+    );
+    db.run(
+      `INSERT INTO tracked_file_content (gitPath, content, conversationId, fileExtension, createdAt)
+       VALUES ('src/a.ts', 'hello', 'conv-files', 'ts', 3000)`,
+    );
+    db.close();
+
+    const listExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "files",
+      "list",
+      "conv-files",
+      "--json",
+    ]);
+    expect(listExit).toBe(0);
+    const list = JSON.parse(logs.join("\n")) as {
+      provenance: string;
+      files: Array<{ path: { path: string } }>;
+    };
+    expect(list.provenance).toBe("ai_tracking");
+    expect(list.files[0]?.path.path).toBe("src/a.ts");
+
+    logs = [];
+    const snapshotsExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "files",
+      "snapshots",
+      "conv-files",
+      "--include-content",
+      "--json",
+    ]);
+    expect(snapshotsExit).toBe(0);
+    const snapshots = JSON.parse(logs.join("\n")) as {
+      snapshots: Array<{ content?: string; contentBytes: number }>;
+    };
+    expect(snapshots.snapshots[0]?.content).toBe("hello");
+    expect(snapshots.snapshots[0]?.contentBytes).toBe(5);
+
+    logs = [];
+    const rebuildExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "files",
+      "rebuild",
+      "--json",
+    ]);
+    expect(rebuildExit).toBe(0);
+    expect(JSON.parse(logs.join("\n")).deletedFiles).toBe(1);
+
+    logs = [];
+    const findExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "files",
+      "find",
+      "src/old.ts",
+      "--json",
+    ]);
+    expect(findExit).toBe(0);
+    const found = JSON.parse(logs.join("\n")) as {
+      totalEntries: number;
+      entries: Array<{ operation: string }>;
+    };
+    expect(found.totalEntries).toBe(1);
+    expect(found.entries[0]?.operation).toBe("deleted");
   });
 
   test("renders markdown task extraction JSON results", async () => {

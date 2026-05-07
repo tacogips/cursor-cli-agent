@@ -32,7 +32,14 @@ import {
   createTranscriptSearchService,
   DEFAULT_TRANSCRIPT_SEARCH_TIMEOUT_MS,
 } from "../cursor/transcript-search";
-import { loadAiTrackingEnrichment } from "../cursor/ai-tracking-reader";
+import {
+  createAiTrackingFileReader,
+  loadAiTrackingEnrichment,
+} from "../cursor/ai-tracking-reader";
+import {
+  createFileIntelligenceService,
+  FileIntelligenceNotFoundError,
+} from "../file-intelligence";
 import { findSkillByName, listSkillRecords } from "../cursor/skill-catalog";
 import {
   createTranscriptMarkdownTaskExtractor,
@@ -44,6 +51,7 @@ import {
 } from "../cursor/transcript-reader";
 import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
+import { FileIntelligenceIndex } from "../persistence/file-intelligence-index";
 import { SessionIndexRepository } from "../persistence/session-index";
 import type { AgentEvent } from "../types/agent-event";
 import type {
@@ -78,6 +86,13 @@ import type {
   TranscriptSearchRole,
 } from "../types/transcript-search";
 import type { MarkdownTaskExtractionResult } from "../types/markdown-task";
+import type {
+  FileHistoryResult,
+  FileIndexRebuildStats,
+  SessionDeletedFilesResult,
+  SessionFileSnapshotResult,
+  SessionFileSummary,
+} from "../types/file-intelligence";
 
 type HeadlessStreamingRunner = typeof runHeadlessStreaming;
 
@@ -676,6 +691,69 @@ function renderTranscriptSearchHuman(result: TranscriptSearchResult): void {
   }
 }
 
+function renderFilesListHuman(result: SessionFileSummary): void {
+  console.log(
+    `session=${result.sessionId} record=${result.recordId} provenance=${result.provenance} files=${result.totalFiles}`,
+  );
+  for (const file of result.files) {
+    const models =
+      file.models.length > 0 ? ` models=${file.models.join(",")}` : "";
+    console.log(
+      `${file.path.path}  ${file.operation}  changes=${file.changeCount}  pathKind=${file.path.pathKind}  provenance=${file.provenance}${models}`,
+    );
+  }
+}
+
+function renderSnapshotsHuman(result: SessionFileSnapshotResult): void {
+  console.log(
+    `session=${result.sessionId} record=${result.recordId} provenance=${result.provenance} snapshots=${result.totalSnapshots}`,
+  );
+  for (const snapshot of result.snapshots) {
+    const model =
+      snapshot.model !== undefined ? ` model=${snapshot.model}` : "";
+    const ext =
+      snapshot.fileExtension !== undefined
+        ? ` ext=${snapshot.fileExtension}`
+        : "";
+    console.log(
+      `${snapshot.path.path}  bytes=${snapshot.contentBytes}  pathKind=${snapshot.path.pathKind}  provenance=${snapshot.provenance}${model}${ext}`,
+    );
+  }
+}
+
+function renderDeletedHuman(result: SessionDeletedFilesResult): void {
+  console.log(
+    `session=${result.sessionId} record=${result.recordId} provenance=${result.provenance} deleted=${result.totalDeletedFiles}`,
+  );
+  for (const file of result.deletedFiles) {
+    const deletedAt =
+      file.deletedAt !== undefined ? ` deletedAt=${file.deletedAt}` : "";
+    const model = file.model !== undefined ? ` model=${file.model}` : "";
+    console.log(
+      `${file.path.path}  pathKind=${file.path.pathKind}  provenance=${file.provenance}${deletedAt}${model}`,
+    );
+  }
+}
+
+function renderFileHistoryHuman(result: FileHistoryResult): void {
+  console.log(
+    `path=${result.queryPath} provenance=${result.provenance} entries=${result.totalEntries} needsRebuild=${result.needsRebuild}`,
+  );
+  for (const entry of result.entries) {
+    const observedAt =
+      entry.observedAt !== undefined ? ` observedAt=${entry.observedAt}` : "";
+    console.log(
+      `${entry.path.path}  ${entry.operation}  session=${entry.sessionId}  record=${entry.recordId}  provenance=${entry.provenance}${observedAt}`,
+    );
+  }
+}
+
+function renderRebuildHuman(stats: FileIndexRebuildStats): void {
+  console.log(
+    `indexedSessions=${stats.indexedSessions} touchedFiles=${stats.touchedFiles} deletedFiles=${stats.deletedFiles} snapshots=${stats.snapshots} skippedSessions=${stats.skippedSessions} updatedAt=${stats.updatedAt} provenance=${stats.provenance}`,
+  );
+}
+
 function renderMarkdownTasksHuman(result: MarkdownTaskExtractionResult): void {
   for (const task of result.tasks) {
     const marker = task.checked ? "[x]" : "[ ]";
@@ -941,6 +1019,11 @@ async function openRepo(): Promise<SessionIndexRepository> {
   return new SessionIndexRepository(stateDbPath());
 }
 
+function openFileIndex(): FileIntelligenceIndex {
+  mkdirSync(getDataDir(), { recursive: true });
+  return new FileIntelligenceIndex(join(getDataDir(), "file-intelligence.db"));
+}
+
 function sessionIdFromEvent(event: AgentEvent): string | undefined {
   switch (event.type) {
     case "session.started":
@@ -983,6 +1066,11 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent session attach <id> [--workspace <path>]
   curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
   curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
+  curort-cli-agent files list <session-id> [--json]
+  curort-cli-agent files snapshots <session-id> [--json] [--include-content]
+  curort-cli-agent files deleted <session-id> [--json]
+  curort-cli-agent files find <path> [--json]
+  curort-cli-agent files rebuild [--json]
   curort-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
   curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
   curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
@@ -1026,6 +1114,9 @@ export async function runCli(argv: string[]): Promise<number> {
   }
   if (cmd === "transcript") {
     return runTranscript(tail);
+  }
+  if (cmd === "files") {
+    return runFiles(tail);
   }
   if (cmd === "activity") {
     return runActivity(tail);
@@ -1098,6 +1189,114 @@ async function runActivity(argv: string[]): Promise<number> {
     }
     return EXIT.OK;
   } finally {
+    repo.close();
+  }
+}
+
+async function runFiles(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub === undefined) {
+    console.error("files: missing subcommand");
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  const json = flags["json"] === true;
+  const repo = await openRepo();
+  const index = openFileIndex();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const service = createFileIntelligenceService({
+      sessions: repo,
+      aiTracking: createAiTrackingFileReader(),
+      index,
+    });
+
+    if (sub === "list") {
+      const sessionId = pos[0];
+      if (sessionId === undefined || sessionId.length === 0) {
+        console.error("files list: missing session id");
+        return EXIT.USAGE;
+      }
+      const result = await service.listFiles(sessionId);
+      if (json) {
+        printJson(result);
+      } else {
+        renderFilesListHuman(result);
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "snapshots") {
+      const sessionId = pos[0];
+      if (sessionId === undefined || sessionId.length === 0) {
+        console.error("files snapshots: missing session id");
+        return EXIT.USAGE;
+      }
+      const result = await service.listSnapshots(sessionId, {
+        includeContent: flags["include-content"] === true,
+      });
+      if (json) {
+        printJson(result);
+      } else {
+        renderSnapshotsHuman(result);
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "deleted") {
+      const sessionId = pos[0];
+      if (sessionId === undefined || sessionId.length === 0) {
+        console.error("files deleted: missing session id");
+        return EXIT.USAGE;
+      }
+      const result = await service.listDeleted(sessionId);
+      if (json) {
+        printJson(result);
+      } else {
+        renderDeletedHuman(result);
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "find") {
+      const path = pos[0];
+      if (path === undefined || path.trim().length === 0) {
+        console.error("files find: missing path");
+        return EXIT.USAGE;
+      }
+      const result = await service.findFile(path);
+      if (json) {
+        printJson(result);
+      } else {
+        renderFileHistoryHuman(result);
+      }
+      return EXIT.OK;
+    }
+
+    if (sub === "rebuild") {
+      if (pos.length > 0) {
+        console.error("files rebuild: unexpected positional arguments");
+        return EXIT.USAGE;
+      }
+      const result = await service.rebuild();
+      if (json) {
+        printJson(result);
+      } else {
+        renderRebuildHuman(result);
+      }
+      return EXIT.OK;
+    }
+
+    console.error(`Unknown files subcommand: ${sub}`);
+    return EXIT.USAGE;
+  } catch (error) {
+    if (error instanceof FileIntelligenceNotFoundError) {
+      console.error(error.message);
+      return EXIT.NOT_FOUND;
+    }
+    throw error;
+  } finally {
+    index.close();
     repo.close();
   }
 }

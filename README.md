@@ -57,6 +57,7 @@ Implemented capabilities:
 - Read-only `transcript search <query>` over local Cursor transcript JSONL files with role filters, session narrowing, pagination, scan budgets, transcript provenance, stable synthetic message IDs, and JSON output
 - Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
 - Derived `activity` records from the session index, transcript mtimes, wrapper-recorded stream/process signals, and stderr/stdout wait patterns, with explicit `provenance: "derived"` signal details
+- Local file intelligence from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db`: `files list`, `files snapshots`, `files deleted`, `files find`, and `files rebuild` with explicit provenance, degraded-state reporting, sparse snapshot content opt-in, and a repository-owned rebuildable path index
 - Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
 - Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, legacy queue migration, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
 - Headless run/resume orchestration via `cursor-agent --print`
@@ -67,7 +68,6 @@ Implemented capabilities:
 Planned capabilities:
 
 - Markdown/task extraction from transcript content
-- File intelligence
 - Optional daemon/server surface after core CLI stabilizes
 
 Bookmark command examples:
@@ -93,6 +93,24 @@ bun run src/main.ts activity --status running --limit 3 --json
 `completed`, and `failed` statuses. Output is derived from local Cursor evidence
 only; optional cached stream/process signals are best-effort and fall back to
 index/transcript-derived state when unavailable.
+
+File intelligence command examples:
+
+```bash
+bun run src/main.ts files list <session-id> --json
+bun run src/main.ts files snapshots <session-id> --json
+bun run src/main.ts files snapshots <session-id> --json --include-content
+bun run src/main.ts files deleted <session-id> --json
+bun run src/main.ts files rebuild --json
+bun run src/main.ts files find <path> --json
+```
+
+`files list`, `files snapshots`, and `files deleted` resolve known Cursor
+sessions through the local session index and read Cursor `ai-tracking` data
+without mutating Cursor-owned files or databases. `files rebuild` writes only
+repository-owned derived index rows, and `files find` reports whether a stale or
+missing index requires another rebuild. Snapshot content is included only when
+`--include-content` is supplied.
 
 Group lifecycle command examples:
 
@@ -136,6 +154,7 @@ reports `provenance: "queue-store+activity"`.
 - `design-docs/specs/design-activity.md`
 - `design-docs/specs/design-group-lifecycle.md`
 - `design-docs/specs/design-queue-lifecycle.md`
+- `design-docs/specs/design-file-intelligence.md`
 
 ## Implementation Plan
 
@@ -148,6 +167,7 @@ reports `provenance: "queue-store+activity"`.
 - `impl-plans/active/activity.md`
 - `impl-plans/active/group-lifecycle.md`
 - `impl-plans/active/queue-lifecycle.md`
+- `impl-plans/active/file-intelligence.md`
 
 ## Reference Project
 

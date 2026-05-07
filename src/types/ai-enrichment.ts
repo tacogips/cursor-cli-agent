@@ -28,6 +28,8 @@ export interface AiDeletedFileRow {
 
 export interface AiTrackedFileRef {
   readonly gitPath: string;
+  readonly content?: string;
+  readonly contentBytes: number;
   readonly fileExtension?: string;
   readonly model?: string;
   readonly createdAt: number;

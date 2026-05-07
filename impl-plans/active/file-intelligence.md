@@ -1,6 +1,6 @@
 # File Intelligence Implementation Plan
 
-**Status**: Ready
+**Status**: In Progress
 **Design Reference**: `design-docs/specs/design-file-intelligence.md`
 **Created**: 2026-05-06
 **Last Updated**: 2026-05-07
@@ -13,27 +13,25 @@
 
 ### Summary
 
-Implement backlog slice `P3-FILE-INTELLIGENCE`: local-only `files list`, `files snapshots`, `files deleted`, `files find`, and `files rebuild` behavior derived from Cursor `ai-code-tracking.db`, with explicit provenance and graceful degradation when enrichment rows are missing.
-
-### Scope
+Implement backlog slice `P3-FILE-INTELLIGENCE`: local-only `files list`, `files snapshots`, `files deleted`, `files find`, and `files rebuild` behavior derived from Cursor `ai-code-tracking.db`, with explicit provenance and graceful degradation when enrichment data is unavailable or sparse.
 
 **Included**: normalized file-intelligence types, read-only Cursor `ai-tracking` file queries, repository-owned rebuildable file index, service orchestration, CLI commands, and focused tests.
 
-**Excluded**: runtime code implementation in this planning branch, transcript-derived patch history, server APIs, daemon watches, SDK exports, commit attribution analytics, and mutation of Cursor-owned files or databases.
-
-### Dependencies
+**Excluded**: transcript-derived patch history, server APIs, daemon watches, SDK exports, commit attribution analytics, and mutation of Cursor-owned files or databases.
 
 - `P1-CORE-FOUNDATION`: `SessionIndexRepository`, `stateDbPath`, `aiTrackingDbPath`, `loadAiTrackingEnrichment`, Cursor path config, and current CLI command structure.
+- `P2-SESSION-SEARCH`: marked ready by workflow intake; no unmet dependency ids.
 
-### Codex Reference Mapping
+Requested reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
 
-Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
+Inspected fallback reference repository root: `/g/gits/tacogips/codex-agent`
 
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/types.ts`: reference file operation, summary, history, index, and rebuild stat contracts.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.ts`: reference session lookup, grouping, rebuildable index, path lookup, and atomic save behavior.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/index.ts`: reference export boundary.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.test.ts`: reference tests for changed files, rebuild/find, ordered history, and moved/deleted path treatment.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`: reference `files list`, `files patches`, `files find`, and `files rebuild` command shape.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/types.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/types.ts`: reference file operation, summary, history, index, and rebuild stat contracts.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/service.ts`: reference session lookup, grouping, rebuildable index, path lookup, and atomic save behavior.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/index.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/index.ts`: reference export boundary.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.test.ts` inspected via `/g/gits/tacogips/codex-agent/src/file-changes/service.test.ts`: reference tests for changed files, rebuild/find, ordered history, and moved/deleted path treatment.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts` inspected via `/g/gits/tacogips/codex-agent/src/cli/index.ts`: reference `files list`, `files patches`, `files find`, and `files rebuild` command shape.
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/server/handlers/files.ts` inspected via `/g/gits/tacogips/codex-agent/src/server/handlers/files.ts`: reference only; server routes are excluded from this slice.
 
 Intentional divergences accepted by the design:
 
@@ -50,7 +48,7 @@ Intentional divergences accepted by the design:
 
 #### `src/types/file-intelligence.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export type FileIntelligenceOperation =
@@ -93,16 +91,16 @@ export interface SessionFileEntry {
 
 **Checklist**:
 
-- [ ] Define operations and provenance states.
-- [ ] Define list, snapshot, deleted, find, and rebuild result types.
-- [ ] Preserve `recordId`, resolved session id, and conversation id fields.
-- [ ] Export types for adapters, persistence, service, and CLI.
+- [x] Define operations and provenance states.
+- [x] Define list, snapshot, deleted, find, and rebuild result types.
+- [x] Preserve `recordId`, resolved session id, and conversation id fields.
+- [x] Export types for adapters, persistence, service, and CLI.
 
 ### 2. AI Tracking File Reader
 
 #### `src/cursor/ai-tracking-reader.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface AiTrackingFileReader {
@@ -126,16 +124,16 @@ export interface AiTrackingSnapshot {
 
 **Checklist**:
 
-- [ ] Keep SQL and schema fallbacks isolated in the Cursor adapter.
-- [ ] Open `ai-code-tracking.db` read-only and close handles deterministically.
-- [ ] Return degraded availability/provenance metadata when DB, schema, or rows are missing.
-- [ ] Support snapshot metadata without loading content unless requested.
+- [x] Keep SQL and schema fallbacks isolated in the Cursor adapter.
+- [x] Open `ai-code-tracking.db` read-only and close handles deterministically.
+- [x] Return degraded availability/provenance metadata when DB, schema, or rows are missing.
+- [x] Support snapshot metadata by default and load content only when explicitly requested.
 
 ### 3. File Intelligence Index
 
 #### `src/persistence/file-intelligence-index.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface FileIntelligenceIndex {
@@ -157,16 +155,16 @@ export interface FileIndexRebuildStats {
 
 **Checklist**:
 
-- [ ] Store repository-owned derived rows, not Cursor-owned state.
-- [ ] Support atomic rebuild semantics.
-- [ ] Store operation, normalized path, raw path, session identity, timestamps, and provenance.
-- [ ] Treat missing or stale index as a recoverable `files find` condition.
+- [x] Store repository-owned derived rows, not Cursor-owned state.
+- [x] Support atomic rebuild semantics.
+- [x] Store operation, normalized path, raw path, session identity, timestamps, and provenance.
+- [x] Treat missing or stale index as a recoverable `files find` condition.
 
 ### 4. File Intelligence Service
 
 #### `src/file-intelligence/manager.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface FileIntelligenceService {
@@ -183,17 +181,17 @@ export interface FileIntelligenceService {
 
 **Checklist**:
 
-- [ ] Resolve session ids through `SessionIndexRepository.resolveSessionKey`.
-- [ ] Prefer `localSessionId`, then `cursorChatId`, as `conversationId`.
-- [ ] Normalize absolute paths against known workspace paths.
-- [ ] Return `unknown` provenance for missing enrichment without failing known-session commands.
-- [ ] Fail unknown sessions with the existing CLI not-found behavior.
+- [x] Resolve session ids through `SessionIndexRepository.resolveSessionKey`.
+- [x] Prefer `localSessionId`, then `cursorChatId`, as `conversationId`.
+- [x] Normalize absolute paths against known workspace paths.
+- [x] Return `unknown` provenance for missing enrichment without failing known-session commands.
+- [x] Fail unknown sessions with the existing CLI not-found behavior.
 
 ### 5. CLI Commands
 
 #### `src/cli/cli.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 async function runFiles(argv: string[]): Promise<number>;
@@ -201,18 +199,18 @@ async function runFiles(argv: string[]): Promise<number>;
 
 **Checklist**:
 
-- [ ] Add `files list <session-id> [--json]`.
-- [ ] Add `files snapshots <session-id> [--json] [--include-content]`.
-- [ ] Add `files deleted <session-id> [--json]`.
-- [ ] Add `files find <path> [--json]`.
-- [ ] Add `files rebuild [--json]`.
-- [ ] Render provenance and degraded-state messages in human output.
+- [x] Add `files list <session-id> [--json]`.
+- [x] Add `files snapshots <session-id> [--json] [--include-content]`.
+- [x] Add `files deleted <session-id> [--json]`.
+- [x] Add `files find <path> [--json]`.
+- [x] Add `files rebuild [--json]`.
+- [x] Render provenance and degraded-state messages in human output.
 
 ### 6. Tests
 
 #### `src/cursor/ai-tracking-reader.test.ts`, `src/persistence/file-intelligence-index.test.ts`, `src/file-intelligence/manager.test.ts`, `src/cli/cli.test.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 interface FileIntelligenceTestMatrix {
@@ -222,11 +220,11 @@ interface FileIntelligenceTestMatrix {
 
 **Checklist**:
 
-- [ ] Cover missing DB and missing schema degradation.
-- [ ] Cover touched, deleted, and snapshot rows joined by conversation id.
-- [ ] Cover `files find` after rebuild.
-- [ ] Cover unknown session and blank path validation.
-- [ ] Cover JSON output provenance for all subcommands.
+- [x] Cover missing DB and missing schema degradation.
+- [x] Cover touched, deleted, and snapshot rows joined by conversation id.
+- [x] Cover `files find` after rebuild.
+- [x] Cover unknown session and blank path validation.
+- [x] Cover JSON output provenance for all subcommands.
 
 ---
 
@@ -234,18 +232,18 @@ interface FileIntelligenceTestMatrix {
 
 | Module | File Path | Status | Tests |
 |--------|-----------|--------|-------|
-| File intelligence types | `src/types/file-intelligence.ts` | NOT_STARTED | - |
-| AI tracking file reader | `src/cursor/ai-tracking-reader.ts` | NOT_STARTED | planned |
-| File intelligence index | `src/persistence/file-intelligence-index.ts` | NOT_STARTED | planned |
-| File intelligence service | `src/file-intelligence/manager.ts` | NOT_STARTED | planned |
-| CLI commands | `src/cli/cli.ts` | NOT_STARTED | planned |
-| Test coverage | `src/**/*.test.ts` | NOT_STARTED | planned |
+| File intelligence types | `src/types/file-intelligence.ts` | COMPLETED | covered through service/CLI compile tests |
+| AI tracking file reader | `src/cursor/ai-tracking-reader.ts` | COMPLETED | `src/cursor/ai-tracking-reader.test.ts` |
+| File intelligence index | `src/persistence/file-intelligence-index.ts` | COMPLETED | `src/persistence/file-intelligence-index.test.ts` |
+| File intelligence service | `src/file-intelligence/manager.ts` | COMPLETED | `src/file-intelligence/manager.test.ts` |
+| CLI commands | `src/cli/cli.ts` | COMPLETED | `src/cli/cli.test.ts` |
+| Test coverage | `src/**/*.test.ts` | COMPLETED | reader, index, service, CLI |
 
 ## Work Breakdown
 
 ### TASK-001: File Intelligence Contracts
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/types/file-intelligence.ts`, export wiring
 **Dependencies**: phase1-core-foundation:TASK-004, phase1-core-foundation:TASK-004.25, phase1-core-foundation:TASK-006
@@ -254,14 +252,14 @@ interface FileIntelligenceTestMatrix {
 Define strict operation, provenance, result, snapshot, deleted-file, find, and rebuild stat contracts.
 
 **Completion Criteria**:
-- [ ] Types compile under strict TypeScript.
-- [ ] Types include explicit degraded provenance.
-- [ ] Contracts preserve session, record, and conversation identity fields.
+- [x] Types compile under strict TypeScript.
+- [x] Types include explicit degraded provenance.
+- [x] Contracts preserve session, record, and conversation identity fields.
 
 ### TASK-002: Cursor AI Tracking Reader Extensions
 
-**Status**: Not Started
-**Parallelizable**: No
+**Status**: Completed
+**Parallelizable**: Yes, after TASK-001; write scope is limited to `src/cursor/ai-tracking-reader.ts` and its tests.
 **Deliverables**: `src/cursor/ai-tracking-reader.ts`, `src/cursor/ai-tracking-reader.test.ts`
 **Dependencies**: TASK-001
 
@@ -269,15 +267,15 @@ Define strict operation, provenance, result, snapshot, deleted-file, find, and r
 Extend the read-only Cursor adapter to query touched files, deleted files, and tracked snapshot metadata/content with schema-safe degradation.
 
 **Completion Criteria**:
-- [ ] DB missing/unreadable returns degraded availability.
-- [ ] Sparse rows return `missing_rows`, not command failure.
-- [ ] Snapshot content can be omitted by default.
-- [ ] Tests cover the observed local table shapes.
+- [x] DB missing/unreadable returns degraded availability.
+- [x] Sparse rows return `missing_rows`, not command failure.
+- [x] Snapshot content can be omitted by default.
+- [x] Tests cover the observed local table shapes.
 
 ### TASK-003: Repository-Owned File Index
 
-**Status**: Not Started
-**Parallelizable**: No
+**Status**: Completed
+**Parallelizable**: Yes, after TASK-001; write scope is limited to `src/persistence/file-intelligence-index.ts` and its tests.
 **Deliverables**: `src/persistence/file-intelligence-index.ts`, `src/persistence/file-intelligence-index.test.ts`
 **Dependencies**: TASK-001
 
@@ -285,14 +283,14 @@ Extend the read-only Cursor adapter to query touched files, deleted files, and t
 Add a rebuildable local file index for path lookup across known Cursor sessions.
 
 **Completion Criteria**:
-- [ ] Rebuild replaces derived rows atomically.
-- [ ] Find matches normalized and raw paths.
-- [ ] Index stats report freshness and provenance.
-- [ ] Tests cover stale/missing index behavior.
+- [x] Rebuild replaces derived rows atomically.
+- [x] Find matches normalized and raw paths.
+- [x] Index stats report freshness and provenance.
+- [x] Tests cover stale/missing index behavior.
 
 ### TASK-004: File Intelligence Service
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/file-intelligence/manager.ts`, `src/file-intelligence/index.ts`, `src/file-intelligence/manager.test.ts`
 **Dependencies**: TASK-001, TASK-002, TASK-003
@@ -301,14 +299,14 @@ Add a rebuildable local file index for path lookup across known Cursor sessions.
 Coordinate session resolution, ai-tracking reads, path normalization, degraded provenance, and index rebuild/find behavior.
 
 **Completion Criteria**:
-- [ ] Known session with missing enrichment returns `unknown` provenance.
-- [ ] Unknown session returns not-found behavior for CLI callers.
-- [ ] Deleted files and snapshots are exposed separately.
-- [ ] Path normalization handles workspace-relative and raw paths.
+- [x] Known session with missing enrichment returns degraded provenance.
+- [x] Unknown session returns not-found behavior for CLI callers.
+- [x] Deleted files and snapshots are exposed separately.
+- [x] Path normalization handles workspace-relative and raw paths.
 
 ### TASK-005: CLI Integration
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/cli/cli.ts`, `src/cli/cli.test.ts`
 **Dependencies**: TASK-004
@@ -317,46 +315,48 @@ Coordinate session resolution, ai-tracking reads, path normalization, degraded p
 Add `files` subcommands with JSON and human output, validation, and exit-code behavior aligned with existing CLI conventions.
 
 **Completion Criteria**:
-- [ ] All five requested subcommands are routed.
-- [ ] `--json` emits stable structured results.
-- [ ] Human output reports provenance and degraded states.
-- [ ] Validation covers missing session id, missing path, and unknown action.
+- [x] All five requested subcommands are routed.
+- [x] `--json` emits stable structured results.
+- [x] Human output reports provenance and degraded states.
+- [x] Validation covers missing session id, missing path, and unknown action.
 
 ### TASK-006: Verification and Plan Closure
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: implementation-plan progress updates
 **Dependencies**: TASK-001, TASK-002, TASK-003, TASK-004, TASK-005
 
 **Description**:
-Run project automation, record progress, and update completion criteria.
+Run project automation, record progress, and update completion criteria. After implementation, refresh the README and user-facing skill documentation required by the workflow before commit-message generation.
 
 **Completion Criteria**:
-- [ ] `task typecheck` passes.
-- [ ] `task test` passes.
-- [ ] `task ci` passes or failures are documented.
-- [ ] Manual `files` smoke commands are documented with degraded-state notes.
+- [x] `task typecheck` passes.
+- [x] `task test` passes.
+- [x] `task ci` passes or failures are documented.
+- [x] Manual `files` smoke commands are documented with degraded-state notes.
+- [x] README and user-facing skill refresh are explicitly deferred to the dedicated post-implementation workflow step.
 
 ## Dependencies
 
 | Feature | Depends On | Status |
 |---------|------------|--------|
-| P3-FILE-INTELLIGENCE | phase1-core-foundation:TASK-004, phase1-core-foundation:TASK-004.25, phase1-core-foundation:TASK-006 | READY |
-| TASK-002 | TASK-001 | BLOCKED |
-| TASK-003 | TASK-001 | BLOCKED |
-| TASK-004 | TASK-001, TASK-002, TASK-003 | BLOCKED |
-| TASK-005 | TASK-004 | BLOCKED |
-| TASK-006 | TASK-001, TASK-002, TASK-003, TASK-004, TASK-005 | BLOCKED |
+| P3-FILE-INTELLIGENCE | phase1-core-foundation:TASK-004, phase1-core-foundation:TASK-004.25, phase1-core-foundation:TASK-006, P2-SESSION-SEARCH | READY |
+| TASK-002 | TASK-001 | COMPLETED |
+| TASK-003 | TASK-001 | COMPLETED |
+| TASK-004 | TASK-001, TASK-002, TASK-003 | COMPLETED |
+| TASK-005 | TASK-004 | COMPLETED |
+| TASK-006 | TASK-001, TASK-002, TASK-003, TASK-004, TASK-005 | COMPLETED |
 
 ## Completion Criteria
 
-- [ ] All requested `files` subcommands implemented.
-- [ ] File intelligence is derived from `ai-tracking`, not transcript replay.
-- [ ] Missing DB, missing schema, and missing rows degrade gracefully with explicit provenance.
-- [ ] Repository-owned file index can be rebuilt and queried by path.
-- [ ] Cursor-owned files and databases remain read-only.
-- [ ] Type checking and tests pass.
+- [x] All requested `files` subcommands implemented.
+- [x] File intelligence is derived from `ai-tracking`, not transcript replay.
+- [x] Missing DB, missing schema, and missing rows degrade gracefully with explicit provenance.
+- [x] Repository-owned file index can be rebuilt and queried by path.
+- [x] Cursor-owned files and databases remain read-only.
+- [x] Type checking and tests pass.
+- [x] README and user-facing skill refresh step is deferred to the dedicated workflow step after implementation review.
 
 ## Verification Commands
 
@@ -373,20 +373,32 @@ bun run src/main.ts files find <path> --json
 
 ## Risks
 
+- Workflow requested root `/g/gits/tacogips/cursor-cli-agent/codex-agent` may remain unavailable for inspection; implementation must preserve requested-path references and use `/g/gits/tacogips/codex-agent` only as the documented fallback.
 - Cursor may change the `ai-code-tracking.db` schema.
 - `ai_code_hashes.fileName` may not always normalize cleanly to a workspace-relative path.
 - Snapshot rows are sparse and may be absent even for sessions with code touches.
 - `files find` can be stale until `files rebuild` runs.
 
-## Open Questions
-
-None.
-
 ## Progress Log
 
 ### Session: 2026-05-06
 
-**Tasks Completed**: Design and implementation-plan authoring only.
+**Tasks Completed**: Initial design and implementation-plan authoring.
 **Tasks In Progress**: None.
-**Blockers**: Runtime implementation is intentionally out of scope for this branch.
-**Notes**: Plan maps Codex file-change behavior to Cursor `ai-tracking` enrichment, replaces Codex patch history with Cursor snapshots/deleted-file views, and preserves explicit degraded provenance.
+**Blockers**: None.
+**Notes**: Plan maps Codex file-change behavior to Cursor `ai-tracking` enrichment, replaces patch history with snapshots/deleted-file views, and preserves degraded provenance.
+
+### Session: 2026-05-07
+
+**Tasks Completed**: Step 4 plan refresh after accepted Step 3 design review.
+**Tasks In Progress**: None.
+**Blockers**: None.
+**Notes**: Updated the preferred active plan path in place, preserved issue-resolution scope, added Codex fallback mapping, removed planning-only wording, and included README/user-facing skill refresh expectations.
+
+### Session: 2026-05-07 Step 6 implementation
+
+**Tasks Completed**: TASK-001, TASK-002, TASK-003, TASK-004, TASK-005, TASK-006.
+**Tasks In Progress**: None.
+**Blockers**: None.
+**Verification**: `task typecheck`, `task test`, and `task ci` pass. Temporary local-state smoke checks ran `files rebuild --json` and `files find src/a.ts --json` with isolated `CURORT_CLI_AGENT_DATA_DIR` and `CURORT_CLI_AGENT_CURSOR_HOME` values.
+**Notes**: Implemented local-only file intelligence from Cursor `ai-tracking` tables, repository-owned derived SQLite index, `files list/snapshots/deleted/find/rebuild` CLI commands, JSON/human provenance output, and focused reader/index/service/CLI tests. README and user-facing workflow-skill refresh remain for the dedicated post-implementation workflow step.

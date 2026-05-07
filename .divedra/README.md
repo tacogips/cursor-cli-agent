@@ -125,4 +125,8 @@ Cursor-local `queue pause`, `queue resume`, `queue delete`, `queue update`,
 `queue move`, `queue mode`, `queue stop`, paused/stopped run guards,
 cooperative stop between queue items, retained completed/failed items,
 manual-mode skips, and queue progress summaries derived from repository-owned
-queue state plus optional activity signals.
+queue state plus optional activity signals. For `P3-FILE-INTELLIGENCE`, it
+covers local-only `files list`, `files snapshots`, `files deleted`, `files
+find`, and `files rebuild` behavior derived from Cursor `ai-tracking`, explicit
+provenance and degraded-state reporting, snapshot content opt-in, and the
+repository-owned rebuildable file index.

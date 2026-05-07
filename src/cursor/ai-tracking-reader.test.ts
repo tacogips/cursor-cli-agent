@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 
-import { loadAiTrackingEnrichment } from "./ai-tracking-reader";
+import {
+  createAiTrackingFileReader,
+  loadAiTrackingEnrichment,
+} from "./ai-tracking-reader";
 
 describe("loadAiTrackingEnrichment", () => {
   test("returns undefined when database file is missing", () => {
@@ -85,5 +88,53 @@ CREATE TABLE tracked_file_content (
     expect(got?.codeTouches.length).toBe(1);
     expect(got?.deletedFiles[0]?.gitPath).toBe("old.ts");
     expect(got?.trackedFiles[0]?.gitPath).toBe("b.ts");
+    expect(got?.trackedFiles[0]?.contentBytes).toBe(1);
+  });
+
+  test("reports missing ai-tracking provenance for incompatible schemas", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ai-track-missing-schema-"));
+    const dbPath = join(dir, "track.db");
+    const db = new Database(dbPath, { create: true });
+    db.run("CREATE TABLE unrelated (id TEXT)");
+    db.close();
+
+    const reader = createAiTrackingFileReader(dbPath);
+    const got = reader.listCodeTouches("conv-1");
+
+    expect(got.provenance).toBe("missing_ai_tracking");
+    expect(got.rows).toEqual([]);
+  });
+
+  test("loads snapshot content only when requested", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ai-track-content-"));
+    const dbPath = join(dir, "track.db");
+    const db = new Database(dbPath, { create: true });
+    db.run(`
+CREATE TABLE tracked_file_content (
+  gitPath TEXT,
+  content TEXT NOT NULL,
+  conversationId TEXT,
+  model TEXT,
+  fileExtension TEXT,
+  createdAt INTEGER NOT NULL,
+  PRIMARY KEY (gitPath)
+);
+`);
+    db.run(
+      `INSERT INTO tracked_file_content (gitPath, content, conversationId, createdAt)
+       VALUES ('src/a.ts', 'hello', 'conv-1', 30)`,
+    );
+    db.close();
+
+    const reader = createAiTrackingFileReader(dbPath);
+    const metadataOnly = reader.listTrackedSnapshots("conv-1");
+    const withContent = reader.listTrackedSnapshots("conv-1", {
+      includeContent: true,
+    });
+
+    expect(metadataOnly.provenance).toBe("ai_tracking");
+    expect(metadataOnly.rows[0]?.contentBytes).toBe(5);
+    expect(metadataOnly.rows[0]?.content).toBeUndefined();
+    expect(withContent.rows[0]?.content).toBe("hello");
   });
 });
