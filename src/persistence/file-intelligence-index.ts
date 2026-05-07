@@ -163,6 +163,18 @@ INSERT INTO file_index_entries (
     };
   }
 
+  listEntries(limit: number = 10000): readonly FileHistoryEntry[] {
+    const rows = this.db
+      .query(
+        `SELECT * FROM file_index_entries
+         ORDER BY normalized_path ASC, COALESCE(observed_at, '') ASC,
+                  session_id ASC, operation ASC
+         LIMIT ?`,
+      )
+      .all(limit) as Record<string, unknown>[];
+    return rows.map(rowToHistoryEntry);
+  }
+
   getStats(): FileIndexStats {
     const row = this.db
       .query("SELECT * FROM file_index_meta WHERE singleton_id = 1")

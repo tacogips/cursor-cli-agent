@@ -157,14 +157,18 @@ Behavior:
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Reference repository root for this workflow run: `/g/gits/tacogips/cursor-cli-agent/codex-agent`.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/types.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/file-changes/service.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/usage-stats.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/types.ts` (requested reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.ts` (requested reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/file-changes/service.test.ts` (requested reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/sdk/usage-stats.ts` (requested reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/index.ts` (workflow-supplied reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/sqlite.ts` (workflow-supplied reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/types/session.ts` (workflow-supplied reference; missing locally during Step 2)
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/design-docs/specs/design-codex-session-management.md` (workflow-supplied reference; missing locally during Step 2)
 
 Reference behavior to preserve:
 

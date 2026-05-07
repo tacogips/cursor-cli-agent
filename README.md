@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, group and queue orchestration, and skill catalog commands have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, and skill catalog commands have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -58,6 +58,7 @@ Implemented capabilities:
 - Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
 - Derived `activity` records from the session index, transcript mtimes, wrapper-recorded stream/process signals, and stderr/stdout wait patterns, with explicit `provenance: "derived"` signal details
 - Local file intelligence from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db`: `files list`, `files snapshots`, `files deleted`, `files find`, and `files rebuild` with explicit provenance, degraded-state reporting, sparse snapshot content opt-in, and a repository-owned rebuildable path index
+- Local repository analytics from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db` `scored_commits` plus file-intelligence attribution: `repo analytics summary`, `repo analytics commits`, `repo analytics sessions`, `repo analytics files`, and `repo analytics rebuild` with explicit provenance, completeness notes, repository-owned derived indexes, valid `0%` AI preservation, TEXT numeric column handling, and degraded-state reporting
 - Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
 - Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, legacy queue migration, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
 - Headless run/resume orchestration via `cursor-agent --print`
@@ -112,6 +113,24 @@ repository-owned derived index rows, and `files find` reports whether a stale or
 missing index requires another rebuild. Snapshot content is included only when
 `--include-content` is supplied.
 
+Repository analytics command examples:
+
+```bash
+bun run src/main.ts repo analytics rebuild --json
+bun run src/main.ts repo analytics summary --json
+bun run src/main.ts repo analytics commits --json --limit 5
+bun run src/main.ts repo analytics sessions --json --limit 5
+bun run src/main.ts repo analytics files --json --limit 5
+```
+
+`repo analytics rebuild` refreshes/imports local Cursor sessions, reads
+`scored_commits` through the read-only Cursor ai-tracking adapter, joins
+session/file attribution through the file-intelligence layer, and writes only
+repository-owned derived analytics. `summary`, `commits`, `sessions`, and
+`files` report provenance and completeness notes so missing Cursor databases,
+missing scored commits, missing file intelligence, and sparse rows are distinct
+from valid zero-valued analytics.
+
 Group lifecycle command examples:
 
 ```bash
@@ -155,6 +174,7 @@ reports `provenance: "queue-store+activity"`.
 - `design-docs/specs/design-group-lifecycle.md`
 - `design-docs/specs/design-queue-lifecycle.md`
 - `design-docs/specs/design-file-intelligence.md`
+- `design-docs/specs/design-repository-analytics.md`
 
 ## Implementation Plan
 
@@ -168,6 +188,7 @@ reports `provenance: "queue-store+activity"`.
 - `impl-plans/active/group-lifecycle.md`
 - `impl-plans/active/queue-lifecycle.md`
 - `impl-plans/active/file-intelligence.md`
+- `impl-plans/active/repository-analytics.md`
 
 ## Reference Project
 
@@ -183,7 +204,7 @@ Important difference:
 ## Cursor Agent Notes
 
 - `~/.cursor/projects/*/agent-transcripts/*.jsonl` can be used as the primary local conversation log source
-- `~/.cursor/ai-tracking/ai-code-tracking.db` can enrich sessions with file-touch, deleted-file, and commit-scoring data keyed by `conversationId`
+- `~/.cursor/ai-tracking/ai-code-tracking.db` can enrich sessions with file-touch and deleted-file data keyed by `conversationId`, and can provide repository-scoped `scored_commits` commit scoring that is not reliably conversation-keyed
 - `~/.cursor/skills-cursor/` exists locally and contains built-in Cursor-managed skills
 - those built-in skills are useful as discoverable metadata
 - they should not be treated as a stable public API or as a writable location for user skills

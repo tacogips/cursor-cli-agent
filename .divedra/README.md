@@ -129,4 +129,10 @@ queue state plus optional activity signals. For `P3-FILE-INTELLIGENCE`, it
 covers local-only `files list`, `files snapshots`, `files deleted`, `files
 find`, and `files rebuild` behavior derived from Cursor `ai-tracking`, explicit
 provenance and degraded-state reporting, snapshot content opt-in, and the
-repository-owned rebuildable file index.
+repository-owned rebuildable file index. For `P3-REPO-ANALYTICS`, it covers
+local-only `repo analytics summary`, `repo analytics commits`, `repo analytics
+sessions`, `repo analytics files`, and `repo analytics rebuild` behavior derived
+from Cursor `scored_commits` plus file-intelligence attribution, explicit
+provenance and completeness notes, repository-owned analytics indexes, valid
+`0%` AI preservation, TEXT numeric column handling, and degraded-state
+reporting.

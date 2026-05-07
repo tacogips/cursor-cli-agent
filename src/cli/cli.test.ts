@@ -419,6 +419,183 @@ CREATE TABLE tracked_file_content (
     expect(found.entries[0]?.operation).toBe("deleted");
   });
 
+  test("renders repo analytics rebuild and query JSON results", async () => {
+    const cursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    if (cursorHome === undefined) {
+      throw new Error("test cursor home was not configured");
+    }
+    const workspace = resolve("/tmp/repo-analytics-cli-workspace");
+    await seedSessionIndex([
+      {
+        recordId: "rec-repo-analytics",
+        localSessionId: "conv-repo-analytics",
+        identityState: "transcript_only",
+        workspaceSlug: "tmp-repo-analytics-cli-workspace",
+        workspacePath: workspace,
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T01:00:00.000Z",
+        source: "headless",
+        status: "completed",
+      },
+    ]);
+    const aiTrackingDir = join(cursorHome, "ai-tracking");
+    await mkdir(aiTrackingDir, { recursive: true });
+    const db = new Database(join(aiTrackingDir, "ai-code-tracking.db"), {
+      create: true,
+    });
+    db.run(`
+CREATE TABLE scored_commits (
+  commitHash TEXT PRIMARY KEY,
+  branchName TEXT,
+  commitMessage TEXT,
+  commitDate TEXT,
+  v1AiPercentage TEXT,
+  v2AiPercentage TEXT
+);
+CREATE TABLE ai_code_hashes (
+  hash TEXT PRIMARY KEY NOT NULL,
+  source TEXT NOT NULL,
+  fileExtension TEXT,
+  fileName TEXT,
+  requestId TEXT,
+  conversationId TEXT,
+  timestamp INTEGER,
+  model TEXT,
+  createdAt INTEGER NOT NULL
+);
+CREATE TABLE ai_deleted_files (
+  gitPath TEXT NOT NULL,
+  composerId TEXT,
+  conversationId TEXT,
+  model TEXT,
+  deletedAt INTEGER NOT NULL,
+  PRIMARY KEY (gitPath, deletedAt)
+);
+CREATE TABLE tracked_file_content (
+  gitPath TEXT,
+  content TEXT NOT NULL,
+  conversationId TEXT,
+  model TEXT,
+  fileExtension TEXT,
+  createdAt INTEGER NOT NULL,
+  PRIMARY KEY (gitPath)
+);
+`);
+    db.run(
+      `INSERT INTO scored_commits (
+         commitHash, branchName, commitMessage, commitDate,
+         v1AiPercentage, v2AiPercentage
+       ) VALUES ('repoabc', 'main', 'analytics', '2026-05-07T00:00:00.000Z', '0.00', '50.00')`,
+    );
+    db.run(
+      `INSERT INTO ai_code_hashes (hash, source, fileName, conversationId, timestamp, createdAt)
+       VALUES ('h-repo-analytics', 'src', 'src/repo.ts', 'conv-repo-analytics', 1000, 1000)`,
+    );
+    db.close();
+
+    const rebuildExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "repo",
+      "analytics",
+      "rebuild",
+      "--json",
+    ]);
+    expect(rebuildExit).toBe(0);
+    const rebuild = JSON.parse(logs.join("\n")) as {
+      indexedCommits: number;
+      indexedSessions: number;
+      indexedFiles: number;
+      provenance: string[];
+    };
+    expect(rebuild.indexedCommits).toBe(1);
+    expect(rebuild.indexedSessions).toBe(1);
+    expect(rebuild.indexedFiles).toBe(1);
+    expect(rebuild.provenance).toContain("ai_tracking");
+    expect(rebuild.provenance).toContain("file_intelligence");
+
+    logs = [];
+    const summaryExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "repo",
+      "analytics",
+      "summary",
+      "--json",
+    ]);
+    expect(summaryExit).toBe(0);
+    const summary = JSON.parse(logs.join("\n")) as {
+      weightedV1AiPercentage: number;
+      weightedV2AiPercentage: number;
+      completenessNotes: string[];
+    };
+    expect(summary.weightedV1AiPercentage).toBe(0);
+    expect(summary.weightedV2AiPercentage).toBe(50);
+    expect(summary.completenessNotes).toContain(
+      "composer line count columns are missing",
+    );
+    expect(summary.completenessNotes).toContain(
+      "v1 AI percentage uses unweighted average because composer line counts are missing",
+    );
+
+    logs = [];
+    const commitsExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "repo",
+      "analytics",
+      "commits",
+      "--limit",
+      "1",
+      "--json",
+    ]);
+    expect(commitsExit).toBe(0);
+    const commits = JSON.parse(logs.join("\n")) as {
+      commits: Array<{ commitHash: string; v1AiPercentage: number }>;
+    };
+    expect(commits.commits[0]?.commitHash).toBe("repoabc");
+    expect(commits.commits[0]?.v1AiPercentage).toBe(0);
+
+    logs = [];
+    const sessionsExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "repo",
+      "analytics",
+      "sessions",
+      "--json",
+    ]);
+    expect(sessionsExit).toBe(0);
+    expect(JSON.parse(logs.join("\n")).sessions[0].touchedFiles).toBe(1);
+
+    logs = [];
+    const filesExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "repo",
+      "analytics",
+      "files",
+      "--json",
+    ]);
+    expect(filesExit).toBe(0);
+    expect(JSON.parse(logs.join("\n")).files[0].path).toBe("src/repo.ts");
+
+    errors = [];
+    const invalidLimit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "repo",
+      "analytics",
+      "commits",
+      "--limit",
+      "0",
+    ]);
+    expect(invalidLimit).toBe(2);
+    expect(errors[0]).toBe(
+      "repo analytics: --limit must be a positive integer",
+    );
+  });
+
   test("renders markdown task extraction JSON results", async () => {
     const transcriptPath = join(testDir, "markdown-cli.jsonl");
     await writeFile(

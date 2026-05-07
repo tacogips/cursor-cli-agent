@@ -6,6 +6,7 @@ import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 
 import {
+  createAiTrackingAnalyticsReader,
   createAiTrackingFileReader,
   loadAiTrackingEnrichment,
 } from "./ai-tracking-reader";
@@ -136,5 +137,53 @@ CREATE TABLE tracked_file_content (
     expect(metadataOnly.rows[0]?.contentBytes).toBe(5);
     expect(metadataOnly.rows[0]?.content).toBeUndefined();
     expect(withContent.rows[0]?.content).toBe("hello");
+  });
+
+  test("reads scored commits with valid zero percentages", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ai-track-scored-"));
+    const dbPath = join(dir, "track.db");
+    const db = new Database(dbPath, { create: true });
+    db.run(`
+CREATE TABLE scored_commits (
+  commitHash TEXT PRIMARY KEY,
+  branchName TEXT,
+  commitMessage TEXT,
+  commitDate TEXT,
+  composerLinesAdded TEXT,
+  composerLinesDeleted TEXT,
+  v1AiPercentage TEXT,
+  v2AiPercentage TEXT
+);
+`);
+    db.run(
+      `INSERT INTO scored_commits (
+         commitHash, branchName, commitMessage, commitDate,
+         composerLinesAdded, composerLinesDeleted, v1AiPercentage,
+         v2AiPercentage
+       ) VALUES ('abc', 'main', 'initial', '2026-05-07T00:00:00.000Z', '10', '5', '0.00', '40.5')`,
+    );
+    db.close();
+
+    const got = createAiTrackingAnalyticsReader(dbPath).listScoredCommits();
+
+    expect(got.provenance).toBe("ai_tracking");
+    expect(got.rows[0]?.commitHash).toBe("abc");
+    expect(got.rows[0]?.composerLinesAdded).toBe(10);
+    expect(got.rows[0]?.composerLinesDeleted).toBe(5);
+    expect(got.rows[0]?.v1AiPercentage).toBe(0);
+    expect(got.rows[0]?.v2AiPercentage).toBe(40.5);
+  });
+
+  test("reports missing scored commits separately from missing database", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ai-track-no-scored-"));
+    const dbPath = join(dir, "track.db");
+    const db = new Database(dbPath, { create: true });
+    db.run("CREATE TABLE unrelated (id TEXT)");
+    db.close();
+
+    const got = createAiTrackingAnalyticsReader(dbPath).listScoredCommits();
+
+    expect(got.provenance).toBe("missing_scored_commits");
+    expect(got.rows).toEqual([]);
   });
 });

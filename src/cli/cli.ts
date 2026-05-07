@@ -33,6 +33,7 @@ import {
   DEFAULT_TRANSCRIPT_SEARCH_TIMEOUT_MS,
 } from "../cursor/transcript-search";
 import {
+  createAiTrackingAnalyticsReader,
   createAiTrackingFileReader,
   loadAiTrackingEnrichment,
 } from "../cursor/ai-tracking-reader";
@@ -52,7 +53,9 @@ import {
 import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
 import { FileIntelligenceIndex } from "../persistence/file-intelligence-index";
+import { RepositoryAnalyticsIndex } from "../persistence/repository-analytics-index";
 import { SessionIndexRepository } from "../persistence/session-index";
+import { createRepositoryAnalyticsService } from "../repository-analytics";
 import type { AgentEvent } from "../types/agent-event";
 import type {
   BookmarkFilter,
@@ -93,6 +96,13 @@ import type {
   SessionFileSnapshotResult,
   SessionFileSummary,
 } from "../types/file-intelligence";
+import type {
+  RepositoryAnalyticsRebuildStats,
+  RepositoryAnalyticsSummary,
+  RepositoryCommitListResult,
+  RepositoryFileAnalyticsResult,
+  RepositorySessionAnalyticsResult,
+} from "../types/repository-analytics";
 
 type HeadlessStreamingRunner = typeof runHeadlessStreaming;
 
@@ -637,6 +647,23 @@ function parseBookmarkSearchOptions(
   return { options: { ...(limit !== undefined ? { limit } : {}) } };
 }
 
+function parseOptionalLimit(
+  command: string,
+  flags: Record<string, string | boolean>,
+):
+  | { readonly options: { readonly limit?: number } }
+  | { readonly error: string } {
+  const rawLimit = flags["limit"];
+  if (rawLimit === undefined) {
+    return { options: {} };
+  }
+  const limit = typeof rawLimit === "string" ? Number(rawLimit) : NaN;
+  if (!Number.isInteger(limit) || !Number.isFinite(limit) || limit <= 0) {
+    return { error: `${command}: --limit must be a positive integer` };
+  }
+  return { options: { limit } };
+}
+
 function renderBookmarkHuman(bookmark: {
   readonly id: string;
   readonly type: string;
@@ -752,6 +779,80 @@ function renderRebuildHuman(stats: FileIndexRebuildStats): void {
   console.log(
     `indexedSessions=${stats.indexedSessions} touchedFiles=${stats.touchedFiles} deletedFiles=${stats.deletedFiles} snapshots=${stats.snapshots} skippedSessions=${stats.skippedSessions} updatedAt=${stats.updatedAt} provenance=${stats.provenance}`,
   );
+}
+
+function renderRepoAnalyticsSummaryHuman(
+  result: RepositoryAnalyticsSummary,
+): void {
+  const v1 =
+    result.weightedV1AiPercentage !== undefined
+      ? ` weightedV1AiPercentage=${result.weightedV1AiPercentage}`
+      : "";
+  const v2 =
+    result.weightedV2AiPercentage !== undefined
+      ? ` weightedV2AiPercentage=${result.weightedV2AiPercentage}`
+      : "";
+  console.log(
+    `commits=${result.totalCommits} scored=${result.scoredCommits} composerLines=${result.totalComposerLines} provenance=${result.provenance.join(",")}${v1}${v2}`,
+  );
+  for (const note of result.completenessNotes) {
+    console.log(`note=${note}`);
+  }
+}
+
+function renderRepoAnalyticsCommitsHuman(
+  result: RepositoryCommitListResult,
+): void {
+  console.log(
+    `commits=${result.totalCommits} provenance=${result.provenance.join(",")}`,
+  );
+  for (const commit of result.commits) {
+    const date = commit.commitDate !== undefined ? ` ${commit.commitDate}` : "";
+    const v1 =
+      commit.v1AiPercentage !== undefined ? ` v1=${commit.v1AiPercentage}` : "";
+    const v2 =
+      commit.v2AiPercentage !== undefined ? ` v2=${commit.v2AiPercentage}` : "";
+    console.log(
+      `${commit.commitHash}${date}${v1}${v2} provenance=${commit.provenance}`,
+    );
+  }
+}
+
+function renderRepoAnalyticsSessionsHuman(
+  result: RepositorySessionAnalyticsResult,
+): void {
+  console.log(
+    `sessions=${result.totalSessions} provenance=${result.provenance.join(",")}`,
+  );
+  for (const session of result.sessions) {
+    console.log(
+      `${session.sessionId} touched=${session.touchedFiles} deleted=${session.deletedFiles} snapshots=${session.snapshots} unknown=${session.unknownFiles} provenance=${session.provenance.join(",")}`,
+    );
+  }
+}
+
+function renderRepoAnalyticsFilesHuman(
+  result: RepositoryFileAnalyticsResult,
+): void {
+  console.log(
+    `files=${result.totalFiles} provenance=${result.provenance.join(",")}`,
+  );
+  for (const file of result.files) {
+    console.log(
+      `${file.path} sessions=${file.sessions} touched=${file.touchedCount} deleted=${file.deletedCount} snapshots=${file.snapshotCount} provenance=${file.provenance.join(",")}`,
+    );
+  }
+}
+
+function renderRepoAnalyticsRebuildHuman(
+  stats: RepositoryAnalyticsRebuildStats,
+): void {
+  console.log(
+    `indexedCommits=${stats.indexedCommits} indexedSessions=${stats.indexedSessions} indexedFiles=${stats.indexedFiles} skippedRows=${stats.skippedRows} updatedAt=${stats.updatedAt} provenance=${stats.provenance.join(",")}`,
+  );
+  for (const note of stats.completenessNotes) {
+    console.log(`note=${note}`);
+  }
 }
 
 function renderMarkdownTasksHuman(result: MarkdownTaskExtractionResult): void {
@@ -1024,6 +1125,13 @@ function openFileIndex(): FileIntelligenceIndex {
   return new FileIntelligenceIndex(join(getDataDir(), "file-intelligence.db"));
 }
 
+function openRepositoryAnalyticsIndex(): RepositoryAnalyticsIndex {
+  mkdirSync(getDataDir(), { recursive: true });
+  return new RepositoryAnalyticsIndex(
+    join(getDataDir(), "repository-analytics.db"),
+  );
+}
+
 function sessionIdFromEvent(event: AgentEvent): string | undefined {
   switch (event.type) {
     case "session.started":
@@ -1071,6 +1179,11 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent files deleted <session-id> [--json]
   curort-cli-agent files find <path> [--json]
   curort-cli-agent files rebuild [--json]
+  curort-cli-agent repo analytics summary [--json]
+  curort-cli-agent repo analytics commits [--limit N] [--json]
+  curort-cli-agent repo analytics sessions [--limit N] [--json]
+  curort-cli-agent repo analytics files [--limit N] [--json]
+  curort-cli-agent repo analytics rebuild [--json]
   curort-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
   curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
   curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
@@ -1117,6 +1230,9 @@ export async function runCli(argv: string[]): Promise<number> {
   }
   if (cmd === "files") {
     return runFiles(tail);
+  }
+  if (cmd === "repo") {
+    return runRepo(tail);
   }
   if (cmd === "activity") {
     return runActivity(tail);
@@ -1297,6 +1413,102 @@ async function runFiles(argv: string[]): Promise<number> {
     throw error;
   } finally {
     index.close();
+    repo.close();
+  }
+}
+
+async function runRepo(argv: string[]): Promise<number> {
+  const [scope, sub, ...rest] = argv;
+  if (scope !== "analytics") {
+    console.error(
+      scope === undefined
+        ? "repo: missing subcommand"
+        : `Unknown repo subcommand: ${scope}`,
+    );
+    return EXIT.USAGE;
+  }
+  if (sub === undefined) {
+    console.error("repo analytics: missing subcommand");
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  if (pos.length > 0) {
+    console.error("repo analytics: unexpected positional arguments");
+    return EXIT.USAGE;
+  }
+  const json = flags["json"] === true;
+  const parsedLimit = parseOptionalLimit("repo analytics", flags);
+  if ("error" in parsedLimit) {
+    console.error(parsedLimit.error);
+    return EXIT.USAGE;
+  }
+  const repo = await openRepo();
+  const fileIndex = openFileIndex();
+  const analyticsIndex = openRepositoryAnalyticsIndex();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const fileIntelligence = createFileIntelligenceService({
+      sessions: repo,
+      aiTracking: createAiTrackingFileReader(),
+      index: fileIndex,
+    });
+    const service = createRepositoryAnalyticsService({
+      sessions: repo,
+      aiTracking: createAiTrackingAnalyticsReader(),
+      fileIntelligence,
+      fileIndex,
+      analyticsIndex,
+    });
+    if (sub === "summary") {
+      const result = await service.getSummary();
+      if (json) {
+        printJson(result);
+      } else {
+        renderRepoAnalyticsSummaryHuman(result);
+      }
+      return EXIT.OK;
+    }
+    if (sub === "commits") {
+      const result = await service.listCommits(parsedLimit.options);
+      if (json) {
+        printJson(result);
+      } else {
+        renderRepoAnalyticsCommitsHuman(result);
+      }
+      return EXIT.OK;
+    }
+    if (sub === "sessions") {
+      const result = await service.listSessions(parsedLimit.options);
+      if (json) {
+        printJson(result);
+      } else {
+        renderRepoAnalyticsSessionsHuman(result);
+      }
+      return EXIT.OK;
+    }
+    if (sub === "files") {
+      const result = await service.listFiles(parsedLimit.options);
+      if (json) {
+        printJson(result);
+      } else {
+        renderRepoAnalyticsFilesHuman(result);
+      }
+      return EXIT.OK;
+    }
+    if (sub === "rebuild") {
+      const result = await service.rebuild();
+      if (json) {
+        printJson(result);
+      } else {
+        renderRepoAnalyticsRebuildHuman(result);
+      }
+      return EXIT.OK;
+    }
+    console.error(`Unknown repo analytics subcommand: ${sub}`);
+    return EXIT.USAGE;
+  } finally {
+    analyticsIndex.close();
+    fileIndex.close();
     repo.close();
   }
 }
