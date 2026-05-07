@@ -10,6 +10,16 @@ import {
   getDataDir,
   stateDbPath,
 } from "../config/paths";
+import {
+  createTokenManager,
+  invalidAuthPermissions,
+  normalizeAuthPermissions,
+  TokenInputError,
+  TokenNotFoundError,
+  type ApiTokenMetadata,
+  type AuthPermission,
+  type CreatedToken,
+} from "../auth";
 import { createActivityManager } from "../activity/manager";
 import { deriveGroupProgressSnapshot } from "../group/progress";
 import { deriveQueueProgressSnapshot } from "../queue/progress";
@@ -346,6 +356,74 @@ export interface ServerStartArgs {
   readonly port?: number;
   readonly token?: string;
   readonly json?: boolean;
+}
+
+interface TokenCreateArgs {
+  readonly name: string;
+  readonly permissions?: readonly AuthPermission[];
+  readonly expiresAt?: string;
+  readonly json?: boolean;
+}
+
+function parsePermissionCsvFlag(
+  value: string | boolean | undefined,
+): { permissions?: readonly AuthPermission[] } | { error: string } {
+  if (value === undefined) {
+    return {};
+  }
+  if (typeof value !== "string") {
+    return { error: "token create: --permissions requires a CSV value" };
+  }
+  const parts = value.split(",");
+  const invalid = invalidAuthPermissions(parts);
+  if (invalid.length > 0) {
+    return {
+      error: `token create: invalid permissions: ${invalid.join(",")}`,
+    };
+  }
+  const permissions = normalizeAuthPermissions(parts);
+  if (permissions.length === 0) {
+    return { error: "token create: at least one permission is required" };
+  }
+  return { permissions };
+}
+
+function parseTokenCreateArgs(
+  argv: readonly string[],
+): { args: TokenCreateArgs } | { error: string } {
+  const { rest: pos, flags } = parseFlags([...argv]);
+  if (pos.length > 0) {
+    return { error: "token create: unexpected positional arguments" };
+  }
+  const name = flags["name"];
+  if (typeof name !== "string" || name.trim().length === 0) {
+    return { error: "token create: --name is required" };
+  }
+  const parsedPermissions = parsePermissionCsvFlag(flags["permissions"]);
+  if ("error" in parsedPermissions) {
+    return parsedPermissions;
+  }
+  const expiresAt = flags["expires-at"];
+  if (expiresAt !== undefined) {
+    if (
+      typeof expiresAt !== "string" ||
+      !Number.isFinite(Date.parse(expiresAt))
+    ) {
+      return {
+        error: "token create: --expires-at must be a valid ISO 8601 timestamp",
+      };
+    }
+  }
+  return {
+    args: {
+      name,
+      ...parsedPermissions,
+      ...(typeof expiresAt === "string"
+        ? { expiresAt: new Date(expiresAt).toISOString() }
+        : {}),
+      ...(flags["json"] === true ? { json: true } : {}),
+    },
+  };
 }
 
 function parseTcpPortFlag(
@@ -955,6 +1033,26 @@ function printJson(v: unknown): void {
   console.log(JSON.stringify(v, null, 2));
 }
 
+function renderTokenCreatedHuman(created: CreatedToken): void {
+  console.log(`token=${created.token}`);
+  console.log(`id=${created.metadata.id}`);
+  console.log(`name=${created.metadata.name}`);
+  console.log(`permissions=${created.metadata.permissions.join(",")}`);
+  if (created.metadata.expiresAt !== undefined) {
+    console.log(`expiresAt=${created.metadata.expiresAt}`);
+  }
+}
+
+function renderTokenMetadataHuman(token: ApiTokenMetadata): void {
+  const expires =
+    token.expiresAt !== undefined ? ` expiresAt=${token.expiresAt}` : "";
+  const revoked =
+    token.revokedAt !== undefined ? ` revokedAt=${token.revokedAt}` : "";
+  console.log(
+    `${token.id}  ${token.name}  permissions=${token.permissions.join(",")}  createdAt=${token.createdAt}${expires}${revoked}`,
+  );
+}
+
 export function renderServerStartResult(
   result: ServerStartResult,
   json: boolean,
@@ -1287,6 +1385,10 @@ export async function runCli(argv: string[]): Promise<number> {
     run <name> [--stream <text|json|events>] [--json]
   curort-cli-agent skill list [--workspace <path>] [--json]
   curort-cli-agent skill show <name> [--workspace <path>] [--json]
+  curort-cli-agent token create --name <name> [--permissions <csv>] [--expires-at <iso8601>] [--json]
+  curort-cli-agent token list [--json]
+  curort-cli-agent token revoke <id> [--json]
+  curort-cli-agent token rotate <id> [--json]
   curort-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--json]
   curort-cli-agent daemon ...  (phase 2; not implemented yet)
 `);
@@ -1300,6 +1402,10 @@ export async function runCli(argv: string[]): Promise<number> {
 
   if (cmd === "server") {
     return runServer(tail);
+  }
+
+  if (cmd === "token") {
+    return runToken(tail);
   }
 
   if (cmd === "daemon") {
@@ -1397,6 +1503,96 @@ async function runServer(argv: string[]): Promise<number> {
     );
     return EXIT.ERR;
   }
+}
+
+async function runToken(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  const manager = createTokenManager();
+  if (sub === "create") {
+    const parsed = parseTokenCreateArgs(rest);
+    if ("error" in parsed) {
+      console.error(parsed.error);
+      return EXIT.USAGE;
+    }
+    try {
+      const created = await manager.createToken(parsed.args);
+      if (parsed.args.json === true) {
+        printJson(created);
+      } else {
+        renderTokenCreatedHuman(created);
+      }
+      return EXIT.OK;
+    } catch (error) {
+      console.error(
+        error instanceof Error
+          ? `token create: ${error.message}`
+          : "token create failed",
+      );
+      return error instanceof TokenInputError ? EXIT.USAGE : EXIT.ERR;
+    }
+  }
+
+  if (sub === "list") {
+    const { rest: pos, flags } = parseFlags(rest);
+    if (pos.length > 0) {
+      console.error("token list: unexpected positional arguments");
+      return EXIT.USAGE;
+    }
+    const tokens = await manager.listTokens();
+    if (flags["json"] === true) {
+      printJson({ tokens });
+    } else {
+      for (const token of tokens) {
+        renderTokenMetadataHuman(token);
+      }
+    }
+    return EXIT.OK;
+  }
+
+  if (sub === "revoke" || sub === "rotate") {
+    const { rest: pos, flags } = parseFlags(rest);
+    const id = pos[0];
+    if (id === undefined || id.length === 0) {
+      console.error(`token ${sub}: missing token id`);
+      return EXIT.USAGE;
+    }
+    if (pos.length > 1) {
+      console.error(`token ${sub}: unexpected positional arguments`);
+      return EXIT.USAGE;
+    }
+    try {
+      if (sub === "revoke") {
+        const token = await manager.revokeToken(id);
+        if (flags["json"] === true) {
+          printJson({ revoked: true, token });
+        } else {
+          console.log(`revoked=${token.id}`);
+        }
+        return EXIT.OK;
+      }
+      const rotated = await manager.rotateToken(id);
+      if (flags["json"] === true) {
+        printJson(rotated);
+      } else {
+        renderTokenCreatedHuman(rotated);
+      }
+      return EXIT.OK;
+    } catch (error) {
+      console.error(
+        error instanceof Error
+          ? `token ${sub}: ${error.message}`
+          : `token ${sub} failed`,
+      );
+      return error instanceof TokenNotFoundError ? EXIT.NOT_FOUND : EXIT.ERR;
+    }
+  }
+
+  console.error(
+    sub === undefined
+      ? "token: missing subcommand"
+      : `Unknown token subcommand: ${sub}`,
+  );
+  return EXIT.USAGE;
 }
 
 async function runActivity(argv: string[]): Promise<number> {

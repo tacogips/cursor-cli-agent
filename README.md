@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, the local REST HTTP server, and live server event streaming have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, and live server event streaming have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -61,7 +61,8 @@ Implemented capabilities:
 - Local repository analytics from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db` `scored_commits` plus file-intelligence attribution: `repo analytics summary`, `repo analytics commits`, `repo analytics sessions`, `repo analytics files`, and `repo analytics rebuild` with explicit provenance, completeness notes, repository-owned derived indexes, valid `0%` AI preservation, TEXT numeric column handling, and degraded-state reporting
 - Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
 - Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, legacy queue migration, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
-- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with optional static bearer auth and shared JSON error envelopes
+- Local API token management: `token create`, `token list`, `token revoke`, and `token rotate` persist repository-owned token metadata under the config directory, store only secret hashes, return raw secrets exactly once, support default `session:read` plus route-facing permissions, and expose metadata-only JSON/human output
+- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
 - Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
@@ -165,9 +166,26 @@ metadata, and skips manual-mode items by default. Queue progress derives item
 totals from repository-owned queue state plus optional `activity` signals and
 reports `provenance: "queue-store+activity"`.
 
+Token command examples:
+
+```bash
+bun run src/main.ts token create --name local-admin --permissions session:read,server:admin --json
+bun run src/main.ts token list --json
+bun run src/main.ts token revoke <token-id> --json
+bun run src/main.ts token rotate <token-id> --json
+```
+
+`token create` defaults to `session:read` when `--permissions` is omitted and
+prints or returns the raw bearer token exactly once. Token records are stored in
+repository-owned config at `~/.config/curort-cli-agent/tokens.json`, or under
+`CURORT_CLI_AGENT_CONFIG_DIR` when set; raw token secrets are never persisted.
+Supported permissions are `session:create`, `session:read`, `session:cancel`,
+`group:*`, `queue:*`, `bookmark:*`, `files:*`, and `server:admin`.
+
 HTTP server command examples:
 
 ```bash
+bun run src/main.ts token create --name local-reader --json
 bun run src/main.ts server start --host 127.0.0.1 --port 0 --json
 curl http://127.0.0.1:<port>/api/health
 curl http://127.0.0.1:<port>/api/version
@@ -181,6 +199,7 @@ curl -N http://127.0.0.1:<port>/api/events/activity
 curl -N http://127.0.0.1:<port>/api/events/activity/<session-id>
 curl -N http://127.0.0.1:<port>/api/events/groups/<group-name>
 curl -N http://127.0.0.1:<port>/api/events/queues/<queue-name>
+curl -H "Authorization: Bearer <token-create-output>" http://127.0.0.1:<port>/api/sessions
 ```
 
 `server start` runs a foreground Bun HTTP server until SIGINT or SIGTERM. The
@@ -188,9 +207,16 @@ default host is `127.0.0.1` and the default port is `0`, which asks the runtime
 to allocate an available port. Loopback hosts may run without a token;
 non-loopback hosts require `--token <token>` or
 `CURORT_CLI_AGENT_SERVER_TOKEN`.
-When a token is configured, requests must include `Authorization: Bearer
-<token>`. Errors use a shared JSON envelope with `code`, `message`, and
-`requestId`, without stack traces or raw Cursor filesystem details.
+When startup auth is configured, requests must include `Authorization: Bearer
+<token>` using a raw token returned by `token create` or `token rotate`; the
+startup token only enables required auth mode and is not the request credential.
+Known API routes enforce route-facing permissions before reading local state:
+health/version and `/api/admin/*` require `server:admin`, session/search/SSE
+session routes require session permissions, group and queue event routes require
+their wildcard families, bookmark routes require `bookmark:*`, and file routes
+require `files:*`. Unmapped paths fall through to the normal `404` route.
+Errors use a shared JSON envelope with `code`, `message`, and `requestId`,
+without stack traces or raw Cursor filesystem details.
 Event routes return `text/event-stream` frames with `id`, `event`, and JSON
 `data` fields. Supported query controls are `replay=latest|none`,
 `heartbeatMs=<positive-ms>`, `startOffset=<non-negative-byte-offset>`, and
@@ -210,6 +236,7 @@ precedence over the query fallback.
 - `design-docs/specs/design-file-intelligence.md`
 - `design-docs/specs/design-repository-analytics.md`
 - `design-docs/specs/design-http-server-core.md`
+- `design-docs/specs/design-token-auth.md`
 - `design-docs/specs/design-server-event-streaming.md`
 
 ## Implementation Plan
@@ -226,6 +253,7 @@ precedence over the query fallback.
 - `impl-plans/active/file-intelligence.md`
 - `impl-plans/active/repository-analytics.md`
 - `impl-plans/active/http-server-core.md`
+- `impl-plans/active/token-auth.md`
 - `impl-plans/active/server-event-streaming.md`
 
 ## Reference Project

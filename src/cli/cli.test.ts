@@ -20,6 +20,7 @@ import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
 
 const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+const previousConfigDir = process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
 const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
 
 let testDir: string;
@@ -50,6 +51,11 @@ function restoreEnv(): void {
     delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
   } else {
     process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+  }
+  if (previousConfigDir === undefined) {
+    delete process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
+  } else {
+    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
   }
   if (previousCursorHome === undefined) {
     delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
@@ -1294,6 +1300,7 @@ describe("CLI server command", () => {
   beforeEach(async () => {
     testDir = await mkdtemp(join(tmpdir(), "curort-cli-server-"));
     process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
+    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
     process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     logs = [];
     errors = [];
@@ -1411,6 +1418,122 @@ describe("CLI server command", () => {
     } finally {
       restore();
     }
+  });
+
+  test("manages local API tokens in human and JSON modes", async () => {
+    const createdExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "create",
+      "--name",
+      "cli token",
+      "--permissions",
+      "session:read,group:*",
+      "--expires-at",
+      "2030-01-01T00:00:00.000Z",
+      "--json",
+    ]);
+    expect(createdExit).toBe(0);
+    const created = JSON.parse(logs.join("\n")) as {
+      token: string;
+      metadata: { id: string; permissions: string[]; expiresAt: string };
+    };
+    expect(created.metadata.permissions).toEqual(["session:read", "group:*"]);
+    expect(created.metadata.expiresAt).toBe("2030-01-01T00:00:00.000Z");
+    expect(JSON.stringify(created.metadata)).not.toContain("tokenHash");
+
+    logs = [];
+    const listExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "list",
+      "--json",
+    ]);
+    expect(listExit).toBe(0);
+    const listed = JSON.parse(logs.join("\n")) as {
+      tokens: Array<{ id: string; name: string }>;
+    };
+    expect(listed.tokens[0]?.id).toBe(created.metadata.id);
+    expect(JSON.stringify(listed)).not.toContain(created.token);
+    expect(JSON.stringify(listed)).not.toContain("tokenHash");
+
+    logs = [];
+    const rotateExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "rotate",
+      created.metadata.id,
+      "--json",
+    ]);
+    expect(rotateExit).toBe(0);
+    const rotated = JSON.parse(logs.join("\n")) as { token: string };
+    expect(rotated.token).not.toBe(created.token);
+
+    logs = [];
+    const revokeExit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "revoke",
+      created.metadata.id,
+    ]);
+    expect(revokeExit).toBe(0);
+    expect(logs[0]).toBe(`revoked=${created.metadata.id}`);
+  });
+
+  test("rejects token usage, invalid permissions, invalid expiry, and missing ids", async () => {
+    const missingName = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "create",
+    ]);
+    expect(missingName).toBe(2);
+    expect(errors[0]).toBe("token create: --name is required");
+
+    errors = [];
+    const invalidPermission = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "create",
+      "--name",
+      "bad",
+      "--permissions",
+      "session:read,nope",
+    ]);
+    expect(invalidPermission).toBe(2);
+    expect(errors[0]).toBe("token create: invalid permissions: nope");
+
+    errors = [];
+    const invalidExpiry = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "create",
+      "--name",
+      "bad",
+      "--expires-at",
+      "not-a-date",
+    ]);
+    expect(invalidExpiry).toBe(2);
+    expect(errors[0]).toBe(
+      "token create: --expires-at must be a valid ISO 8601 timestamp",
+    );
+
+    errors = [];
+    const notFound = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "token",
+      "revoke",
+      "missing",
+    ]);
+    expect(notFound).toBe(3);
+    expect(errors[0]).toBe("token revoke: token not found: missing");
   });
 });
 

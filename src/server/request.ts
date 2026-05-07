@@ -1,19 +1,5 @@
 import type { TranscriptSearchRole } from "../types/transcript-search";
 import { HttpError } from "./http-errors";
-import type { HttpServerConfig } from "./types";
-
-export function requireBearerAuth(
-  request: Request,
-  config: HttpServerConfig,
-): void {
-  if (config.token === undefined) {
-    return;
-  }
-  const authorization = request.headers.get("authorization");
-  if (authorization !== `Bearer ${config.token}`) {
-    throw new HttpError("UNAUTHORIZED", "missing or invalid bearer token");
-  }
-}
 
 export function parsePositiveInteger(
   url: { readonly searchParams: URLSearchParams },

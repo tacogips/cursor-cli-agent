@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
+import { createTokenManager } from "../auth";
 import { workspaceSlugFromPath } from "../config/paths";
 import { SessionIndexRepository } from "../persistence/session-index";
 import { createHttpRouteHandler } from "./routes";
@@ -85,13 +86,17 @@ describe("http server core", () => {
     expect(config.configDir).toBe(join(testDir, "config"));
     expect(config.cursorHome).toBe(join(testDir, "cursor"));
     expect(config.token).toBeUndefined();
+    expect(config.authMode).toBe("disabled");
 
     expect(() => resolveHttpServerConfig({ host: "0.0.0.0" })).toThrow(
       "server token is required for non-loopback hosts",
     );
-    expect(
-      resolveHttpServerConfig({ host: "0.0.0.0", token: "secret" }).token,
-    ).toBe("secret");
+    const exposed = resolveHttpServerConfig({
+      host: "0.0.0.0",
+      token: "managed-startup-token",
+    });
+    expect(exposed.token).toBe("managed-startup-token");
+    expect(exposed.authMode).toBe("required");
   });
 
   test("returns health and version JSON", async () => {
@@ -184,6 +189,35 @@ describe("http server core", () => {
     expect((unauthorized["error"] as { code: string }).code).toBe(
       "UNAUTHORIZED",
     );
+
+    const sessionToken = await createTokenManager({
+      configDir: join(testDir, "config"),
+    }).createToken({
+      name: "session reader",
+      permissions: ["session:read"],
+    });
+    const forbidden = await authed(
+      new Request("http://server/api/health", {
+        headers: { authorization: `Bearer ${sessionToken.token}` },
+      }),
+    );
+    expect(forbidden.status).toBe(403);
+    expect(((await jsonFor(forbidden))["error"] as { code: string }).code).toBe(
+      "FORBIDDEN",
+    );
+
+    const adminToken = await createTokenManager({
+      configDir: join(testDir, "config"),
+    }).createToken({
+      name: "admin",
+      permissions: ["server:admin"],
+    });
+    const authorized = await authed(
+      new Request("http://server/api/health", {
+        headers: { authorization: `Bearer ${adminToken.token}` },
+      }),
+    );
+    expect(authorized.status).toBe(200);
 
     const route = handler();
     const invalid = await route(

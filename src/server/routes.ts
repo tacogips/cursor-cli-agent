@@ -16,6 +16,8 @@ import {
   jsonResponse,
   toHttpError,
 } from "./http-errors";
+import { authenticateRequest, requireAuthPermission } from "./auth";
+import { routePermissionForRequest } from "./permissions";
 import {
   parseNonNegativeInteger,
   parseOptionalPositiveInteger,
@@ -23,7 +25,6 @@ import {
   parsePositiveInteger,
   parseRequiredString,
   parseTranscriptRole,
-  requireBearerAuth,
 } from "./request";
 import { handleEventRoute, isEventRoutePath } from "./routes/events";
 import type { HttpServerConfig } from "./types";
@@ -231,7 +232,11 @@ export function createHttpRouteHandler(
   };
   return async (request: Request): Promise<Response> => {
     try {
-      requireBearerAuth(request, resolvedContext.config);
+      const permission = routePermissionForRequest(request);
+      if (permission !== undefined) {
+        const auth = await authenticateRequest(request, resolvedContext.config);
+        requireAuthPermission(auth, permission.permission);
+      }
       const url = new URL(request.url);
       if (request.method !== "GET" && isKnownPath(url.pathname)) {
         throw new HttpError("METHOD_NOT_ALLOWED", "method not allowed");

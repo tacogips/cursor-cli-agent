@@ -148,12 +148,24 @@ reporting.
 
 For `P4-HTTP-SERVER`, it covers `curort-cli-agent server start`, foreground
 Bun HTTP server startup/shutdown, loopback tokenless operation, non-loopback
-static bearer token requirements, `GET /api/health`, `GET /api/version`,
+startup token requirements, `GET /api/health`, `GET /api/version`,
 normalized `GET /api/sessions`, `GET /api/sessions/:id`, `GET
 /api/sessions/:id/messages`, `GET /api/search/sessions?q=<query>`, `GET
 /api/search/transcripts?q=<query>`, shared JSON error envelopes, and the
 accepted sandbox limitation that real socket smoke checks may need to be rerun
 outside restricted workflow execution environments.
+
+For `P4-AUTH`, it covers local `token create`, `token list`, `token revoke`,
+and `token rotate` commands, repository-owned `tokens.json` persistence under
+the config directory, metadata-only listing, hash-only secret storage, raw token
+display exactly once on create/rotate, default `session:read` permissions,
+wildcard family permissions, managed bearer verification for HTTP requests,
+`401` invalid/missing credential envelopes, `403` missing-permission envelopes,
+and route permission mapping for session, group, queue, bookmark, file, and
+server-admin routes. The refresh should also document that startup `--token` or
+`CURORT_CLI_AGENT_SERVER_TOKEN` enables required auth mode for exposed servers,
+while request credentials come from `token create` or `token rotate`, and that
+unmapped API paths currently fall through to normal `404` handling.
 
 For `P4-SSE`, it covers live Server-Sent Events routes on the existing local
 HTTP server: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET

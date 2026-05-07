@@ -85,6 +85,11 @@ family. `server:admin` is reserved for server administration and any future
 remote token-management endpoints. CLI token commands remain local operator
 commands and do not require bearer auth.
 
+Existing `P4-HTTP-SERVER` routes currently use a single static bearer token
+check. `P4-AUTH` replaces that route entry check with repository-owned token
+verification plus route permission requirements while preserving the existing
+`401 Unauthorized` error envelope for missing or invalid credentials.
+
 Route handlers introduced by `P4-HTTP-SERVER` must declare their required
 permission before they call domain managers or persistence repositories.
 Handlers expose normalized application entities only and must not pass raw
@@ -125,21 +130,28 @@ server is exposed beyond loopback.
 Server startup policy belongs to `P4-HTTP-SERVER`, but this feature
 requires these auth hooks:
 
-- `authMode: "disabled" | "optional" | "required"`
+- `authMode: "disabled" | "optional" | "required"` mapped from the existing
+  loopback/no-token and non-loopback/token-required startup policy
 - host binding awareness so non-loopback hosts cannot accidentally run without
   auth
 - a request context field carrying verified token metadata when present
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`
+Reference repository root for this workflow run:
+`/g/gits/tacogips/codex-agent`.
+
+The delegated input also supplied
+`/g/gits/tacogips/cursor-cli-agent/codex-agent`, but that checkout did not
+contain the requested auth reference files during design review.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/auth/types.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/auth/token-manager.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/auth/token-manager.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/codex-agent/src/auth/types.ts`
+- `/g/gits/tacogips/codex-agent/src/auth/token-manager.ts`
+- `/g/gits/tacogips/codex-agent/src/auth/token-manager.test.ts`
+- `/g/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/codex-agent/src/server/auth.ts`
 
 Reused concepts:
 
@@ -171,9 +183,11 @@ Intentional divergences:
 - route registration metadata
 - response helpers for `401 Unauthorized` and `403 Forbidden`
 
-This design can be implemented after the server core establishes middleware and
-route metadata contracts. Token CLI and token storage can be built first, but
-server permission enforcement cannot be completed without the server core.
+The delegated P4-AUTH workflow run treats `P4-HTTP-SERVER` as ready. Token CLI
+and token storage can be built independently, and server permission enforcement
+should integrate with the existing `src/server/request.ts`,
+`src/server/routes.ts`, `src/server/types.ts`, and `src/server/http-errors.ts`
+contracts.
 
 ## Verification
 

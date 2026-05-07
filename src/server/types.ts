@@ -1,6 +1,14 @@
 import pkg from "../../package.json" with { type: "json" };
 
 import { getConfigDir, getCursorHome, getDataDir } from "../config/paths";
+import type { ApiTokenMetadata } from "../types/auth-token";
+
+export type ServerAuthMode = "disabled" | "optional" | "required";
+
+export interface ServerAuthContext {
+  readonly mode: ServerAuthMode;
+  readonly token?: ApiTokenMetadata;
+}
 
 export interface HttpServerConfig {
   readonly host: string;
@@ -9,6 +17,7 @@ export interface HttpServerConfig {
   readonly configDir: string;
   readonly cursorHome: string;
   readonly token?: string;
+  readonly authMode: ServerAuthMode;
   readonly packageVersion: string;
 }
 
@@ -61,6 +70,7 @@ export function resolveHttpServerConfig(
     configDir: getConfigDir(),
     cursorHome: getCursorHome(),
     ...(token !== undefined ? { token } : {}),
+    authMode: token === undefined ? "disabled" : "required",
     packageVersion: pkg.version,
   };
 }

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 export type HttpErrorCode =
   | "INVALID_REQUEST"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "NOT_FOUND"
   | "METHOD_NOT_ALLOWED"
   | "INTERNAL_ERROR";
@@ -19,6 +20,7 @@ export interface HttpErrorEnvelope {
 const STATUS_BY_CODE: Record<HttpErrorCode, number> = {
   INVALID_REQUEST: 400,
   UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
   NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
   INTERNAL_ERROR: 500,

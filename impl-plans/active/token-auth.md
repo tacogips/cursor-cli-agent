@@ -1,6 +1,6 @@
 # Token and Bearer Auth Implementation Plan
 
-**Status**: Ready
+**Status**: In Progress
 **Design Reference**: `design-docs/specs/design-token-auth.md`
 **Created**: 2026-05-06
 **Last Updated**: 2026-05-07
@@ -13,51 +13,64 @@
 
 ### Summary
 
-Implement backlog slice `P4-TOKEN-AUTH`: local token create/list/revoke/rotate
+Implement backlog slice `P4-AUTH`: local token create/list/revoke/rotate
 commands, repository-owned token persistence, bearer-token verification, and
-scoped permission enforcement hooks for the Phase 4 HTTP server.
+route-level permission enforcement for the Phase 4 HTTP server.
 
 ### Scope
 
 **Included**: auth token types, token config store, token manager, CLI token
-commands, bearer verification middleware contracts, route permission guard
-contracts, and focused tests for token lifecycle and server authorization.
+commands, bearer verification, request auth context, route permission mapping,
+and focused lifecycle/server authorization tests.
 
-**Excluded**: HTTP server core implementation, daemon lifecycle, public SDK
-exports, GraphQL compatibility bridge, remote token-management routes, and any
-mutation of Cursor-owned files or databases.
+**Excluded**: daemon lifecycle, public SDK exports, GraphQL compatibility,
+remote token-management routes, and any write to Cursor-owned paths such as
+`~/.cursor/projects`, `~/.cursor/ai-tracking`, or `~/.cursor/skills-cursor`.
 
 ### Codex Reference Mapping
 
-Reference repository root: `/g/gits/tacogips/cursor-cli-agent/codex-agent`
+Primary accepted design references:
 
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/auth/types.ts`: permissions, metadata,
-  normalization, and wildcard checks.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/auth/token-manager.ts`: file-backed
-  token lifecycle with hashed secrets.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/auth/token-manager.test.ts`: lifecycle
-  and permission parsing tests.
-- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/cli/index.ts`: token command behavior.
+- `design-docs/specs/design-token-auth.md`
+- `design-docs/specs/command.md#token-commands`
+- `design-docs/specs/design-codex-agent-parity-gap.md#phase-4-server-auth-daemon-and-public-sdk`
+- `design-docs/specs/design-http-server-core.md`
+
+Usable Codex auth references from design review:
+
+- `/g/gits/tacogips/codex-agent/src/auth/types.ts`
+- `/g/gits/tacogips/codex-agent/src/auth/token-manager.ts`
+- `/g/gits/tacogips/codex-agent/src/auth/token-manager.test.ts`
+- `/g/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/codex-agent/src/server/auth.ts`
+
+Delegated input references that were unavailable in this checkout:
+
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/index.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/session/sqlite.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/src/types/session.ts`
+- `/g/gits/tacogips/cursor-cli-agent/codex-agent/design-docs/specs/design-codex-session-management.md`
 
 Intentional divergences:
 
-- Use `getConfigDir()` and this repository's `CURORT_CLI_AGENT_CONFIG_DIR`
-  override instead of the reference `~/.config/codex-agent` path.
-- Add `files:*` and `server:admin` permission families from this repository's
+- Use `getConfigDir()` with `CURORT_CLI_AGENT_CONFIG_DIR` and legacy
+  `CURSOR_CLI_AGENT_CONFIG_DIR`, not the Codex config path.
+- Include `files:*` and `server:admin` permissions from this repository's
   Phase 4 route model.
 - Enforce permissions against normalized server route metadata, not raw Cursor
   CLI payload shapes.
-- Keep GraphQL token commands out of scope until the compatibility bridge phase.
+- Keep GraphQL token commands out of this backlog slice.
 
 ---
 
 ## Modules
 
-### 1. Auth Types
+### 1. Auth Types and Permission Helpers
 
 #### `src/types/auth-token.ts`
+#### `src/auth/index.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETE
 
 ```typescript
 export type AuthPermission =
@@ -83,120 +96,96 @@ export interface TokenRecord extends ApiTokenMetadata {
   readonly tokenHash: string;
 }
 
-export interface TokenConfig {
-  readonly tokens: readonly TokenRecord[];
+export interface VerifyTokenResult {
+  readonly ok: boolean;
+  readonly metadata?: ApiTokenMetadata;
 }
-
-export interface VerifiedToken {
-  readonly ok: true;
-  readonly metadata: ApiTokenMetadata;
-}
-
-export interface RejectedToken {
-  readonly ok: false;
-}
-
-export type VerifyTokenResult = VerifiedToken | RejectedToken;
 ```
 
 **Checklist**:
 
-- [ ] Define permission literals and exported default permission list.
-- [ ] Define public metadata and private persisted record shapes.
-- [ ] Define `VerifyTokenResult` as a strict discriminated union.
+- [x] Define permission literals, default permission, and normalization helpers.
+- [x] Support wildcard family permission checks.
+- [x] Export public auth API through `src/auth/index.ts`.
 
 ### 2. Token Store
 
 #### `src/persistence/token-store.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETE
 
 ```typescript
+export interface TokenConfig {
+  readonly tokens: readonly TokenRecord[];
+}
+
 export interface TokenStore {
   load(): Promise<TokenConfig>;
   save(config: TokenConfig): Promise<void>;
 }
-
-export interface TokenStoreOptions {
-  readonly configDir?: string;
-  readonly tokensFileName?: string;
-}
 ```
 
 **Checklist**:
 
-- [ ] Resolve storage through `getConfigDir()` unless tests inject `configDir`.
-- [ ] Store `tokens.json` outside Cursor-managed directories.
-- [ ] Return an empty config for missing files.
-- [ ] Rewrite atomically via temporary file and rename.
+- [x] Resolve default storage to `tokens.json` under `getConfigDir()`.
+- [x] Return empty config for a missing file.
+- [x] Atomically rewrite the token file via temporary file and rename.
+- [x] Keep raw token secrets out of persisted JSON.
 
 ### 3. Token Manager
 
 #### `src/auth/token-manager.ts`
-#### `src/auth/index.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETE
 
 ```typescript
 export interface CreateTokenInput {
   readonly name: string;
-  readonly permissions: readonly AuthPermission[];
+  readonly permissions?: readonly string[];
   readonly expiresAt?: string;
 }
 
-export interface TokenManager {
-  createToken(input: CreateTokenInput): Promise<string>;
-  listTokens(): Promise<readonly ApiTokenMetadata[]>;
-  revokeToken(id: string): Promise<boolean>;
-  rotateToken(id: string): Promise<string>;
-  verifyToken(rawToken: string): Promise<VerifyTokenResult>;
+export interface CreatedToken {
+  readonly token: string;
+  readonly metadata: ApiTokenMetadata;
 }
 ```
 
 **Checklist**:
 
-- [ ] Generate token id and high-entropy secret components.
-- [ ] Persist only secret hashes.
-- [ ] Validate non-empty names and non-empty normalized permissions.
-- [ ] Sort listed metadata newest first.
-- [ ] Reject revoked, expired, malformed, unknown, and mismatched tokens.
+- [x] Create high-entropy token id and secret components.
+- [x] Store only secret hashes and compare with constant-time comparison.
+- [x] Default permissions to `session:read`.
+- [x] List metadata newest first without hashes or raw secrets.
+- [x] Revoke idempotently, rotate by replacing the hash and clearing `revokedAt`.
+- [x] Reject malformed, unknown, mismatched, revoked, and expired tokens.
 
 ### 4. CLI Token Commands
 
 #### `src/cli/cli.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETE
 
 ```typescript
-type TokenCommand =
-  | "create"
-  | "list"
-  | "revoke"
-  | "rotate";
-
-interface TokenCreateArgs {
-  readonly name: string;
-  readonly permissions?: readonly AuthPermission[];
-  readonly expiresAt?: string;
-  readonly json: boolean;
-}
+type TokenCommand = "create" | "list" | "revoke" | "rotate";
 ```
 
 **Checklist**:
 
-- [ ] Add token command usage to top-level help.
-- [ ] Implement `token create --name <name> [--permissions <csv>] [--expires-at <iso8601>] [--json]`.
-- [ ] Implement `token list [--json]`.
-- [ ] Implement `token revoke <id> [--json]`.
-- [ ] Implement `token rotate <id> [--json]`.
-- [ ] Return stable non-zero usage or not-found errors.
+- [x] Add `token` commands to top-level usage and dispatcher.
+- [x] Implement `token create --name <name> [--permissions <csv>] [--expires-at <iso8601>] [--json]`.
+- [x] Implement `token list [--json]`.
+- [x] Implement `token revoke <id> [--json]`.
+- [x] Implement `token rotate <id> [--json]`.
+- [x] Preserve stable human/JSON output and non-zero failures.
 
-### 5. Server Auth Contracts
+### 5. Server Auth Integration
 
 #### `src/server/auth.ts`
 #### `src/server/types.ts`
+#### `src/server/request.ts`
 
-**Status**: BLOCKED
+**Status**: COMPLETE
 
 ```typescript
 export type ServerAuthMode = "disabled" | "optional" | "required";
@@ -205,131 +194,138 @@ export interface ServerAuthContext {
   readonly mode: ServerAuthMode;
   readonly token?: ApiTokenMetadata;
 }
+```
 
+**Checklist**:
+
+- [x] Replace static token equality with token-manager verification.
+- [x] Map loopback/no-token startup to disabled auth and non-loopback/token
+      startup to required auth.
+- [x] Parse `Authorization: Bearer <token>`.
+- [x] Preserve `401 Unauthorized` response envelope for missing/invalid bearer credentials.
+- [x] Attach verified metadata to request auth context.
+
+### 6. Route Permission Enforcement
+
+#### `src/server/permissions.ts`
+#### `src/server/routes.ts`
+#### `src/server/http-errors.ts`
+
+**Status**: COMPLETE
+
+```typescript
 export interface RoutePermissionRequirement {
   readonly permission: AuthPermission;
 }
-
-export interface AuthorizationResult {
-  readonly ok: boolean;
-  readonly status?: 401 | 403;
-  readonly reason?: string;
-  readonly token?: ApiTokenMetadata;
-}
 ```
 
 **Checklist**:
 
-- [ ] Align file paths and request context with `P4-HTTP-SERVER-CORE`.
-- [ ] Parse `Authorization: Bearer <token>`.
-- [ ] Return `401` for missing or invalid tokens when auth is required.
-- [ ] Return `403` for valid tokens missing the route permission.
+- [x] Declare one required permission before protected handlers call managers or stores.
+- [x] Map session read/create/cancel routes to session permissions.
+- [x] Map group, queue, bookmark, and file routes to wildcard families.
+- [x] Reserve admin routes for `server:admin`.
+- [x] Add `FORBIDDEN`/`403` response support where missing.
+- [x] Return `403 Forbidden` when a verified token lacks the required permission.
 
-### 6. Route Permission Map
-
-#### `src/server/permissions.ts`
-
-**Status**: BLOCKED
-
-```typescript
-export interface RoutePermission {
-  readonly method: string;
-  readonly pathPattern: string;
-  readonly permission: AuthPermission;
-}
-
-export interface RoutePermissionRegistry {
-  getRequirement(method: string, pathname: string): RoutePermissionRequirement | null;
-}
-```
-
-**Checklist**:
-
-- [ ] Map session read routes to `session:read`.
-- [ ] Map session creation routes to `session:create`.
-- [ ] Map session cancellation routes to `session:cancel`.
-- [ ] Map group, queue, bookmark, and file routes to their wildcard families.
-- [ ] Reserve server administration routes for `server:admin`.
+---
 
 ## Work Breakdown
 
-### TASK-001: Auth Types
+### TASK-001: Auth Types and Permission Helpers
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
-**Deliverables**: `src/types/auth-token.ts`, `src/auth/index.ts`
+**Deliverables**: `src/types/auth-token.ts`, `src/auth/index.ts`, auth helper tests
 **Dependencies**: None
 
 **Completion Criteria**:
 
-- [ ] Permission constants and helpers compile under strict TypeScript.
-- [ ] Default permission is `session:read`.
-- [ ] Wildcard family checks are covered by tests.
+- [x] Permission constants and normalization compile under strict TypeScript.
+- [x] Default permission is `session:read`.
+- [x] Wildcard permission checks are unit tested.
 
 ### TASK-002: Token Store
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/persistence/token-store.ts`, `src/persistence/token-store.test.ts`
-**Dependencies**: TASK-001
+**Dependencies**: TASK-001 types only
 
 **Completion Criteria**:
 
-- [ ] Token config reads and writes use repository-owned config paths.
-- [ ] Missing file behavior returns an empty token list.
-- [ ] Atomic save behavior is covered by tests where practical.
+- [x] Store uses `getConfigDir()` and supports injected config dirs in tests.
+- [x] Missing file returns an empty token config.
+- [x] Save operation writes valid JSON atomically.
 
 ### TASK-003: Token Manager
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/auth/token-manager.ts`, `src/auth/token-manager.test.ts`
 **Dependencies**: TASK-001, TASK-002
 
 **Completion Criteria**:
 
-- [ ] Create/list/revoke/rotate/verify behavior matches the design.
-- [ ] Raw secrets are returned only from create and rotate.
-- [ ] Revoked and expired tokens cannot verify.
+- [x] Create/list/revoke/rotate/verify match `design-token-auth.md`.
+- [x] Raw token secret appears only in create and rotate results.
+- [x] Revoked, expired, malformed, and old rotated tokens fail verification.
 
-### TASK-004: CLI Commands
+### TASK-004: CLI Token Commands
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/cli/cli.ts`, `src/cli/cli.test.ts`
 **Dependencies**: TASK-003
 
 **Completion Criteria**:
 
-- [ ] Token commands appear in usage text.
-- [ ] Human and JSON output are stable.
-- [ ] Usage and not-found failures return non-zero exit codes.
+- [x] All token subcommands work in human and JSON modes.
+- [x] Token list never emits `tokenHash` or raw secrets.
+- [x] Usage, invalid permission, invalid expiry, and not-found paths are tested.
 
 ### TASK-005: Server Auth Integration
 
-**Status**: Blocked
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `src/server/auth.ts`, `src/server/types.ts`, `src/server/auth.test.ts`
-**Dependencies**: TASK-003, `P4-HTTP-SERVER-CORE`
+**Deliverables**: `src/server/auth.ts`, `src/server/types.ts`, `src/server/request.ts`, `src/server/server.test.ts`
+**Dependencies**: TASK-003, existing `P4-HTTP-SERVER` files
 
 **Completion Criteria**:
 
-- [ ] Bearer token parsing feeds verified metadata into request context.
-- [ ] Required auth returns `401` for missing or invalid credentials.
-- [ ] Disabled auth mode is limited by server core startup policy.
+- [x] Static bearer-token check is replaced or adapted to repository token verification.
+- [x] Missing/invalid required credentials return `401 Unauthorized`.
+- [x] Loopback disabled-auth behavior remains available.
+- [x] Non-loopback hosts still cannot run without required auth.
 
 ### TASK-006: Route Permission Enforcement
 
-**Status**: Blocked
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `src/server/permissions.ts`, `src/server/auth.test.ts`
-**Dependencies**: TASK-005, `P4-HTTP-SERVER-CORE`
+**Deliverables**: `src/server/permissions.ts`, `src/server/routes.ts`, `src/server/http-errors.ts`, server auth/route tests
+**Dependencies**: TASK-005
 
 **Completion Criteria**:
 
-- [ ] Every protected route declares exactly one required permission.
-- [ ] Valid tokens without the required permission return `403`.
-- [ ] Permission decisions use normalized route metadata only.
+- [x] Protected routes declare required permissions before handler execution.
+- [x] `src/server/http-errors.ts` supports `FORBIDDEN`/`403` consistently.
+- [x] Valid token with insufficient permission returns `403 Forbidden`.
+- [x] Permission checks use normalized route metadata only.
+
+### TASK-007: End-to-End Verification and Docs Refresh
+
+**Status**: In Progress
+**Parallelizable**: No
+**Deliverables**: `README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md`, `.divedra/README.md`, final verification results
+**Dependencies**: TASK-004, TASK-005, TASK-006
+
+**Completion Criteria**:
+
+- [x] `task typecheck` passes.
+- [x] `task test` passes.
+- [x] `task build` passes.
+- [ ] README and user-facing workflow guidance are refreshed for P4-AUTH behavior.
+- [ ] `.divedra/README.md` is checked and updated when workflow invocation guidance changes.
 
 ---
 
@@ -337,36 +333,77 @@ export interface RoutePermissionRegistry {
 
 | Module | File Path | Status | Tests |
 |--------|-----------|--------|-------|
-| Auth types | `src/types/auth-token.ts` | NOT_STARTED | - |
-| Token store | `src/persistence/token-store.ts` | NOT_STARTED | Planned |
-| Token manager | `src/auth/token-manager.ts` | NOT_STARTED | Planned |
-| CLI token commands | `src/cli/cli.ts` | NOT_STARTED | Planned |
-| Server auth contracts | `src/server/auth.ts` | BLOCKED | Planned |
-| Route permission map | `src/server/permissions.ts` | BLOCKED | Planned |
+| Auth types/helpers | `src/types/auth-token.ts`, `src/auth/index.ts` | COMPLETE | `src/auth/token-manager.test.ts` |
+| Token store | `src/persistence/token-store.ts` | COMPLETE | `src/persistence/token-store.test.ts` |
+| Token manager | `src/auth/token-manager.ts` | COMPLETE | `src/auth/token-manager.test.ts` |
+| CLI token commands | `src/cli/cli.ts` | COMPLETE | `src/cli/cli.test.ts` |
+| Server auth | `src/server/auth.ts`, `src/server/request.ts`, `src/server/types.ts` | COMPLETE | `src/server/server.test.ts` |
+| Route permissions | `src/server/permissions.ts`, `src/server/routes.ts`, `src/server/http-errors.ts` | COMPLETE | `src/server/server.test.ts` |
 
 ## Dependencies
 
 | Feature | Depends On | Status |
 |---------|------------|--------|
-| `P4-TOKEN-AUTH` token CLI and storage | Auth types and token store | READY |
-| `P4-TOKEN-AUTH` server verification | `P4-HTTP-SERVER-CORE` request context and middleware | BLOCKED |
-| `P4-TOKEN-AUTH` route enforcement | `P4-HTTP-SERVER-CORE` route metadata | BLOCKED |
+| Token CLI and storage | Auth types and token store | COMPLETE |
+| Server bearer verification | Existing `P4-HTTP-SERVER` request/route contracts | COMPLETE |
+| Route permission enforcement | Server bearer verification | COMPLETE |
+
+## Parallelization
+
+- TASK-001 and TASK-002 may proceed together if TASK-002 only imports stable
+  token record types after TASK-001 starts.
+- TASK-003 through TASK-007 are sequential because they share CLI/server auth
+  surfaces and build directly on the token manager.
+
+## Verification
+
+- `task typecheck`
+- `task test`
+- `task build`
+- Targeted token manager tests for create/list/revoke/rotate/verify.
+- Targeted CLI tests for token human/JSON output and errors.
+- Targeted server tests for `401 Unauthorized`, `403 Forbidden`, auth modes,
+  and route permission mapping.
+- `git diff --check -- impl-plans/active/token-auth.md`
 
 ## Completion Criteria
 
-- [ ] Token lifecycle commands implemented and tested.
-- [ ] Token storage never writes Cursor-managed files.
-- [ ] Token list output never exposes secrets or hashes.
-- [ ] Bearer verification rejects malformed, revoked, expired, and mismatched tokens.
-- [ ] Route permission guard returns `401` and `403` consistently.
-- [ ] `task typecheck`, `task test`, and `task build` pass.
-## Verification
+- [x] Token lifecycle commands are implemented and tested.
+- [x] Token storage never writes Cursor-managed files.
+- [x] Token list output never exposes hashes or raw secrets.
+- [x] Bearer verification rejects malformed, revoked, expired, mismatched, and old rotated tokens.
+- [x] Route permission guard returns `401` and `403` consistently.
+- [x] Route auth decisions occur before handlers read or mutate local state.
+- [x] `task typecheck`, `task test`, and `task build` pass.
+
+## Risks
+
+1. Existing server core has a static token field; replacing it must preserve
+   non-loopback startup safety.
+2. Route permission coverage can drift as later Phase 4/5 routes are added.
+3. Token-file permission hardening may vary by runtime and platform.
 
 ## Progress Log
 
-### Session: 2026-05-06 00:00
+### Session: 2026-05-07
 
-**Tasks Completed**: Design and implementation plan authored.
+**Tasks Completed**: Implementation plan refreshed after Step 3 accepted
+`design-docs/specs/design-token-auth.md`.
 **Tasks In Progress**: None.
-**Blockers**: Server auth integration and route permission enforcement depend on `P4-HTTP-SERVER-CORE`.
-**Notes**: No runtime implementation was performed in this planning pass.
+**Blockers**: None for planning; route permission enforcement waits on TASK-005.
+**Notes**: Updated stale `P4-TOKEN-AUTH` and blocked server-auth language to
+`P4-AUTH` with existing `P4-HTTP-SERVER` treated as ready.
+
+### Session: 2026-05-07 Step 6 Implementation
+
+**Tasks Completed**: TASK-001 through TASK-006; TASK-007 typecheck item.
+**Tasks In Progress**: TASK-007 README/user-facing workflow refresh for the
+later workflow step.
+**Blockers**: None for Step 6 implementation.
+**Notes**: Added managed token lifecycle implementation, local `tokens.json`
+store, CLI `token` commands, bearer verification, route permission mapping,
+`403 FORBIDDEN` support, and focused auth/store/CLI/server tests. Targeted
+commands passed: `bun test src/auth/token-manager.test.ts
+src/persistence/token-store.test.ts`, `bun test src/server/server.test.ts`,
+`bun test src/cli/cli.test.ts`, `task typecheck`, `task test`, `task build`,
+and `git diff --check -- impl-plans/active/token-auth.md`.
