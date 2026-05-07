@@ -1,4 +1,6 @@
-import type { ActivityListOptions } from "../activity/manager";
+import type { ActivityListOptions, ActivityManager } from "../activity/manager";
+import type { SessionIndexRepository } from "../persistence/session-index";
+import type { ToolVersionCommandRunner } from "../types/tool-versions";
 import type {
   AgentRunnerFacade,
   CursorAgentRequest,
@@ -15,6 +17,7 @@ import type {
   SearchFacade,
   SessionFacade,
 } from "./facades";
+import type { ToolHelperSdk } from "./helpers";
 
 export type {
   ActivityFacade,
@@ -31,6 +34,7 @@ export type {
   SearchFacade,
   SessionFacade,
 };
+export type { SessionIndexRepository } from "../persistence/session-index";
 
 export type {
   ActivitySignal,
@@ -109,6 +113,34 @@ export type {
   TranscriptSearchResult,
   TranscriptSearchRole,
 } from "../types/transcript-search";
+export type {
+  RegisteredTool,
+  ToolConfig,
+  ToolContext,
+  ToolRegistrySdk,
+  ToolSummary,
+} from "../types/tool-registry";
+export type {
+  ToolAvailabilityStatus,
+  ToolCommandRunOptions,
+  ToolCommandRunResult,
+  ToolVersionCommandRunner,
+  ToolVersionInfo,
+  ToolVersionOptions,
+  ToolVersionReport,
+} from "../types/tool-versions";
+export type {
+  AuthAvailabilityInfo,
+  ModelAvailabilityOptions,
+  ModelAvailabilityReport,
+  ModelReachabilityInfo,
+} from "../types/model-availability";
+export type {
+  DailyUsageActivity,
+  UsageStatsOptions,
+  UsageStatsReport,
+} from "../types/usage-stats";
+export type { ToolHelperSdk };
 
 export interface CursorAgentSdk {
   readonly sessions: SessionFacade;
@@ -119,6 +151,7 @@ export interface CursorAgentSdk {
   readonly files: FileFacade;
   readonly activity: ActivityFacade;
   readonly runner: AgentRunnerFacade;
+  readonly tools: ToolHelperSdk;
 }
 
 export interface CursorAgentSdkOptions {
@@ -126,4 +159,7 @@ export interface CursorAgentSdkOptions {
   readonly cursorHome?: string;
   readonly cursorBinary?: string;
   readonly now?: () => Date;
+  readonly sessionRepository?: SessionIndexRepository;
+  readonly activityManager?: ActivityManager;
+  readonly commandRunner?: ToolVersionCommandRunner;
 }

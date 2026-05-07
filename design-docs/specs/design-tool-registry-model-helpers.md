@@ -130,15 +130,18 @@ The stats service must not claim zero token usage when no token source exists. I
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Reference repository root for this workflow run: `/g/gits/tacogips/codex-agent`.
+The supplied preferred root `/g/gits/tacogips/cursor-cli-agent/codex-agent`
+exists as a placeholder but contains no files, so implementation planning should
+use the fallback root above for behavioral reference.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/tool-registry.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/tool-versions.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/model-availability.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/sdk/usage-stats.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/index.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/tool-registry.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/tool-versions.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/model-availability.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/usage-stats.ts`
+- `/g/gits/tacogips/codex-agent/src/cli/index.ts`
 
 Reference behavior to preserve:
 
@@ -195,9 +198,18 @@ bun run src/main.ts model check --model <known-model> --probe --json --timeout-m
 
 ## Open Questions
 
-- Should `tool run` be exposed in the first CLI release, or should registry execution stay SDK-only until tool input schemas are finalized?
-- Should `model check --probe` require an explicit workspace flag to make possible transcript/materialization side effects more visible?
-- Which optional tool versions beyond `cursor-agent`, package, Bun, and Git should be included by default?
+Pending user-facing rollout decisions are tracked in
+`design-docs/user-qa/pending-tool-registry-model-helpers.md`.
+
+Default decisions for Step 4 planning until the user overrides them:
+
+- Ship `tool run` in the first CLI release with strict structured JSON input,
+  registered-tool lookup only, and no Cursor MCP discovery.
+- Do not require a dedicated workspace flag for `model check --probe`; keep
+  probe mode explicitly opt-in, bounded, and provenance-marked.
+- Include only package metadata and `cursor-agent` in default version output;
+  keep Bun and Git behind their explicit include flags and do not add other
+  optional binaries by default.
 
 ## References
 

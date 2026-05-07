@@ -23,8 +23,16 @@ import {
   type CreatedToken,
 } from "../auth";
 import { createActivityManager } from "../activity/manager";
+import { checkModelAvailability } from "../cursor/model-availability";
+import { getToolVersions } from "../cursor/tool-versions";
 import { deriveGroupProgressSnapshot } from "../group/progress";
 import { deriveQueueProgressSnapshot } from "../queue/progress";
+import {
+  ToolRegistryError,
+  createToolRegistry,
+  tool,
+} from "../sdk/tool-registry";
+import { createUsageStatsManager } from "../usage/manager";
 import {
   BookmarkInputError,
   BookmarkNotFoundError,
@@ -129,6 +137,15 @@ import type {
   RepositoryFileAnalyticsResult,
   RepositorySessionAnalyticsResult,
 } from "../types/repository-analytics";
+import type {
+  ModelAvailabilityOptions,
+  ModelAvailabilityReport,
+} from "../types/model-availability";
+import type {
+  ToolVersionOptions,
+  ToolVersionReport,
+} from "../types/tool-versions";
+import type { UsageStatsOptions, UsageStatsReport } from "../types/usage-stats";
 
 type HeadlessStreamingRunner = typeof runHeadlessStreaming;
 type HttpServerStarter = typeof startHttpServer;
@@ -383,6 +400,20 @@ interface DaemonStartArgs extends DaemonStartOptions {
 
 interface DaemonStopArgs extends DaemonStopOptions {
   readonly json?: boolean;
+}
+
+export interface ToolCommandArgs {
+  readonly json: boolean;
+  readonly timeoutMs?: number;
+  readonly includeGit?: boolean;
+  readonly includeBun?: boolean;
+}
+
+export interface ModelCheckCommandArgs {
+  readonly model: string;
+  readonly probe: boolean;
+  readonly json: boolean;
+  readonly timeoutMs?: number;
 }
 
 interface TokenCreateArgs {
@@ -752,6 +783,62 @@ function parseActivityOptions(flags: Record<string, string | boolean>):
   };
 }
 
+function parseToolCommandArgs(
+  flags: Record<string, string | boolean>,
+): { args: ToolCommandArgs } | { error: string } {
+  const timeoutMs = parseOptionalPositiveIntegerFlag(flags, "timeout-ms");
+  if (timeoutMs === null) {
+    return { error: "tool: --timeout-ms must be a positive integer" };
+  }
+  return {
+    args: {
+      json: flags["json"] === true,
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      ...(flags["include-git"] === true ? { includeGit: true } : {}),
+      ...(flags["include-bun"] === true ? { includeBun: true } : {}),
+    },
+  };
+}
+
+function parseModelCheckCommandArgs(
+  flags: Record<string, string | boolean>,
+): { args: ModelCheckCommandArgs } | { error: string } {
+  const model = flags["model"];
+  if (typeof model !== "string" || model.trim().length === 0) {
+    return { error: "model check: --model is required" };
+  }
+  const timeoutMs = parseOptionalPositiveIntegerFlag(flags, "timeout-ms");
+  if (timeoutMs === null) {
+    return { error: "model check: --timeout-ms must be a positive integer" };
+  }
+  return {
+    args: {
+      model,
+      probe: flags["probe"] === true,
+      json: flags["json"] === true,
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    },
+  };
+}
+
+function parseUsageStatsOptions(flags: Record<string, string | boolean>):
+  | {
+      readonly json: boolean;
+      readonly options: UsageStatsOptions;
+    }
+  | { readonly error: string } {
+  const recentDays = parseOptionalPositiveIntegerFlag(flags, "recent-days");
+  if (recentDays === null) {
+    return { error: "usage stats: --recent-days must be a positive integer" };
+  }
+  return {
+    json: flags["json"] === true,
+    options: {
+      ...(recentDays !== undefined ? { recentDays } : {}),
+    },
+  };
+}
+
 function parseMarkdownTaskOptions(flags: Record<string, string | boolean>):
   | {
       sessionId: string;
@@ -1111,6 +1198,48 @@ function renderActivityHuman(activity: {
     activity.localSessionId ?? activity.cursorChatId ?? activity.recordId;
   const sources = activity.signals.map((signal) => signal.source).join(",");
   console.log(`${id}  ${activity.status}  ${activity.updatedAt}  ${sources}`);
+}
+
+function renderToolVersionsHuman(report: ToolVersionReport): void {
+  console.log(`curort-cli-agent ${report.packageVersion}`);
+  for (const item of report.tools) {
+    const version = item.version ?? "-";
+    const error = item.error !== undefined ? `  error=${item.error}` : "";
+    console.log(`${item.name}  ${item.status}  ${version}${error}`);
+  }
+}
+
+function renderModelAvailabilityHuman(report: ModelAvailabilityReport): void {
+  console.log(`model=${report.model}`);
+  console.log(
+    `binary=${report.binary.status} version=${report.binary.version ?? "-"}`,
+  );
+  console.log(
+    `auth=${report.auth.status} provenance=${report.auth.provenance}`,
+  );
+  const reachability = report.modelReachability;
+  const error =
+    reachability.error !== undefined ? ` error=${reachability.error}` : "";
+  console.log(
+    `reachability=${reachability.status} probed=${String(reachability.probed)}${error}`,
+  );
+}
+
+function renderUsageStatsHuman(report: UsageStatsReport): void {
+  console.log(
+    `sessions=${report.totalSessions} first=${report.firstSessionDate ?? "-"} computed=${report.lastComputedDate}`,
+  );
+  console.log(`statuses=${JSON.stringify(report.statusCounts)}`);
+  console.log(`activity=${JSON.stringify(report.activityStatusCounts)}`);
+  console.log(`models=${JSON.stringify(report.models)}`);
+  for (const daily of report.recentDailyActivity) {
+    console.log(
+      `${daily.date} sessions=${daily.sessionCount} activitySignals=${daily.activitySignalCount}`,
+    );
+  }
+  for (const note of report.completenessNotes) {
+    console.log(`note=${note}`);
+  }
 }
 
 function printJson(v: unknown): void {
@@ -1514,6 +1643,12 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent repo analytics files [--limit N] [--json]
   curort-cli-agent repo analytics rebuild [--json]
   curort-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
+  curort-cli-agent tool list [--json]
+  curort-cli-agent tool show <name> [--json]
+  curort-cli-agent tool run <name> --input <json|@path> [--json]
+  curort-cli-agent tool versions [--include-git] [--include-bun] [--timeout-ms N] [--json]
+  curort-cli-agent model check --model <model> [--probe] [--timeout-ms N] [--json]
+  curort-cli-agent usage stats [--recent-days N] [--json]
   curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
   curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
   curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
@@ -1577,6 +1712,15 @@ export async function runCli(argv: string[]): Promise<number> {
   }
   if (cmd === "activity") {
     return runActivity(tail);
+  }
+  if (cmd === "tool") {
+    return runTool(tail);
+  }
+  if (cmd === "model") {
+    return runModel(tail);
+  }
+  if (cmd === "usage") {
+    return runUsage(tail);
   }
   if (cmd === "markdown") {
     return runMarkdown(tail);
@@ -1868,6 +2012,386 @@ async function runActivity(argv: string[]): Promise<number> {
       for (const activity of activities) {
         renderActivityHuman(activity);
       }
+    }
+    return EXIT.OK;
+  } finally {
+    repo.close();
+  }
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.floor(value)
+    : undefined;
+}
+
+function createCliToolRegistry(): ReturnType<typeof createToolRegistry> {
+  return createToolRegistry([
+    tool<Record<string, unknown>, ToolVersionReport>({
+      name: "tool.versions",
+      description: "Return package and optional local helper tool versions.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          includeGit: { type: "boolean" },
+          includeBun: { type: "boolean" },
+          timeoutMs: { type: "number" },
+        },
+      },
+      run(input) {
+        const timeoutMs = optionalNumber(input["timeoutMs"]);
+        return getToolVersions({
+          includeGit: input["includeGit"] === true,
+          includeBun: input["includeBun"] === true,
+          ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+        });
+      },
+    }),
+    tool<Record<string, unknown>, ModelAvailabilityReport>({
+      name: "model.check",
+      description:
+        "Check cursor-agent binary evidence and optional model probe.",
+      inputSchema: {
+        type: "object",
+        required: ["model"],
+        properties: {
+          model: { type: "string" },
+          probe: { type: "boolean" },
+          timeoutMs: { type: "number" },
+        },
+      },
+      run(input) {
+        const model = input["model"];
+        if (typeof model !== "string" || model.trim().length === 0) {
+          throw new Error("model.check input requires non-empty model");
+        }
+        const timeoutMs = optionalNumber(input["timeoutMs"]);
+        return checkModelAvailability({
+          model,
+          probe: input["probe"] === true,
+          ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+        });
+      },
+    }),
+    tool<Record<string, unknown>, UsageStatsReport>({
+      name: "usage.stats",
+      description: "Aggregate local indexed session and activity statistics.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          recentDays: { type: "number" },
+        },
+      },
+      async run(input) {
+        const recentDays = optionalNumber(input["recentDays"]);
+        const repo = await openRepo();
+        try {
+          await repo.importTranscriptsFromFilesystem();
+          const activity = createActivityManager({ sessions: repo });
+          return await createUsageStatsManager({
+            sessions: repo,
+            activity,
+          }).stats({
+            ...(recentDays !== undefined ? { recentDays } : {}),
+          });
+        } finally {
+          repo.close();
+        }
+      },
+    }),
+  ]);
+}
+
+async function parseToolRunInput(
+  value: string | boolean | undefined,
+): Promise<{ input: Record<string, unknown> } | { error: string }> {
+  if (typeof value !== "string" || value.length === 0) {
+    return { error: "tool run: --input is required" };
+  }
+  let source: string;
+  try {
+    if (value.startsWith("@")) {
+      source = await readFile(value.slice(1), "utf8");
+    } else if (existsSync(value)) {
+      source = await readFile(value, "utf8");
+    } else {
+      source = value;
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { error: `tool run: failed to read input file: ${detail}` };
+  }
+  try {
+    const parsed = JSON.parse(source) as unknown;
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed)
+    ) {
+      return { error: "tool run: --input must be a JSON object" };
+    }
+    return { input: parsed as Record<string, unknown> };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { error: `tool run: --input must be valid JSON: ${detail}` };
+  }
+}
+
+function validateOptionalBooleanField(
+  toolName: string,
+  input: Record<string, unknown>,
+  field: string,
+): string | null {
+  const value = input[field];
+  if (value !== undefined && typeof value !== "boolean") {
+    return `${toolName} input field ${field} must be boolean`;
+  }
+  return null;
+}
+
+function validateOptionalNumberField(
+  toolName: string,
+  input: Record<string, unknown>,
+  field: string,
+): string | null {
+  const value = input[field];
+  if (
+    value !== undefined &&
+    (typeof value !== "number" || !Number.isInteger(value) || value <= 0)
+  ) {
+    return `${toolName} input field ${field} must be a positive integer`;
+  }
+  return null;
+}
+
+function validateToolRunInput(
+  toolName: string,
+  input: Record<string, unknown>,
+): string | null {
+  if (toolName === "tool.versions") {
+    return (
+      validateOptionalBooleanField(toolName, input, "includeGit") ??
+      validateOptionalBooleanField(toolName, input, "includeBun") ??
+      validateOptionalNumberField(toolName, input, "timeoutMs")
+    );
+  }
+  if (toolName === "model.check") {
+    const model = input["model"];
+    if (typeof model !== "string" || model.trim().length === 0) {
+      return "model.check input requires non-empty model";
+    }
+    return (
+      validateOptionalBooleanField(toolName, input, "probe") ??
+      validateOptionalNumberField(toolName, input, "timeoutMs")
+    );
+  }
+  if (toolName === "usage.stats") {
+    return validateOptionalNumberField(toolName, input, "recentDays");
+  }
+  return null;
+}
+
+async function runTool(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub === undefined) {
+    console.error("tool: missing subcommand");
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  const parsedArgs = parseToolCommandArgs(flags);
+  if ("error" in parsedArgs) {
+    console.error(parsedArgs.error);
+    return EXIT.USAGE;
+  }
+  const json = parsedArgs.args.json;
+
+  if (sub === "versions") {
+    if (pos.length > 0) {
+      console.error("tool versions: unexpected positional arguments");
+      return EXIT.USAGE;
+    }
+    const options: ToolVersionOptions = {
+      ...(parsedArgs.args.timeoutMs !== undefined
+        ? { timeoutMs: parsedArgs.args.timeoutMs }
+        : {}),
+      ...(parsedArgs.args.includeGit === true ? { includeGit: true } : {}),
+      ...(parsedArgs.args.includeBun === true ? { includeBun: true } : {}),
+    };
+    const report = await getToolVersions(options);
+    if (json) {
+      printJson(report);
+    } else {
+      renderToolVersionsHuman(report);
+    }
+    return EXIT.OK;
+  }
+
+  const registry = createCliToolRegistry();
+  if (sub === "list") {
+    if (pos.length > 0) {
+      console.error("tool list: unexpected positional arguments");
+      return EXIT.USAGE;
+    }
+    const tools = registry.list();
+    if (json) {
+      printJson({ tools });
+    } else {
+      for (const item of tools) {
+        console.log(`${item.name}  ${item.description ?? ""}`.trimEnd());
+      }
+    }
+    return EXIT.OK;
+  }
+
+  if (sub === "show") {
+    const name = pos[0];
+    if (name === undefined || name.length === 0) {
+      console.error("tool show: missing name");
+      return EXIT.USAGE;
+    }
+    if (pos.length > 1) {
+      console.error("tool show: unexpected positional arguments");
+      return EXIT.USAGE;
+    }
+    const item = registry.get(name);
+    if (item === null) {
+      console.error("tool not found");
+      return EXIT.NOT_FOUND;
+    }
+    const summary = registry
+      .list()
+      .find((toolSummary) => toolSummary.name === item.name);
+    if (json) {
+      printJson(summary ?? { name: item.name });
+    } else {
+      console.log(`${item.name}  ${summary?.description ?? ""}`.trimEnd());
+    }
+    return EXIT.OK;
+  }
+
+  if (sub === "run") {
+    const name = pos[0];
+    if (name === undefined || name.length === 0) {
+      console.error("tool run: missing name");
+      return EXIT.USAGE;
+    }
+    if (pos.length > 1) {
+      console.error("tool run: unexpected positional arguments");
+      return EXIT.USAGE;
+    }
+    const parsedInput = await parseToolRunInput(flags["input"]);
+    if ("error" in parsedInput) {
+      console.error(parsedInput.error);
+      return EXIT.USAGE;
+    }
+    const validationError = validateToolRunInput(name, parsedInput.input);
+    if (validationError !== null) {
+      console.error(validationError);
+      return EXIT.USAGE;
+    }
+    try {
+      const result = await registry.run(name, parsedInput.input);
+      if (json) {
+        printJson(result);
+      } else if (typeof result === "string") {
+        console.log(result);
+      } else {
+        printJson(result);
+      }
+      return EXIT.OK;
+    } catch (error) {
+      if (error instanceof ToolRegistryError && error.code === "not_found") {
+        console.error("tool not found");
+        return EXIT.NOT_FOUND;
+      }
+      console.error(error instanceof Error ? error.message : "tool run failed");
+      return EXIT.ERR;
+    }
+  }
+
+  console.error(`Unknown tool subcommand: ${sub}`);
+  return EXIT.USAGE;
+}
+
+async function runModel(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub !== "check") {
+    console.error(
+      sub === undefined
+        ? "model: missing subcommand"
+        : `Unknown model subcommand: ${sub}`,
+    );
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  if (pos.length > 0) {
+    console.error("model check: unexpected positional arguments");
+    return EXIT.USAGE;
+  }
+  const parsed = parseModelCheckCommandArgs(flags);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+  const options: ModelAvailabilityOptions = {
+    model: parsed.args.model,
+    probe: parsed.args.probe,
+    ...(parsed.args.timeoutMs !== undefined
+      ? { timeoutMs: parsed.args.timeoutMs }
+      : {}),
+    workspace: process.cwd(),
+  };
+  try {
+    const report = await checkModelAvailability(options);
+    if (parsed.args.json) {
+      printJson(report);
+    } else {
+      renderModelAvailabilityHuman(report);
+    }
+    return report.modelReachability.probed &&
+      report.modelReachability.status === "unavailable"
+      ? EXIT.CURSOR
+      : EXIT.OK;
+  } catch (error) {
+    console.error(
+      error instanceof Error ? error.message : "model check failed",
+    );
+    return EXIT.USAGE;
+  }
+}
+
+async function runUsage(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub !== "stats") {
+    console.error(
+      sub === undefined
+        ? "usage: missing subcommand"
+        : `Unknown usage subcommand: ${sub}`,
+    );
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  if (pos.length > 0) {
+    console.error("usage stats: unexpected positional arguments");
+    return EXIT.USAGE;
+  }
+  const parsed = parseUsageStatsOptions(flags);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+  const repo = await openRepo();
+  try {
+    await repo.importTranscriptsFromFilesystem();
+    const activity = createActivityManager({ sessions: repo });
+    const report = await createUsageStatsManager({
+      sessions: repo,
+      activity,
+    }).stats(parsed.options);
+    if (parsed.json) {
+      printJson(report);
+    } else {
+      renderUsageStatsHuman(report);
     }
     return EXIT.OK;
   } finally {

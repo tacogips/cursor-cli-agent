@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, the public SDK facade, and the optional GraphQL compatibility bridge have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, the public SDK facade, tool/model availability helpers, usage statistics, and the optional GraphQL compatibility bridge have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -65,7 +65,8 @@ Implemented capabilities:
 - Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
 - Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
 - Local daemon lifecycle: `daemon start`, `daemon status`, and `daemon stop` supervise the local HTTP/SSE server in a repository-owned background process, persist PID metadata under the config directory, write JSONL lifecycle diagnostics under the data directory, refuse foreign PID termination, and expose stable human/JSON output without raw token values
-- Public SDK facade: root package, `./sdk`, `./sdk/testing`, `./server`, and `./types` package exports are import-safe and expose normalized Cursor-domain contracts for sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, and deterministic test mocks
+- Public SDK facade: root package, `./sdk`, `./sdk/testing`, `./server`, and `./types` package exports are import-safe and expose normalized Cursor-domain contracts for sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, local tool helpers, and deterministic test mocks
+- Local tool and model helpers: `tool list`, `tool show`, `tool run`, `tool versions`, `model check`, and `usage stats` expose a typed local helper registry, bounded version introspection, conservative Cursor model availability checks, and repository-owned session/activity statistics
 - Optional compatibility bridge: `graphql <document|command>` and opt-in `server start --compat-graphql` expose a Codex-agent-like JSON command field over local Cursor-normalized services, with explicit supported/degraded/unsupported capability metadata, Cursor limitation reporting, and server-side bearer permission gates
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
@@ -86,6 +87,9 @@ import { createMockCursorAgentSdk } from "curort-cli-agent/sdk/testing";
 
 const sdk: CursorAgentSdk = createCursorAgentSdk();
 const sessions = await sdk.sessions.list({ limit: 20 });
+const tools = sdk.tools.registry.list();
+const versions = await sdk.tools.versions();
+const stats = await sdk.tools.usageStats({ recentDays: 7 });
 const handlers = createResourceHandlers(createMockCursorAgentSdk());
 ```
 
@@ -117,6 +121,29 @@ bun run src/main.ts activity --status running --limit 3 --json
 `completed`, and `failed` statuses. Output is derived from local Cursor evidence
 only; optional cached stream/process signals are best-effort and fall back to
 index/transcript-derived state when unavailable.
+
+Tool, model, and usage helper examples:
+
+```bash
+bun run src/main.ts tool list --json
+bun run src/main.ts tool show tool.versions --json
+bun run src/main.ts tool run tool.versions --input '{"includeGit":true,"timeoutMs":1000}' --json
+bun run src/main.ts tool versions --include-git --include-bun --timeout-ms 1000 --json
+bun run src/main.ts model check --model test-model --json
+bun run src/main.ts model check --model test-model --probe --timeout-ms 30000 --json
+bun run src/main.ts usage stats --recent-days 7 --json
+```
+
+`tool list`, `tool show`, and `tool run` use the repository-owned helper
+registry, not Cursor MCP discovery. The registered helpers are `tool.versions`,
+`model.check`, and `usage.stats`; structured `tool run` input must be a JSON
+object, and numeric fields such as `timeoutMs` and `recentDays` must be positive
+integers. `tool versions` reports package metadata and `cursor-agent` by
+default, while Bun and Git version probes are opt-in. `model check` is
+conservative by default: auth is `unknown` and reachability is `not_checked`
+unless `--probe` is supplied. `usage stats` aggregates repository-owned session
+and activity indexes; token totals remain `unknown` when no repository-owned
+usage event source is available.
 
 File intelligence command examples:
 
@@ -308,6 +335,7 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 - `design-docs/specs/design-daemon-lifecycle.md`
 - `design-docs/specs/design-public-sdk.md`
 - `design-docs/specs/design-compat-bridge.md`
+- `design-docs/specs/design-tool-registry-model-helpers.md`
 
 ## Implementation Plan
 
@@ -328,6 +356,7 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 - `impl-plans/active/daemon-lifecycle.md`
 - `impl-plans/active/public-sdk.md`
 - `impl-plans/active/compat-bridge.md`
+- `impl-plans/active/tool-registry-model-helpers.md`
 
 ## Reference Project
 

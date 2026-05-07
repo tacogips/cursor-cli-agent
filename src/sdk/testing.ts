@@ -14,6 +14,7 @@ import type {
   CursorAgentSdk,
   CursorRunningAgent,
 } from "./types";
+import { createToolRegistry } from "./tool-registry";
 
 export interface MockCursorRunningAgentOptions {
   readonly sessionId: string;
@@ -321,6 +322,45 @@ export function createMockCursorAgentSdk(
       start: () => defaultRunner,
       resume: () => defaultRunner,
       ...input.runner,
+    },
+    tools: {
+      registry: createToolRegistry(),
+      versions: async () => ({
+        packageVersion: "0.0.0-test",
+        checkedAt: "2026-05-07T00:00:00.000Z",
+        tools: [],
+      }),
+      checkModel: async (options) => ({
+        model: options.model,
+        binary: {
+          name: "cursor-agent",
+          command: "cursor-agent",
+          version: null,
+          status: "not_checked",
+          checkedAt: "2026-05-07T00:00:00.000Z",
+        },
+        auth: {
+          status: "unknown",
+          detail: "mock",
+          provenance: "not_available",
+        },
+        modelReachability: {
+          status: "not_checked",
+          probed: false,
+        },
+        checkedAt: "2026-05-07T00:00:00.000Z",
+      }),
+      usageStats: async () => ({
+        totalSessions: 0,
+        statusCounts: {},
+        activityStatusCounts: {},
+        firstSessionDate: null,
+        lastComputedDate: "2026-05-07",
+        models: {},
+        recentDailyActivity: [],
+        completenessNotes: [],
+      }),
+      ...input.tools,
     },
   };
 }

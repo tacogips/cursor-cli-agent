@@ -211,3 +211,14 @@ commands; Cursor-local limitation metadata; route-facing bearer permission
 gates; and the accepted reference decision that `/g/gits/tacogips/codex-agent`
 is a behavioral reference while this repository dispatches through
 Cursor-normalized SDK, domain, server, and SSE boundaries.
+
+For `P5-TOOL-REGISTRY`, it covers local tool and model helper behavior:
+`curort-cli-agent tool list`, `tool show`, `tool run`, `tool versions`, `model
+check`, and `usage stats`, plus the public SDK `tools` facade. The refresh
+includes the typed local helper registry, registered helper names
+`tool.versions`, `model.check`, and `usage.stats`, positive-integer validation
+for structured numeric `tool run` fields, package and `cursor-agent` default
+version reporting with opt-in Bun/Git probes, conservative model auth and
+reachability status with explicit `--probe`, repository-owned session/activity
+usage aggregation, and residual limitations for unavailable local
+`cursor-agent` version output, unknown auth status, and unknown token totals.
