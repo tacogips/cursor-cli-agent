@@ -27,6 +27,8 @@ import {
   parseTranscriptRole,
 } from "./request";
 import { handleEventRoute, isEventRoutePath } from "./routes/events";
+import { handleGraphqlRoute } from "./graphql-route";
+import { handleAppServerCompatRoute } from "./app-server-compat";
 import type { HttpServerConfig } from "./types";
 
 export interface RouteContext {
@@ -232,6 +234,20 @@ export function createHttpRouteHandler(
   };
   return async (request: Request): Promise<Response> => {
     try {
+      const graphqlRoute = await handleGraphqlRoute(request, {
+        config: resolvedContext.config,
+        streams: resolvedContext.streams,
+      });
+      if (graphqlRoute !== undefined) {
+        return graphqlRoute;
+      }
+      const appServerCompatRoute = await handleAppServerCompatRoute(request, {
+        config: resolvedContext.config,
+        streams: resolvedContext.streams,
+      });
+      if (appServerCompatRoute !== undefined) {
+        return appServerCompatRoute;
+      }
       const permission = routePermissionForRequest(request);
       if (permission !== undefined) {
         const auth = await authenticateRequest(request, resolvedContext.config);

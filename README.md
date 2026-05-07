@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, and the public SDK facade have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, the public SDK facade, and the optional GraphQL compatibility bridge have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -66,6 +66,7 @@ Implemented capabilities:
 - Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
 - Local daemon lifecycle: `daemon start`, `daemon status`, and `daemon stop` supervise the local HTTP/SSE server in a repository-owned background process, persist PID metadata under the config directory, write JSONL lifecycle diagnostics under the data directory, refuse foreign PID termination, and expose stable human/JSON output without raw token values
 - Public SDK facade: root package, `./sdk`, `./sdk/testing`, `./server`, and `./types` package exports are import-safe and expose normalized Cursor-domain contracts for sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, and deterministic test mocks
+- Optional compatibility bridge: `graphql <document|command>` and opt-in `server start --compat-graphql` expose a Codex-agent-like JSON command field over local Cursor-normalized services, with explicit supported/degraded/unsupported capability metadata, Cursor limitation reporting, and server-side bearer permission gates
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -242,6 +243,28 @@ Event routes return `text/event-stream` frames with `id`, `event`, and JSON
 `lastEventId=<event-id>`; the standard `Last-Event-ID` request header takes
 precedence over the query fallback.
 
+GraphQL compatibility examples:
+
+```bash
+bun run src/bin.ts graphql 'query { ping }'
+bun run src/bin.ts graphql session.list --param '{"limit":1}' --json
+bun run src/bin.ts graphql 'mutation ($param: JSON) { command(name: "group.create", params: $param) }' --variables '{"param":{"name":"demo","workspaces":[]}}' --json
+bun run src/bin.ts server start --host 127.0.0.1 --port 0 --compat-graphql --json
+curl -X POST http://127.0.0.1:<port>/api/graphql -H 'content-type: application/json' -d '{"query":"query { ping }"}'
+curl http://127.0.0.1:<port>/api/compat/app-server
+```
+
+The compatibility bridge is intentionally local and opt-in. Shorthand command
+names are inferred from the registry, `--param` binds GraphQL variable `param`,
+and `--variables` supplies the full variable object; JSON may be passed inline
+or as `@path`. Unsupported Codex-only commands such as `session.fork`,
+`files.patches`, and token lifecycle commands return structured compatibility
+errors instead of proxying raw Cursor state. When compatibility routes are
+enabled on a token-protected server, `/api/graphql` command execution uses the
+same route-facing permission literals as the REST and SSE APIs, and
+`/api/compat/app-server` returns auth-gated `compat-local` metadata with the
+same capability and limitation matrix.
+
 Daemon command examples:
 
 ```bash
@@ -284,6 +307,7 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 - `design-docs/specs/design-server-event-streaming.md`
 - `design-docs/specs/design-daemon-lifecycle.md`
 - `design-docs/specs/design-public-sdk.md`
+- `design-docs/specs/design-compat-bridge.md`
 
 ## Implementation Plan
 
@@ -303,6 +327,7 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 - `impl-plans/active/server-event-streaming.md`
 - `impl-plans/active/daemon-lifecycle.md`
 - `impl-plans/active/public-sdk.md`
+- `impl-plans/active/compat-bridge.md`
 
 ## Reference Project
 

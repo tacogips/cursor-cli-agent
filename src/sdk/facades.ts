@@ -34,7 +34,12 @@ import type {
   SessionFileSummary,
 } from "../types/file-intelligence";
 import type { GroupProgressSnapshot, GroupRecord } from "../types/group";
-import type { QueueProgressSnapshot, QueueRecord } from "../types/queue";
+import type {
+  QueueItemMode,
+  QueueItemStatus,
+  QueueProgressSnapshot,
+  QueueRecord,
+} from "../types/queue";
 import type { CursorSessionRecord } from "../types/session-record";
 import type {
   SessionSearchOptions,
@@ -78,7 +83,21 @@ export interface QueueFacade {
   get(name: string): Promise<QueueRecord | null>;
   create(name: string, workspace: string): Promise<QueueRecord>;
   addItem(name: string, prompt: string): Promise<QueueRecord>;
+  updateItem(
+    name: string,
+    itemId: string,
+    patch: {
+      readonly prompt?: string | undefined;
+      readonly status?: QueueItemStatus | undefined;
+    },
+  ): Promise<QueueRecord | null>;
   removeItem(name: string, itemId: string): Promise<QueueRecord>;
+  moveItem(name: string, from: number, to: number): Promise<QueueRecord | null>;
+  setItemMode(
+    name: string,
+    itemId: string,
+    mode: QueueItemMode,
+  ): Promise<QueueRecord | null>;
   delete(name: string): Promise<QueueRecord | null>;
   pause(name: string): Promise<QueueRecord | null>;
   resume(name: string): Promise<QueueRecord | null>;
@@ -235,8 +254,47 @@ export function createDomainFacades(
         queuesStore.createQueue(name, workspace, queuesPath),
       addItem: (name: string, prompt: string) =>
         queuesStore.addQueueItem(name, prompt, queuesPath),
+      async updateItem(
+        name: string,
+        itemId: string,
+        patch: {
+          readonly prompt?: string | undefined;
+          readonly status?: QueueItemStatus | undefined;
+        },
+      ): Promise<QueueRecord | null> {
+        const storePatch = {
+          ...(patch.prompt !== undefined ? { prompt: patch.prompt } : {}),
+          ...(patch.status !== undefined ? { status: patch.status } : {}),
+        };
+        return nullIfMissing(
+          await queuesStore.updateQueueItem(
+            name,
+            itemId,
+            storePatch,
+            queuesPath,
+          ),
+        );
+      },
       removeItem: (name: string, itemId: string) =>
         queuesStore.removeQueueItem(name, itemId, queuesPath),
+      async moveItem(
+        name: string,
+        from: number,
+        to: number,
+      ): Promise<QueueRecord | null> {
+        return nullIfMissing(
+          await queuesStore.moveQueueItem(name, from, to, queuesPath),
+        );
+      },
+      async setItemMode(
+        name: string,
+        itemId: string,
+        mode: QueueItemMode,
+      ): Promise<QueueRecord | null> {
+        return nullIfMissing(
+          await queuesStore.updateQueueItem(name, itemId, { mode }, queuesPath),
+        );
+      },
       async delete(name: string): Promise<QueueRecord | null> {
         return nullIfMissing(await queuesStore.deleteQueue(name, queuesPath));
       },

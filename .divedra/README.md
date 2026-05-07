@@ -199,3 +199,15 @@ raw `src/cursor` adapter payloads. It also covers the accepted daemon startup
 regression fix: daemon server startup resolves an absolute executable
 `src/bin.ts` or `dist/bin.js` entrypoint so module resolution does not depend on
 the caller's current working directory.
+
+For `P5-COMPAT-BRIDGE`, it covers the optional Codex-agent-like compatibility
+surface: `curort-cli-agent graphql <document|command>`, shorthand command
+normalization, `--param`, `--variables`, inline JSON and `@path` JSON loading,
+the opt-in `server start --compat-graphql` `/api/graphql` route, and
+`/api/compat/app-server` compat-local metadata. The refresh includes the
+supported, degraded, and unsupported command matrix; explicit unsupported
+Codex-only decisions for `session.fork`, `files.patches`, and token lifecycle
+commands; Cursor-local limitation metadata; route-facing bearer permission
+gates; and the accepted reference decision that `/g/gits/tacogips/codex-agent`
+is a behavioral reference while this repository dispatches through
+Cursor-normalized SDK, domain, server, and SSE boundaries.

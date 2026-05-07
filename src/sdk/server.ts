@@ -11,6 +11,10 @@ export type {
   ServerEventPayloadByName,
   ServerEventStreamOptions,
 } from "../types/server-event";
+export {
+  createAppServerCompatMetadata,
+  type AppServerCompatMetadata,
+} from "../server/app-server-compat";
 
 export interface ResourceHandlerSet {
   readonly sessions: {

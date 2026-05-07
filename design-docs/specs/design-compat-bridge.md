@@ -98,7 +98,7 @@ Server transports are gated as follows:
 - `/api/graphql` is opt-in and disabled by default until server startup exposes an explicit compatibility flag.
 - When server auth mode is `required`, every command must pass the permission gate in the capability matrix before dispatch.
 - When server auth mode is `optional` or `disabled`, non-loopback startup policy remains owned by `P4-HTTP-SERVER`; the bridge must not weaken it.
-- App-server-like compatibility mode uses `mode: "compat-local"` and the same auth gate as `/api/graphql`.
+- App-server-like compatibility metadata is exposed only through the opt-in `/api/compat/app-server` route, uses `mode: "compat-local"`, and uses the same auth gate as `/api/graphql`.
 - Token management commands are not exposed through GraphQL/app-server compatibility in this slice.
 
 If final token-auth literals use wildcard families instead of read/write/run literals, implementation maps the compatibility permission intents to those final literals in one permission adapter.
@@ -135,15 +135,15 @@ Every degraded response must distinguish unavailable evidence from empty results
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Reference repository root: `/g/gits/tacogips/codex-agent`.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/graphql.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/cli/graphql.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`
+- `/g/gits/tacogips/codex-agent/src/graphql/index.ts`
+- `/g/gits/tacogips/codex-agent/src/graphql/index.test.ts`
+- `/g/gits/tacogips/codex-agent/src/cli/graphql.ts`
+- `/g/gits/tacogips/codex-agent/src/cli/graphql.test.ts`
+- `/g/gits/tacogips/codex-agent/impl-plans/completed/phase4-daemon-app-server.md`
 
 Preserved behavior:
 
@@ -168,15 +168,17 @@ Planned implementation verification:
 task typecheck
 task test
 task ci
-bun run src/main.ts graphql 'query { ping }'
-bun run src/main.ts graphql session.list --param '{"limit":1}'
-bun run src/main.ts graphql 'mutation ($param: JSON) { command(name: "group.create", params: $param) }' --variables '{"param":{"name":"demo","workspaces":[]}}'
-bun run src/main.ts graphql session.watch --param '{"id":"<session-id>","startOffset":0}'
+bun run src/bin.ts graphql 'query { ping }'
+bun run src/bin.ts graphql session.list --param '{"limit":1}'
+bun run src/bin.ts graphql 'mutation ($param: JSON) { command(name: "group.create", params: $param) }' --variables '{"param":{"name":"demo","workspaces":[]}}'
+bun run src/bin.ts graphql session.watch --param '{"id":"<session-id>","startOffset":0}'
 ```
 
 Server smoke checks wait for phase-4 route contracts and should cover disabled route, missing token, forbidden token, successful query, successful mutation, and subscription disconnect cleanup.
 
 ## Open Questions
+
+Tracked in `design-docs/user-qa/pending-compat-bridge.md`:
 
 - Should `/api/graphql` use `--compat-graphql` or a broader `--compat` server flag?
 - Should capability metadata list unsupported Codex-only commands by default, or only when requested with an include flag?

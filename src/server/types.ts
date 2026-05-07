@@ -18,6 +18,7 @@ export interface HttpServerConfig {
   readonly cursorHome: string;
   readonly token?: string;
   readonly authMode: ServerAuthMode;
+  readonly compatGraphql?: boolean;
   readonly packageVersion: string;
 }
 
@@ -40,6 +41,7 @@ export interface ResolveHttpServerConfigInput {
   readonly host?: string;
   readonly port?: number;
   readonly token?: string;
+  readonly compatGraphql?: boolean;
 }
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
@@ -71,6 +73,7 @@ export function resolveHttpServerConfig(
     cursorHome: getCursorHome(),
     ...(token !== undefined ? { token } : {}),
     authMode: token === undefined ? "disabled" : "required",
+    ...(input.compatGraphql === true ? { compatGraphql: true } : {}),
     packageVersion: pkg.version,
   };
 }

@@ -167,7 +167,53 @@ export function createMockCursorAgentSdk(
         return record;
       },
       addItem: async (name) => queues.get(name) ?? makeEmptyQueue(name),
+      updateItem: async (name, itemId, patch) => {
+        const current = queues.get(name) ?? makeEmptyQueue(name);
+        const record: QueueRecord = {
+          ...current,
+          items: current.items.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  ...(patch.prompt !== undefined
+                    ? { prompt: patch.prompt }
+                    : {}),
+                  ...(patch.status !== undefined
+                    ? { status: patch.status }
+                    : {}),
+                }
+              : item,
+          ),
+        };
+        queues.set(name, record);
+        return record;
+      },
       removeItem: async (name) => queues.get(name) ?? makeEmptyQueue(name),
+      moveItem: async (name, from, to) => {
+        const current = queues.get(name) ?? makeEmptyQueue(name);
+        const item = current.items[from];
+        if (item === undefined) {
+          return current;
+        }
+        const without = current.items.filter((_, index) => index !== from);
+        const record: QueueRecord = {
+          ...current,
+          items: [...without.slice(0, to), item, ...without.slice(to)],
+        };
+        queues.set(name, record);
+        return record;
+      },
+      setItemMode: async (name, itemId, mode) => {
+        const current = queues.get(name) ?? makeEmptyQueue(name);
+        const record: QueueRecord = {
+          ...current,
+          items: current.items.map((item) =>
+            item.id === itemId ? { ...item, mode } : item,
+          ),
+        };
+        queues.set(name, record);
+        return record;
+      },
       delete: async (name) => {
         const record = queues.get(name) ?? null;
         queues.delete(name);

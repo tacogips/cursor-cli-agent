@@ -7,6 +7,8 @@ import pkg from "../../package.json" with { type: "json" };
 
 import {
   agentTranscriptsDirForWorkspace,
+  getConfigDir,
+  getCursorHome,
   getDataDir,
   stateDbPath,
 } from "../config/paths";
@@ -71,6 +73,7 @@ import {
   startHttpServer,
   type ServerStartResult,
 } from "../server";
+import { runGraphqlCli } from "./graphql";
 import { createDaemonManager, type DaemonManager } from "../daemon/manager";
 import type { AgentEvent } from "../types/agent-event";
 import type {
@@ -370,6 +373,7 @@ export interface ServerStartArgs {
   readonly host?: string;
   readonly port?: number;
   readonly token?: string;
+  readonly compatGraphql?: boolean;
   readonly json?: boolean;
 }
 
@@ -495,6 +499,7 @@ export function parseServerStartArgs(
       ...(typeof host === "string" ? { host } : {}),
       ...(port !== undefined ? { port } : {}),
       ...(typeof token === "string" ? { token } : {}),
+      ...(flags["compat-graphql"] === true ? { compatGraphql: true } : {}),
       ...(flags["json"] === true ? { json: true } : {}),
     },
   };
@@ -1528,11 +1533,12 @@ export async function runCli(argv: string[]): Promise<number> {
     run <name> [--stream <text|json|events>] [--json]
   curort-cli-agent skill list [--workspace <path>] [--json]
   curort-cli-agent skill show <name> [--workspace <path>] [--json]
+  curort-cli-agent graphql <document|command> [--param <json|@path>] [--variables <json|@path>] [--json]
   curort-cli-agent token create --name <name> [--permissions <csv>] [--expires-at <iso8601>] [--json]
   curort-cli-agent token list [--json]
   curort-cli-agent token revoke <id> [--json]
   curort-cli-agent token rotate <id> [--json]
-  curort-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--json]
+  curort-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--compat-graphql] [--json]
   curort-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms N] [--json]
   curort-cli-agent daemon stop [--timeout-ms N] [--json]
   curort-cli-agent daemon status [--token <token>] [--json]
@@ -1586,6 +1592,15 @@ export async function runCli(argv: string[]): Promise<number> {
   }
   if (cmd === "skill") {
     return runSkill(tail);
+  }
+  if (cmd === "graphql") {
+    const { flags } = parseFlags(tail);
+    return runGraphqlCli(tail, {
+      workspace: getWorkspace(flags),
+      dataDir: getDataDir(),
+      configDir: getConfigDir(),
+      cursorHome: getCursorHome(),
+    });
   }
 
   console.error(`Unknown command: ${cmd}`);

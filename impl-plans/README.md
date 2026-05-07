@@ -18,3 +18,6 @@ Conventions:
 | `active/bookmarks.md` | 2 | Completed | `design-docs/specs/design-bookmarks.md` |
 | `active/activity.md` | 2 | Completed | `design-docs/specs/design-activity.md` |
 | `active/markdown-tasks.md` | 2 | Blocked | `design-docs/specs/design-codex-agent-parity-gap.md#phase-2-search-bookmarks-and-activity` |
+| `active/compat-bridge.md` | 5 | Completed | `design-docs/specs/design-compat-bridge.md` |
+
+`active/compat-bridge.md` tracks the optional GraphQL compatibility bridge and `compat-local` metadata surface.
