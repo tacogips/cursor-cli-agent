@@ -3,7 +3,13 @@ import {
   createTranscriptSearchService,
   DEFAULT_TRANSCRIPT_SEARCH_TIMEOUT_MS,
 } from "../cursor/transcript-search";
+import { getGroup } from "../persistence/groups-store";
+import { getQueue } from "../persistence/queues-store";
 import type { SessionIndexRepository } from "../persistence/session-index";
+import {
+  createEventStreamService,
+  type EventStreamService,
+} from "./event-streams";
 import {
   HttpError,
   errorResponse,
@@ -19,12 +25,18 @@ import {
   parseTranscriptRole,
   requireBearerAuth,
 } from "./request";
+import { handleEventRoute, isEventRoutePath } from "./routes/events";
 import type { HttpServerConfig } from "./types";
 
 export interface RouteContext {
   readonly config: HttpServerConfig;
   readonly startedAt: Date;
   readonly sessions: SessionIndexRepository;
+  readonly streams?: EventStreamService;
+}
+
+interface ResolvedRouteContext extends RouteContext {
+  readonly streams: EventStreamService;
 }
 
 const API_VERSION = "v1";
@@ -55,10 +67,23 @@ async function refreshSessions(
 
 async function dispatchGet(
   request: Request,
-  context: RouteContext,
+  context: ResolvedRouteContext,
 ): Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname;
+
+  const eventRoute = await handleEventRoute(request, {
+    streams: context.streams,
+    sessionExists: async (id) => {
+      await refreshSessions(context.sessions);
+      return context.sessions.resolveSessionKey(id) !== undefined;
+    },
+    groupExists: async (name) => (await getGroup(name)) !== undefined,
+    queueExists: async (name) => (await getQueue(name)) !== undefined,
+  });
+  if (eventRoute !== undefined) {
+    return eventRoute;
+  }
 
   if (pathname === "/api/health") {
     return jsonResponse({
@@ -189,6 +214,7 @@ function isKnownPath(pathname: string): boolean {
     pathname === "/api/version" ||
     pathname === "/api/sessions" ||
     pathname.startsWith("/api/sessions/") ||
+    isEventRoutePath(pathname) ||
     pathname === "/api/search/sessions" ||
     pathname === "/api/search/transcripts"
   );
@@ -197,9 +223,15 @@ function isKnownPath(pathname: string): boolean {
 export function createHttpRouteHandler(
   context: RouteContext,
 ): (request: Request) => Promise<Response> {
+  const resolvedContext: ResolvedRouteContext = {
+    ...context,
+    streams:
+      context.streams ??
+      createEventStreamService({ sessions: context.sessions }),
+  };
   return async (request: Request): Promise<Response> => {
     try {
-      requireBearerAuth(request, context.config);
+      requireBearerAuth(request, resolvedContext.config);
       const url = new URL(request.url);
       if (request.method !== "GET" && isKnownPath(url.pathname)) {
         throw new HttpError("METHOD_NOT_ALLOWED", "method not allowed");
@@ -207,7 +239,7 @@ export function createHttpRouteHandler(
       if (request.method !== "GET") {
         throw new HttpError("NOT_FOUND", "route not found");
       }
-      return await dispatchGet(request, context);
+      return await dispatchGet(request, resolvedContext);
     } catch (error) {
       return errorResponse(toHttpError(error));
     }

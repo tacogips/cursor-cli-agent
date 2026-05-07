@@ -93,14 +93,19 @@ Graceful disconnect is required:
 
 ## Codex Reference Mapping
 
-Reference repository root: `/Users/taco/gits/tacogips/codex-agent`.
+Reference repository root: `/g/gits/tacogips/codex-agent`.
 
 Relevant files:
 
-- `/Users/taco/gits/tacogips/codex-agent/src/rollout/watcher.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/rollout/watcher.test.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.ts`
-- `/Users/taco/gits/tacogips/codex-agent/src/graphql/index.test.ts`
+- `/g/gits/tacogips/codex-agent/src/rollout/watcher.ts`
+- `/g/gits/tacogips/codex-agent/src/rollout/watcher.test.ts`
+- `/g/gits/tacogips/codex-agent/src/graphql/index.ts`
+- `/g/gits/tacogips/codex-agent/src/graphql/index.test.ts`
+- `/g/gits/tacogips/codex-agent/src/server/sse.ts`
+- `/g/gits/tacogips/codex-agent/src/sdk/events.ts`
+- `/g/gits/tacogips/codex-agent/src/session/index.ts`
+- `/g/gits/tacogips/codex-agent/src/session/sqlite.ts`
+- `/g/gits/tacogips/codex-agent/src/types/session.ts`
 
 Reference behavior to preserve:
 
@@ -148,8 +153,10 @@ Validation errors should use normal HTTP JSON error responses before the SSE str
 
 Planned automated checks:
 
-- `bun test src/server/event-stream.test.ts`
 - `bun test src/server/event-broker.test.ts`
+- `bun test src/server/sse.test.ts`
+- `bun test src/server/event-streams.test.ts`
+- `bun test src/server/routes/events.test.ts`
 - `bun test src/cursor/transcript-tail.test.ts`
 - `task typecheck`
 - `task test`

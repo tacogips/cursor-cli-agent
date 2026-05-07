@@ -113,3 +113,18 @@ export function parseTranscriptRole(url: {
     "role must be user, assistant, system, or tool",
   );
 }
+
+export function parseReplayMode(
+  url: { readonly searchParams: URLSearchParams },
+  name: string,
+  defaultValue: "latest" | "none",
+): "latest" | "none" {
+  const value = url.searchParams.get(name);
+  if (value === null) {
+    return defaultValue;
+  }
+  if (value === "latest" || value === "none") {
+    return value;
+  }
+  throw new HttpError("INVALID_REQUEST", `${name} must be latest or none`);
+}

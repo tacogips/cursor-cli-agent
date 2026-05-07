@@ -7,7 +7,7 @@ This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-ag
 Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
-- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, and the local REST HTTP server have repository-owned implementations
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, the local REST HTTP server, and live server event streaming have repository-owned implementations
 - Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
 
 ## Project Workflows
@@ -61,7 +61,8 @@ Implemented capabilities:
 - Local repository analytics from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db` `scored_commits` plus file-intelligence attribution: `repo analytics summary`, `repo analytics commits`, `repo analytics sessions`, `repo analytics files`, and `repo analytics rebuild` with explicit provenance, completeness notes, repository-owned derived indexes, valid `0%` AI preservation, TEXT numeric column handling, and degraded-state reporting
 - Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
 - Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, legacy queue migration, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
-- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, and transcript search routes over repository-owned Cursor adapters, with optional static bearer auth and shared JSON error envelopes
+- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with optional static bearer auth and shared JSON error envelopes
+- Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
 - Headless run/resume orchestration via `cursor-agent --print`
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
@@ -175,6 +176,11 @@ curl http://127.0.0.1:<port>/api/sessions/<session-id>
 curl http://127.0.0.1:<port>/api/sessions/<session-id>/messages
 curl http://127.0.0.1:<port>/api/search/sessions?q=<query>
 curl http://127.0.0.1:<port>/api/search/transcripts?q=<query>
+curl -N http://127.0.0.1:<port>/api/events/sessions/<session-id>
+curl -N http://127.0.0.1:<port>/api/events/activity
+curl -N http://127.0.0.1:<port>/api/events/activity/<session-id>
+curl -N http://127.0.0.1:<port>/api/events/groups/<group-name>
+curl -N http://127.0.0.1:<port>/api/events/queues/<queue-name>
 ```
 
 `server start` runs a foreground Bun HTTP server until SIGINT or SIGTERM. The
@@ -185,6 +191,11 @@ non-loopback hosts require `--token <token>` or
 When a token is configured, requests must include `Authorization: Bearer
 <token>`. Errors use a shared JSON envelope with `code`, `message`, and
 `requestId`, without stack traces or raw Cursor filesystem details.
+Event routes return `text/event-stream` frames with `id`, `event`, and JSON
+`data` fields. Supported query controls are `replay=latest|none`,
+`heartbeatMs=<positive-ms>`, `startOffset=<non-negative-byte-offset>`, and
+`lastEventId=<event-id>`; the standard `Last-Event-ID` request header takes
+precedence over the query fallback.
 
 ## Design Documents
 
@@ -199,6 +210,7 @@ When a token is configured, requests must include `Authorization: Bearer
 - `design-docs/specs/design-file-intelligence.md`
 - `design-docs/specs/design-repository-analytics.md`
 - `design-docs/specs/design-http-server-core.md`
+- `design-docs/specs/design-server-event-streaming.md`
 
 ## Implementation Plan
 
@@ -214,6 +226,7 @@ When a token is configured, requests must include `Authorization: Bearer
 - `impl-plans/active/file-intelligence.md`
 - `impl-plans/active/repository-analytics.md`
 - `impl-plans/active/http-server-core.md`
+- `impl-plans/active/server-event-streaming.md`
 
 ## Reference Project
 

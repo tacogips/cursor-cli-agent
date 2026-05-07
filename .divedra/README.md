@@ -154,3 +154,13 @@ normalized `GET /api/sessions`, `GET /api/sessions/:id`, `GET
 /api/search/transcripts?q=<query>`, shared JSON error envelopes, and the
 accepted sandbox limitation that real socket smoke checks may need to be rerun
 outside restricted workflow execution environments.
+
+For `P4-SSE`, it covers live Server-Sent Events routes on the existing local
+HTTP server: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET
+/api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET
+/api/events/queues/:name`. The refresh includes normalized event envelopes,
+transcript tailing, pending-to-materialized session events, activity updates,
+group and queue progress snapshots, `replay=latest|none`, `heartbeatMs`,
+`startOffset`, standard `Last-Event-ID` resume support with `lastEventId` query
+fallback, and the accepted sandbox limitation that real curl SSE smoke checks
+may need to be rerun outside restricted workflow execution environments.
