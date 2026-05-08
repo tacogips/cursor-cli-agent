@@ -1,3 +1,5 @@
+import type { PromptAttachmentProvenance } from "./prompt-attachment";
+
 export type QueueLifecycleState =
   | "active"
   | "paused"
@@ -24,6 +26,8 @@ export type QueueRunStatus =
 export interface QueueItemRecord {
   readonly id: string;
   readonly prompt: string;
+  /** Item-level attachments supplied at `queue add` (validated; no bytes). */
+  readonly attachments?: readonly PromptAttachmentProvenance[];
   readonly status: QueueItemStatus;
   readonly mode: QueueItemMode;
   readonly createdAt: string;
@@ -40,6 +44,8 @@ export interface QueueItemRecord {
 export interface QueueRunRecord {
   readonly id: string;
   readonly status: QueueRunStatus;
+  /** Run-level image attachments forwarded on `queue run` (validated). */
+  readonly attachments?: readonly PromptAttachmentProvenance[];
   readonly startedAt: string;
   readonly updatedAt: string;
   readonly completedAt?: string;

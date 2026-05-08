@@ -1,3 +1,5 @@
+import type { PromptAttachmentProvenance } from "./prompt-attachment";
+
 export type ActivityStatus =
   | "idle"
   | "running"
@@ -19,6 +21,8 @@ export interface ActivitySignal {
   readonly status: ActivityStatus;
   readonly observedAt: string;
   readonly detail?: string;
+  /** Summaries for image attachments forwarded into Cursor (no bytes). */
+  readonly attachments?: readonly PromptAttachmentProvenance[];
 }
 
 export interface SessionActivity {

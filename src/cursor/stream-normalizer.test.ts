@@ -48,4 +48,37 @@ describe("StreamNormalizerState", () => {
       expect(evs[0].usage?.inputTokens).toBe(1);
     }
   });
+
+  it("emits session.completed when usage carries only explicit total_tokens", () => {
+    const n = new StreamNormalizerState();
+    const line = JSON.stringify({
+      type: "result",
+      session_id: "s1",
+      is_error: false,
+      result: "",
+      usage: { total_tokens: 42 },
+    });
+    const evs = n.processLine(line);
+    expect(evs[0]?.type).toBe("session.completed");
+    if (evs[0]?.type === "session.completed") {
+      expect(evs[0].usage?.totalTokens).toBe(42);
+    }
+  });
+
+  it("drops negative explicit totals and keeps component usage", () => {
+    const n = new StreamNormalizerState();
+    const line = JSON.stringify({
+      type: "result",
+      session_id: "s1",
+      is_error: false,
+      result: "",
+      usage: { total_tokens: -1, inputTokens: 2 },
+    });
+    const evs = n.processLine(line);
+    expect(evs[0]?.type).toBe("session.completed");
+    if (evs[0]?.type === "session.completed") {
+      expect(evs[0].usage?.inputTokens).toBe(2);
+      expect(evs[0].usage?.totalTokens).toBeUndefined();
+    }
+  });
 });

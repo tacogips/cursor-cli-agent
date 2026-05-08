@@ -24,7 +24,7 @@ function permissionForIntent(
     case "none":
       return undefined;
     case "server:read":
-      return "server:admin";
+      return "server:read";
     case "session:read":
       return "session:read";
     case "session:create":

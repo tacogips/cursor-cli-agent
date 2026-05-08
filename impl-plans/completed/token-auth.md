@@ -1,9 +1,8 @@
 # Token and Bearer Auth Implementation Plan
 
-**Status**: In Progress
-**Design Reference**: `design-docs/specs/design-token-auth.md`
+**Status**: Completed
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-07
+**Last Updated**: 2026-05-09
 
 ---
 
@@ -81,6 +80,7 @@ export type AuthPermission =
   | "queue:*"
   | "bookmark:*"
   | "files:*"
+  | "server:read"
   | "server:admin";
 
 export interface ApiTokenMetadata {
@@ -314,7 +314,7 @@ export interface RoutePermissionRequirement {
 
 ### TASK-007: End-to-End Verification and Docs Refresh
 
-**Status**: In Progress
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md`, `.divedra/README.md`, final verification results
 **Dependencies**: TASK-004, TASK-005, TASK-006
@@ -324,8 +324,8 @@ export interface RoutePermissionRequirement {
 - [x] `task typecheck` passes.
 - [x] `task test` passes.
 - [x] `task build` passes.
-- [ ] README and user-facing workflow guidance are refreshed for P4-AUTH behavior.
-- [ ] `.divedra/README.md` is checked and updated when workflow invocation guidance changes.
+- [x] README and user-facing workflow guidance are refreshed for P4-AUTH behavior.
+- [x] `.divedra/README.md` is checked and updated when workflow invocation guidance changes.
 
 ---
 
@@ -364,7 +364,7 @@ export interface RoutePermissionRequirement {
 - Targeted CLI tests for token human/JSON output and errors.
 - Targeted server tests for `401 Unauthorized`, `403 Forbidden`, auth modes,
   and route permission mapping.
-- `git diff --check -- impl-plans/active/token-auth.md`
+- `git diff --check -- impl-plans/completed/token-auth.md`
 
 ## Completion Criteria
 
@@ -397,8 +397,7 @@ export interface RoutePermissionRequirement {
 ### Session: 2026-05-07 Step 6 Implementation
 
 **Tasks Completed**: TASK-001 through TASK-006; TASK-007 typecheck item.
-**Tasks In Progress**: TASK-007 README/user-facing workflow refresh for the
-later workflow step.
+**Tasks In Progress**: None (`TASK-007` README/workflow-doc refresh concluded in Progress Log Session 2026-05-09).
 **Blockers**: None for Step 6 implementation.
 **Notes**: Added managed token lifecycle implementation, local `tokens.json`
 store, CLI `token` commands, bearer verification, route permission mapping,
@@ -406,4 +405,12 @@ store, CLI `token` commands, bearer verification, route permission mapping,
 commands passed: `bun test src/auth/token-manager.test.ts
 src/persistence/token-store.test.ts`, `bun test src/server/server.test.ts`,
 `bun test src/cli/cli.test.ts`, `task typecheck`, `task test`, `task build`,
-and `git diff --check -- impl-plans/active/token-auth.md`.
+and `git diff --check -- impl-plans/completed/token-auth.md`.
+
+### Session: 2026-05-09
+
+**Tasks Completed**: TASK-007 documentation refresh; added `server:read` permission for `/api/repository/analytics`; updated `README.md`, `.divedra/README.md`, and plan type snippets to match `src/types/auth-token.ts`.
+
+**Verification**: `task ci` after HTTP resource integration.
+
+**Notes**: Permission mapping for new REST resources lives in `src/server/permissions.ts` alongside existing session/bookmark/file rules.

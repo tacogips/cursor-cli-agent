@@ -88,6 +88,14 @@ export function activitySignalsJsonPath(): string {
   return join(getDataDir(), "activity-signals.json");
 }
 
+export function usageEventsJsonPath(): string {
+  return join(getDataDir(), "usage-events.json");
+}
+
+export function sessionReplayForksJsonPath(): string {
+  return join(getDataDir(), "session-replay-forks.json");
+}
+
 export function daemonMetadataPath(): string {
   return join(getConfigDir(), "daemon.json");
 }

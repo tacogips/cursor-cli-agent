@@ -27,7 +27,7 @@ Excluded:
 - Feature ID: `P3-PROMPT-ATTACHMENTS`
 - Target feature area: `session-process`
 - Requested behavior: Design and plan Cursor-safe prompt attachment support for session run/resume plus group and queue execution, with CLI/SDK input validation, capability detection, provenance, and graceful unsupported behavior.
-- Assigned implementation plan: `impl-plans/active/prompt-attachments.md`
+- Assigned implementation plan: `impl-plans/completed/prompt-attachments.md`
 
 ## Attachment Model
 

@@ -13,8 +13,14 @@ import type {
   QueueRunRecord,
   QueueRunStatus,
 } from "../types/queue";
+import type { PromptAttachmentProvenance } from "../types/prompt-attachment";
 
 export type { QueueRecord } from "../types/queue";
+
+export interface AddQueueItemOptions {
+  readonly path?: string;
+  readonly attachments?: readonly PromptAttachmentProvenance[];
+}
 
 export interface QueueItemPatch {
   readonly prompt?: string;
@@ -266,8 +272,21 @@ export async function createQueue(
 export async function addQueueItem(
   name: string,
   prompt: string,
-  path = queuesJsonPath(),
+  options?: string | AddQueueItemOptions,
 ): Promise<QueueRecord> {
+  let path = queuesJsonPath();
+  let attachments: readonly PromptAttachmentProvenance[] | undefined;
+  if (typeof options === "string") {
+    path = options;
+  } else if (options !== undefined) {
+    if (options.path !== undefined) {
+      path = options.path;
+    }
+    attachments =
+      options.attachments !== undefined && options.attachments.length > 0
+        ? options.attachments
+        : undefined;
+  }
   const updated = await mutateQueue(
     name,
     (q, now) => ({
@@ -280,6 +299,7 @@ export async function addQueueItem(
         {
           id: randomUUID(),
           prompt,
+          ...(attachments !== undefined ? { attachments } : {}),
           status: "pending",
           mode: "auto",
           createdAt: now,

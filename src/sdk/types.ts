@@ -1,5 +1,6 @@
 import type { ActivityListOptions, ActivityManager } from "../activity/manager";
 import type { SessionIndexRepository } from "../persistence/session-index";
+import type { UsageEventStore } from "../persistence/usage-event-store";
 import type { ToolVersionCommandRunner } from "../types/tool-versions";
 import type {
   AgentRunnerFacade,
@@ -35,6 +36,7 @@ export type {
   SessionFacade,
 };
 export type { SessionIndexRepository } from "../persistence/session-index";
+export type { UsageEventStore } from "../persistence/usage-event-store";
 
 export type {
   ActivitySignal,
@@ -137,6 +139,8 @@ export type {
 } from "../types/model-availability";
 export type {
   DailyUsageActivity,
+  UsageDailyTokenActivity,
+  UsageEvidenceCoverage,
   UsageStatsOptions,
   UsageStatsReport,
 } from "../types/usage-stats";
@@ -161,5 +165,6 @@ export interface CursorAgentSdkOptions {
   readonly now?: () => Date;
   readonly sessionRepository?: SessionIndexRepository;
   readonly activityManager?: ActivityManager;
+  readonly usageEventStore?: UsageEventStore;
   readonly commandRunner?: ToolVersionCommandRunner;
 }

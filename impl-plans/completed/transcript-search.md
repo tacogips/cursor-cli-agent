@@ -209,7 +209,7 @@ describe("transcript full-text search", () => {
 **Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/types/transcript-search.ts`
-**Dependencies**: `impl-plans/active/session-search.md`
+**Dependencies**: `impl-plans/completed/session-search.md`
 
 **Completion Criteria**:
 
@@ -237,7 +237,7 @@ describe("transcript full-text search", () => {
 **Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/cursor/transcript-search.ts`, `src/cursor/transcript-search.test.ts`, any needed candidate helper in `src/persistence/session-index.ts`
-**Dependencies**: TASK-001, TASK-002, `impl-plans/active/session-search.md`
+**Dependencies**: TASK-001, TASK-002, `impl-plans/completed/session-search.md`
 
 **Completion Criteria**:
 
@@ -266,7 +266,7 @@ describe("transcript full-text search", () => {
 
 **Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `impl-plans/active/transcript-search.md`
+**Deliverables**: `impl-plans/completed/transcript-search.md`
 **Dependencies**: TASK-001, TASK-002, TASK-003, TASK-004
 
 **Completion Criteria**:
@@ -283,13 +283,13 @@ describe("transcript full-text search", () => {
 | Streaming transcript reader | `src/cursor/transcript-reader.ts` | COMPLETED | `src/cursor/transcript-reader.test.ts` |
 | Search service | `src/cursor/transcript-search.ts` | COMPLETED | `src/cursor/transcript-search.test.ts` |
 | CLI command | `src/cli/cli.ts` | COMPLETED | `src/cli/cli.test.ts` |
-| Plan progress | `impl-plans/active/transcript-search.md` | COMPLETED | Review |
+| Plan progress | `impl-plans/completed/transcript-search.md` | COMPLETED | Review |
 
 ## Dependencies
 
 | Feature | Depends On | Status |
 |---------|------------|--------|
-| P2-TRANSCRIPT-SEARCH | `P2-SESSION-SEARCH` / `impl-plans/active/session-search.md` | Available |
+| P2-TRANSCRIPT-SEARCH | `P2-SESSION-SEARCH` / `impl-plans/completed/session-search.md` | Available |
 | P2-BOOKMARKS | Stable transcript message IDs from this plan | Available |
 | P2-MARKDOWN-TASKS | Stable transcript extraction boundary from this plan | Available |
 
@@ -348,5 +348,5 @@ describe("transcript full-text search", () => {
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/session-search.md`
-- **Next**: `impl-plans/active/bookmarks.md`, `impl-plans/active/markdown-tasks.md`
+- **Depends On**: `impl-plans/completed/session-search.md`
+- **Next**: `impl-plans/completed/bookmarks.md`, `impl-plans/completed/markdown-tasks.md`

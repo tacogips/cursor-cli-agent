@@ -182,14 +182,24 @@ describe("http server core", () => {
   });
 
   test("returns stable error envelope for auth, validation, missing sessions, and methods", async () => {
+    // health and version are public; no token is required even when auth mode is required
     const authed = handler("secret");
+    const publicHealth = await authed(new Request("http://server/api/health"));
+    expect(publicHealth.status).toBe(200);
+    const publicVersion = await authed(
+      new Request("http://server/api/version"),
+    );
+    expect(publicVersion.status).toBe(200);
+
+    // protected route rejects missing token
     const unauthorized = await jsonFor(
-      await authed(new Request("http://server/api/health")),
+      await authed(new Request("http://server/api/repository/analytics")),
     );
     expect((unauthorized["error"] as { code: string }).code).toBe(
       "UNAUTHORIZED",
     );
 
+    // protected route rejects token with insufficient permission
     const sessionToken = await createTokenManager({
       configDir: join(testDir, "config"),
     }).createToken({
@@ -197,7 +207,7 @@ describe("http server core", () => {
       permissions: ["session:read"],
     });
     const forbidden = await authed(
-      new Request("http://server/api/health", {
+      new Request("http://server/api/repository/analytics", {
         headers: { authorization: `Bearer ${sessionToken.token}` },
       }),
     );
@@ -206,15 +216,16 @@ describe("http server core", () => {
       "FORBIDDEN",
     );
 
-    const adminToken = await createTokenManager({
+    // protected route accepts token with correct permission
+    const readToken = await createTokenManager({
       configDir: join(testDir, "config"),
     }).createToken({
-      name: "admin",
-      permissions: ["server:admin"],
+      name: "server reader",
+      permissions: ["server:read"],
     });
     const authorized = await authed(
-      new Request("http://server/api/health", {
-        headers: { authorization: `Bearer ${adminToken.token}` },
+      new Request("http://server/api/repository/analytics", {
+        headers: { authorization: `Bearer ${readToken.token}` },
       }),
     );
     expect(authorized.status).toBe(200);
@@ -259,5 +270,103 @@ describe("http server core", () => {
     expect(((await jsonFor(method))["error"] as { code: string }).code).toBe(
       "METHOD_NOT_ALLOWED",
     );
+  });
+
+  test("exposes resource API routes for groups and repository analytics", async () => {
+    const route = handler();
+    const groups = await jsonFor(
+      await route(new Request("http://server/api/groups")),
+    );
+    expect(groups["total"]).toBe(0);
+    expect(groups["provenance"]).toBe("groups_store");
+
+    const created = await route(
+      new Request("http://server/api/groups", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "http-g1" }),
+      }),
+    );
+    expect(created.status).toBe(200);
+    const listAfter = await jsonFor(
+      await route(new Request("http://server/api/groups")),
+    );
+    expect(listAfter["total"]).toBe(1);
+
+    const analytics = await jsonFor(
+      await route(new Request("http://server/api/repository/analytics")),
+    );
+    expect(analytics["sessions"]).toBeDefined();
+    expect((analytics["sessions"] as { total: number }).total).toBe(0);
+
+    const analyticsPost = await route(
+      new Request("http://server/api/repository/analytics", {
+        method: "POST",
+      }),
+    );
+    expect(analyticsPost.status).toBe(405);
+    expect(
+      ((await jsonFor(analyticsPost))["error"] as { code: string }).code,
+    ).toBe("METHOD_NOT_ALLOWED");
+
+    const authed = handler("secret");
+    const readToken = await createTokenManager({
+      configDir: join(testDir, "config"),
+    }).createToken({
+      name: "analytics",
+      permissions: ["server:read"],
+    });
+    const ok = await authed(
+      new Request("http://server/api/repository/analytics", {
+        headers: { authorization: `Bearer ${readToken.token}` },
+      }),
+    );
+    expect(ok.status).toBe(200);
+
+    const sessionOnly = await createTokenManager({
+      configDir: join(testDir, "config"),
+    }).createToken({
+      name: "session-only-analytics",
+      permissions: ["session:read"],
+    });
+    const forbiddenAnalytics = await authed(
+      new Request("http://server/api/repository/analytics", {
+        headers: { authorization: `Bearer ${sessionOnly.token}` },
+      }),
+    );
+    expect(forbiddenAnalytics.status).toBe(403);
+
+    const forbiddenGroups = await authed(
+      new Request("http://server/api/groups", {
+        headers: { authorization: `Bearer ${readToken.token}` },
+      }),
+    );
+    expect(forbiddenGroups.status).toBe(403);
+  });
+
+  test("lists bookmarks over resource API with stable envelope", async () => {
+    const route = handler();
+    const bookmarks = await jsonFor(
+      await route(new Request("http://server/api/bookmarks")),
+    );
+    expect(bookmarks["total"]).toBe(0);
+    expect(bookmarks["provenance"]).toBe("bookmarks_store");
+  });
+
+  test("lists activity and queues over resource API with stable envelopes", async () => {
+    const route = handler();
+    const activity = await jsonFor(
+      await route(new Request("http://server/api/activity")),
+    );
+    expect(Array.isArray(activity["items"])).toBe(true);
+    expect(activity["total"]).toBe(0);
+    expect(activity["provenance"]).toBe("activity_store");
+
+    const queues = await jsonFor(
+      await route(new Request("http://server/api/queues")),
+    );
+    expect(Array.isArray(queues["items"])).toBe(true);
+    expect(queues["total"]).toBe(0);
+    expect(queues["provenance"]).toBe("queues_store");
   });
 });

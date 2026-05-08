@@ -209,7 +209,7 @@ describe("markdown task extraction", () => {
 **Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/types/markdown-task.ts`
-**Dependencies**: `impl-plans/active/transcript-search.md`
+**Dependencies**: `impl-plans/completed/transcript-search.md`
 
 **Completion Criteria**:
 
@@ -235,7 +235,7 @@ describe("markdown task extraction", () => {
 **Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/markdown/transcript-tasks.ts`, `src/markdown/transcript-tasks.test.ts`
-**Dependencies**: TASK-001, TASK-002, `impl-plans/active/transcript-search.md`
+**Dependencies**: TASK-001, TASK-002, `impl-plans/completed/transcript-search.md`
 
 **Completion Criteria**:
 
@@ -261,7 +261,7 @@ describe("markdown task extraction", () => {
 
 **Status**: Completed
 **Parallelizable**: Yes
-**Deliverables**: `impl-plans/active/markdown-tasks.md`
+**Deliverables**: `impl-plans/completed/markdown-tasks.md`
 **Dependencies**: TASK-001, TASK-002, TASK-003, TASK-004
 
 **Completion Criteria**:
@@ -278,7 +278,7 @@ describe("markdown task extraction", () => {
 | Pure markdown parser | `src/markdown/parser.ts` | Completed | `src/markdown/parser.test.ts` |
 | Transcript extractor | `src/markdown/transcript-tasks.ts` | Completed | `src/markdown/transcript-tasks.test.ts` |
 | CLI command | `src/cli/cli.ts` | Completed | `src/cli/cli.test.ts` |
-| Plan progress | `impl-plans/active/markdown-tasks.md` | Completed | Review |
+| Plan progress | `impl-plans/completed/markdown-tasks.md` | Completed | Review |
 
 ## Dependencies
 
@@ -330,5 +330,5 @@ describe("markdown task extraction", () => {
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/transcript-search.md`
-- **Related**: `impl-plans/active/bookmarks.md`
+- **Depends On**: `impl-plans/completed/transcript-search.md`
+- **Related**: `impl-plans/completed/bookmarks.md`

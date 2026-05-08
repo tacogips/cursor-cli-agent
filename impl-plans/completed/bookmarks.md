@@ -27,7 +27,7 @@ Implement backlog slice `P2-BOOKMARKS`: local bookmark CRUD and search for repos
 - `design-docs/specs/command.md#bookmark-commands`
 - `design-docs/specs/design-codex-agent-parity-gap.md#phase-2-search-bookmarks-and-activity`
 - `design-docs/specs/design-transcript-search.md`
-- `impl-plans/active/transcript-search.md`
+- `impl-plans/completed/transcript-search.md`
 
 ### Codex Reference Mapping
 
@@ -278,7 +278,7 @@ describe("bookmark lifecycle", () => {
 **Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/cursor/transcript-bookmark-lookup.ts`
-**Dependencies**: `impl-plans/active/transcript-search.md`
+**Dependencies**: `impl-plans/completed/transcript-search.md`
 
 **Completion Criteria**:
 
@@ -344,7 +344,7 @@ describe("bookmark lifecycle", () => {
 
 | Feature | Depends On | Status |
 |---------|------------|--------|
-| P2-BOOKMARKS | `P2-TRANSCRIPT-SEARCH` stable message IDs | Available via `impl-plans/active/transcript-search.md` |
+| P2-BOOKMARKS | `P2-TRANSCRIPT-SEARCH` stable message IDs | Available via `impl-plans/completed/transcript-search.md` |
 | Phase-4 server bookmark APIs | P2-BOOKMARKS | Future phase |
 | SDK exports | P2-BOOKMARKS | Future phase |
 
@@ -387,7 +387,7 @@ describe("bookmark lifecycle", () => {
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/transcript-search.md`
-- **Related**: `impl-plans/active/activity.md`
-- **Related**: `impl-plans/active/markdown-tasks.md`
+- **Depends On**: `impl-plans/completed/transcript-search.md`
+- **Related**: `impl-plans/completed/activity.md`
+- **Related**: `impl-plans/completed/markdown-tasks.md`
 - **Future**: Phase-4 server and SDK plans expose bookmark APIs after local lifecycle is complete.

@@ -24,7 +24,7 @@ Repository rules:
 - When Codex-reference inputs are present, trace the plan back to the referenced behavior and any intentional divergences accepted in the design.
 - Reuse the local implementation-plan authoring conventions from:
   - `impl-plans/templates/plan-template.md`
-  - `impl-plans/active/phase1-core-foundation.md`
+  - `impl-plans/completed/phase1-core-foundation.md`
 - For backlog-slice runs, prefer a concise plan that is specific to one feature
   slice rather than a broad roadmap rewrite.
 - If this step is rerunning because Step 5 reported that the plan file was

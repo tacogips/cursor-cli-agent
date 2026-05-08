@@ -224,4 +224,4 @@ None. This design chooses unversioned `/api` paths to match the existing archite
 - `design-docs/specs/design-bookmarks.md`
 - `design-docs/specs/design-group-lifecycle.md`
 - `design-docs/specs/design-file-intelligence.md`
-- `impl-plans/active/http-resource-apis.md`
+- `impl-plans/completed/http-resource-apis.md`

@@ -1,6 +1,6 @@
 # File Intelligence Implementation Plan
 
-**Status**: In Progress
+**Status**: Completed
 **Design Reference**: `design-docs/specs/design-file-intelligence.md`
 **Created**: 2026-05-06
 **Last Updated**: 2026-05-07
@@ -17,7 +17,7 @@ Implement backlog slice `P3-FILE-INTELLIGENCE`: local-only `files list`, `files 
 
 **Included**: normalized file-intelligence types, read-only Cursor `ai-tracking` file queries, repository-owned rebuildable file index, service orchestration, CLI commands, and focused tests.
 
-**Excluded**: transcript-derived patch history, server APIs, daemon watches, SDK exports, commit attribution analytics, and mutation of Cursor-owned files or databases.
+**Excluded**: transcript-derived patch history; HTTP handlers for file resources (implemented under the sibling `http-resource-apis` slice, not duplicated here); daemon watches; SDK-only export gaps called out separately; commit attribution analytics; and mutation of Cursor-owned files or databases.
 
 - `P1-CORE-FOUNDATION`: `SessionIndexRepository`, `stateDbPath`, `aiTrackingDbPath`, `loadAiTrackingEnrichment`, Cursor path config, and current CLI command structure.
 - `P2-SESSION-SEARCH`: marked ready by workflow intake; no unmet dependency ids.

@@ -80,6 +80,15 @@ Because the workflow ends with commit/push, do not use it when the user has
 explicitly asked to avoid workflow-driven commits or wants manual local edits
 only.
 
+## Local lifecycle commands (workflow refresh reminders)
+
+Mirror `README.md` for authoritative flags and examples. Typical verification entry points after Phase 2-4 feature work:
+
+- Groups: `bun run src/main.ts group pause|resume|delete|watch|run … --json`
+- Queues: `bun run src/main.ts queue pause|resume|add|run … --json`
+- Tokens and HTTP server: `token` and `server start` sections in `README.md`
+- Replay fork experiment: `bun run src/main.ts session fork … --dry-run --json`
+
 ## Reporting
 
 After the workflow finishes, report:

@@ -109,6 +109,5 @@ entry points, and added deterministic mock/expected-results files.
 `task divedra-workflows` lists `parity-backlog-design-implement-loop` from the
 project catalog.
 
-**Status note**: This slice is complete. The plan remains under `active/` only
-because the repository does not yet have an automated archive step for completed
-workflow-authoring plans.
+**Status note**: This slice is complete and archived under `completed/` with the
+rest of the finished implementation plans.

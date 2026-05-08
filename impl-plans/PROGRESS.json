@@ -1,10 +1,11 @@
 {
-  "lastUpdated": "2026-05-05T12:16:32+09:00",
+  "lastUpdated": "2026-05-08T12:00:00Z",
   "phases": {
-    "1": { "status": "READY" },
-    "2": { "status": "READY" },
-    "3": { "status": "BLOCKED" },
-    "4": { "status": "BLOCKED" }
+    "1": { "status": "COMPLETED" },
+    "2": { "status": "COMPLETED" },
+    "3": { "status": "COMPLETED" },
+    "4": { "status": "COMPLETED" },
+    "5": { "status": "COMPLETED" }
   },
   "plans": {
     "session-search": {
@@ -138,33 +139,355 @@
     },
     "markdown-tasks": {
       "phase": 2,
-      "status": "Blocked",
+      "status": "Completed",
       "tasks": {
         "TASK-001": {
-          "status": "Not Started",
+          "status": "Completed",
           "parallelizable": true,
           "deps": ["transcript-search:TASK-001"]
         },
         "TASK-002": {
-          "status": "Not Started",
+          "status": "Completed",
           "parallelizable": false,
           "deps": ["TASK-001"]
         },
         "TASK-003": {
-          "status": "Not Started",
+          "status": "Completed",
           "parallelizable": false,
           "deps": ["TASK-001", "TASK-002", "transcript-search:TASK-002"]
         },
         "TASK-004": {
-          "status": "Not Started",
+          "status": "Completed",
           "parallelizable": false,
           "deps": ["TASK-001", "TASK-002", "TASK-003"]
         },
         "TASK-005": {
-          "status": "Not Started",
+          "status": "Completed",
           "parallelizable": false,
           "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
         }
+      }
+    },
+    "queue-lifecycle": {
+      "phase": 3,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"] }
+      }
+    },
+    "repository-analytics": {
+      "phase": 3,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": false, "deps": ["file-intelligence:TASK-001"] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001", "file-intelligence:TASK-003"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "file-intelligence:TASK-004"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"] }
+      }
+    },
+    "server-event-streaming": {
+      "phase": 4,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-004", "P4-HTTP-SERVER"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-003", "TASK-004", "TASK-005"] }
+      }
+    },
+    "public-sdk": {
+      "phase": 4,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["P2/P3-domain-contracts"] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "P4-HTTP-SERVER", "P4-SSE"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-004"] },
+        "TASK-007": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"] }
+      }
+    },
+    "http-resource-apis": {
+      "phase": 4,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": []
+        },
+        "TASK-002": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-004": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["TASK-003"]
+        },
+        "TASK-006": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["TASK-003"]
+        },
+        "TASK-007": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["TASK-003", "TASK-004", "TASK-005", "TASK-006"]
+        },
+        "TASK-008": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-007"]
+        }
+      }
+    },
+    "usage-event-persistence": {
+      "phase": 5,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": []
+        },
+        "TASK-002": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-004": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-002", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-002", "TASK-004"]
+        },
+        "TASK-006": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-005"]
+        }
+      }
+    },
+    "prompt-attachments": {
+      "phase": 3,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": []
+        },
+        "TASK-002": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-003", "TASK-004"]
+        },
+        "TASK-006": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-005"]
+        }
+      }
+    },
+    "session-replay-fork": {
+      "phase": 5,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": {
+          "status": "Completed",
+          "parallelizable": true,
+          "deps": []
+        },
+        "TASK-002": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001"]
+        },
+        "TASK-003": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002"]
+        },
+        "TASK-004": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-001", "TASK-002", "TASK-003"]
+        },
+        "TASK-005": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-004"]
+        },
+        "TASK-006": {
+          "status": "Completed",
+          "parallelizable": false,
+          "deps": ["TASK-005"]
+        }
+      }
+    },
+    "daemon-lifecycle": {
+      "phase": 4,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-005"] }
+      }
+    },
+    "file-intelligence": {
+      "phase": 3,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-005"] }
+      }
+    },
+    "group-lifecycle": {
+      "phase": 3,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-003", "TASK-004", "TASK-005"] }
+      }
+    },
+    "http-server-core": {
+      "phase": 4,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-005"] }
+      }
+    },
+    "parity-global-design-plan-workflow": {
+      "phase": 1,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": false, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002"] }
+      }
+    },
+    "phase1-core-foundation": {
+      "phase": 1,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": true, "deps": ["TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-005"] },
+        "TASK-007": { "status": "Completed", "parallelizable": false, "deps": ["TASK-006"] },
+        "TASK-008": { "status": "Completed", "parallelizable": false, "deps": ["TASK-007"] }
+      }
+    },
+    "token-auth": {
+      "phase": 4,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-003"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-005"] },
+        "TASK-007": { "status": "Completed", "parallelizable": false, "deps": ["TASK-004", "TASK-005", "TASK-006"] }
+      }
+    },
+    "tool-registry-model-helpers": {
+      "phase": 5,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-005": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "P4-PUBLIC-SDK"] }
+      }
+    },
+    "compat-bridge": {
+      "phase": 5,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": true, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001", "P4-TOKEN-AUTH"] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "P4-PUBLIC-SDK"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001", "TASK-003"] },
+        "TASK-005": { "status": "Completed", "parallelizable": true, "deps": ["TASK-001", "TASK-004"] },
+        "TASK-006": { "status": "Completed", "parallelizable": false, "deps": ["P4-HTTP-SERVER-CORE", "P4-TOKEN-AUTH", "P4-SSE", "TASK-002", "TASK-004"] },
+        "TASK-007": { "status": "Completed", "parallelizable": true, "deps": ["TASK-005", "TASK-006"] }
+      }
+    },
+    "parity-backlog-workflow": {
+      "phase": 1,
+      "status": "Completed",
+      "tasks": {
+        "TASK-001": { "status": "Completed", "parallelizable": false, "deps": [] },
+        "TASK-002": { "status": "Completed", "parallelizable": false, "deps": ["TASK-001"] },
+        "TASK-003": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002"] },
+        "TASK-004": { "status": "Completed", "parallelizable": false, "deps": ["TASK-002", "TASK-003"] }
       }
     }
   }

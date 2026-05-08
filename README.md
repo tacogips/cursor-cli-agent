@@ -62,13 +62,14 @@ Implemented capabilities:
 - Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, legacy group migration, paused-run guards, JSON output, and activity-derived watch summaries
 - Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, legacy queue migration, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
 - Local API token management: `token create`, `token list`, `token revoke`, and `token rotate` persist repository-owned token metadata under the config directory, store only secret hashes, return raw secrets exactly once, support default `session:read` plus route-facing permissions, and expose metadata-only JSON/human output
-- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
+- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, normalized REST resource routes for groups, queues, bookmarks, files, activity, and repository analytics (see design `design-http-resource-apis.md`), and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
 - Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
 - Local daemon lifecycle: `daemon start`, `daemon status`, and `daemon stop` supervise the local HTTP/SSE server in a repository-owned background process, persist PID metadata under the config directory, write JSONL lifecycle diagnostics under the data directory, refuse foreign PID termination, and expose stable human/JSON output without raw token values
 - Public SDK facade: root package, `./sdk`, `./sdk/testing`, `./server`, and `./types` package exports are import-safe and expose normalized Cursor-domain contracts for sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, local tool helpers, and deterministic test mocks
 - Local tool and model helpers: `tool list`, `tool show`, `tool run`, `tool versions`, `model check`, and `usage stats` expose a typed local helper registry, bounded version introspection, conservative Cursor model availability checks, and repository-owned session/activity statistics
 - Optional compatibility bridge: `graphql <document|command>` and opt-in `server start --compat-graphql` expose a Codex-agent-like JSON command field over local Cursor-normalized services, with explicit supported/degraded/unsupported capability metadata, Cursor limitation reporting, and server-side bearer permission gates
 - Headless run/resume orchestration via `cursor-agent --print`
+- Experimental `session fork` for best-effort transcript replay into a new headless session (repository-owned provenance; not a native Cursor fork); supports `--dry-run`, stable `event-<n>-<role>` boundaries, and explicit limitation reporting
 - Live transcript watching and normalized event streaming
 - Group and queue orchestration on top of Cursor Agent
 - Read-only skill catalog support for `~/.cursor/skills-cursor`, `~/.cursor/skills`, and project `.cursor/skills`
@@ -131,7 +132,7 @@ bun run src/main.ts tool run tool.versions --input '{"includeGit":true,"timeoutM
 bun run src/main.ts tool versions --include-git --include-bun --timeout-ms 1000 --json
 bun run src/main.ts model check --model test-model --json
 bun run src/main.ts model check --model test-model --probe --timeout-ms 30000 --json
-bun run src/main.ts usage stats --recent-days 7 --json
+bun run src/main.ts usage stats [--workspace <path>] [--session <id>] --recent-days 7 --json
 ```
 
 `tool list`, `tool show`, and `tool run` use the repository-owned helper
@@ -141,9 +142,15 @@ object, and numeric fields such as `timeoutMs` and `recentDays` must be positive
 integers. `tool versions` reports package metadata and `cursor-agent` by
 default, while Bun and Git version probes are opt-in. `model check` is
 conservative by default: auth is `unknown` and reachability is `not_checked`
-unless `--probe` is supplied. `usage stats` aggregates repository-owned session
-and activity indexes; token totals remain `unknown` when no repository-owned
-usage event source is available.
+unless `--probe` is supplied. `usage stats` merges the session and activity
+indexes with a repository-owned usage event journal captured from wrapper-started
+`session run`, `session resume`, `session continue`, `session fork`, `group run`, and `queue run`
+streams; JSON output includes token totals, model buckets, daily usage slices,
+explicit coverage counts, and `usageProvenance` set to `repository_usage_events`
+when a usage event store is wired (or `unavailable` when it is not).
+Callers that construct `createUsageStatsManager` without a `usageEvents` store
+still receive zeroed usage totals plus a completeness note instead of implying
+global zero-token truth.
 
 File intelligence command examples:
 
@@ -227,7 +234,7 @@ prints or returns the raw bearer token exactly once. Token records are stored in
 repository-owned config at `~/.config/curort-cli-agent/tokens.json`, or under
 `CURORT_CLI_AGENT_CONFIG_DIR` when set; raw token secrets are never persisted.
 Supported permissions are `session:create`, `session:read`, `session:cancel`,
-`group:*`, `queue:*`, `bookmark:*`, `files:*`, and `server:admin`.
+`group:*`, `queue:*`, `bookmark:*`, `files:*`, `server:read`, and `server:admin`.
 
 HTTP server command examples:
 
@@ -241,6 +248,8 @@ curl http://127.0.0.1:<port>/api/sessions/<session-id>
 curl http://127.0.0.1:<port>/api/sessions/<session-id>/messages
 curl http://127.0.0.1:<port>/api/search/sessions?q=<query>
 curl http://127.0.0.1:<port>/api/search/transcripts?q=<query>
+curl http://127.0.0.1:<port>/api/groups
+curl http://127.0.0.1:<port>/api/repository/analytics
 curl -N http://127.0.0.1:<port>/api/events/sessions/<session-id>
 curl -N http://127.0.0.1:<port>/api/events/activity
 curl -N http://127.0.0.1:<port>/api/events/activity/<session-id>
@@ -258,10 +267,14 @@ When startup auth is configured, requests must include `Authorization: Bearer
 <token>` using a raw token returned by `token create` or `token rotate`; the
 startup token only enables required auth mode and is not the request credential.
 Known API routes enforce route-facing permissions before reading local state:
-health/version and `/api/admin/*` require `server:admin`, session/search/SSE
-session routes require session permissions, group and queue event routes require
-their wildcard families, bookmark routes require `bookmark:*`, and file routes
-require `files:*`. Unmapped paths fall through to the normal `404` route.
+health/version and `/api/admin/*` require `server:admin`, `/api/repository/analytics`
+requires `server:read` (also granted by `server:admin` tokens), session/search/SSE
+session routes require session permissions, `/api/activity` shares `session:read`,
+group list/mutation routes require `group:*`, queue list/mutation routes require
+`queue:*`, group and queue event routes require their wildcard families, bookmark
+routes require `bookmark:*`, and file routes require `files:*`. Unmapped paths fall
+through to the normal `404` route. Long-running `group run` and `queue run` are not
+implemented over HTTP; use the CLI for those flows.
 Errors use a shared JSON envelope with `code`, `message`, and `requestId`,
 without stack traces or raw Cursor filesystem details.
 Event routes return `text/event-stream` frames with `id`, `event`, and JSON
@@ -339,21 +352,24 @@ the metadata marker. `daemon stop --force` is intentionally outside this slice.
 
 ## Implementation Plan
 
-- `impl-plans/active/phase1-core-foundation.md`
+- `impl-plans/completed/phase1-core-foundation.md`
 - `impl-plans/active/parity-backlog-workflow.md`
-- `impl-plans/active/parity-global-design-plan-workflow.md`
+- `impl-plans/completed/parity-global-design-plan-workflow.md`
 - `impl-plans/active/session-search.md`
 - `impl-plans/active/transcript-search.md`
 - `impl-plans/active/bookmarks.md`
 - `impl-plans/active/activity.md`
-- `impl-plans/active/group-lifecycle.md`
+- `impl-plans/completed/group-lifecycle.md`
 - `impl-plans/active/queue-lifecycle.md`
-- `impl-plans/active/file-intelligence.md`
+- `impl-plans/completed/file-intelligence.md`
 - `impl-plans/active/repository-analytics.md`
-- `impl-plans/active/http-server-core.md`
-- `impl-plans/active/token-auth.md`
+- `impl-plans/completed/http-resource-apis.md`
+- `impl-plans/completed/http-server-core.md`
+- `impl-plans/completed/token-auth.md`
 - `impl-plans/active/server-event-streaming.md`
-- `impl-plans/active/daemon-lifecycle.md`
+- `impl-plans/completed/daemon-lifecycle.md`
+- `impl-plans/completed/prompt-attachments.md`
+- `impl-plans/completed/session-replay-fork.md`
 - `impl-plans/active/public-sdk.md`
 - `impl-plans/active/compat-bridge.md`
 - `impl-plans/active/tool-registry-model-helpers.md`

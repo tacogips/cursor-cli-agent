@@ -7,7 +7,7 @@ import {
   type ResumeRunOptions,
 } from "../cursor/process-runner";
 import { StreamNormalizerState } from "../cursor/stream-normalizer";
-import type { AgentEvent } from "../types/agent-event";
+import { sessionIdFromEvent, type AgentEvent } from "../types/agent-event";
 
 export type CursorAgentStreamMode = "event" | "normalized";
 
@@ -150,23 +150,6 @@ class RunningAgent implements CursorRunningAgent {
     if (sessionId !== undefined) {
       this.currentSessionId = sessionId;
     }
-  }
-}
-
-function sessionIdFromEvent(event: AgentEvent): string | undefined {
-  switch (event.type) {
-    case "session.started":
-    case "session.user_message":
-    case "session.thinking":
-    case "session.assistant_message":
-    case "session.completed":
-      return event.sessionId;
-    case "session.error":
-      return event.sessionId;
-    case "session.pending":
-      return event.cursorChatId;
-    case "session.materialized":
-      return event.sessionId;
   }
 }
 

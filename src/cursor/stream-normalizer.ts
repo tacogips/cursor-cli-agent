@@ -25,17 +25,31 @@ function parseUsage(raw: unknown): UsageStats | undefined {
   const outputTokens = raw["outputTokens"];
   const cacheReadTokens = raw["cacheReadTokens"];
   const cacheWriteTokens = raw["cacheWriteTokens"];
+  const totalCamel = raw["totalTokens"];
+  const totalSnake = raw["total_tokens"];
+  const rawTotal =
+    typeof totalCamel === "number"
+      ? totalCamel
+      : typeof totalSnake === "number"
+        ? totalSnake
+        : undefined;
+  const totalTokens =
+    rawTotal !== undefined && Number.isFinite(rawTotal) && rawTotal >= 0
+      ? rawTotal
+      : undefined;
   const u: UsageStats = {
     ...(typeof inputTokens === "number" ? { inputTokens } : {}),
     ...(typeof outputTokens === "number" ? { outputTokens } : {}),
     ...(typeof cacheReadTokens === "number" ? { cacheReadTokens } : {}),
     ...(typeof cacheWriteTokens === "number" ? { cacheWriteTokens } : {}),
+    ...(typeof totalTokens === "number" ? { totalTokens } : {}),
   };
   if (
     u.inputTokens === undefined &&
     u.outputTokens === undefined &&
     u.cacheReadTokens === undefined &&
-    u.cacheWriteTokens === undefined
+    u.cacheWriteTokens === undefined &&
+    u.totalTokens === undefined
   ) {
     return undefined;
   }

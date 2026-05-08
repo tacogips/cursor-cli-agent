@@ -208,5 +208,5 @@ explicit route metadata and an auth mode field.
 
 - `design-docs/specs/design-codex-agent-parity-gap.md#phase-4-server-auth-daemon-and-public-sdk`
 - `design-docs/specs/command.md#token-commands`
-- `impl-plans/active/token-auth.md`
+- `impl-plans/completed/token-auth.md`
 - `design-docs/references/README.md`

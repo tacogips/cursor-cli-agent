@@ -228,4 +228,4 @@ Manual smoke commands require a pre-existing local group named `example`.
 
 - `design-docs/specs/design-codex-agent-parity-gap.md#phase-3-file-intelligence-and-orchestration-expansion`
 - `design-docs/specs/design-activity.md`
-- `impl-plans/active/group-lifecycle.md`
+- `impl-plans/completed/group-lifecycle.md`

@@ -475,10 +475,14 @@ describe("tool, model, and usage CLI helpers", () => {
     const parsed = JSON.parse(logs.join("\n")) as {
       totalSessions: number;
       completenessNotes: string[];
+      usageProvenance: string;
+      usageTokens: { totalTokens: number };
     };
     expect(parsed.totalSessions).toBe(0);
-    expect(parsed.completenessNotes).toContain(
-      "token totals are unknown because no repository-owned usage event store exists",
-    );
+    expect(parsed.usageProvenance).toBe("repository_usage_events");
+    expect(parsed.usageTokens.totalTokens).toBe(0);
+    expect(
+      parsed.completenessNotes.some((n) => n.includes("usage event store")),
+    ).toBe(false);
   });
 });

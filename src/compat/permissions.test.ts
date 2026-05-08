@@ -25,6 +25,9 @@ describe("compat permission adapter", () => {
     expect(
       compatAuthPermissionForCapability(capability("version.get")),
     ).toBeUndefined();
+    expect(compatAuthPermissionForCapability(capability("skill.list"))).toBe(
+      "server:read",
+    );
   });
 
   test("returns 401 for missing required credentials and 403 for insufficient permissions", () => {

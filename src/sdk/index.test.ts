@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { createCursorAgentSdk } from "./index";
 import { SessionIndexRepository } from "../persistence/session-index";
+import { createUsageEventStore } from "../persistence/usage-event-store";
 
 let testDir: string;
 
@@ -93,9 +94,7 @@ describe("public SDK facade", () => {
       },
     });
     await expect(sdk.tools.usageStats()).resolves.toMatchObject({
-      activityStatusCounts: {
-        completed: 1,
-      },
+      activityStatusCounts: {},
     });
   });
 
@@ -151,5 +150,70 @@ describe("public SDK facade", () => {
         },
       ],
     });
+  });
+
+  test("tools facade uses injected usage event store for token totals", async () => {
+    const sessionRepository = new SessionIndexRepository(
+      join(testDir, "injected-state.db"),
+      { cursorProjectsRoot: join(testDir, "cursor", "projects") },
+    );
+    sessionRepository.upsert({
+      recordId: "rec-u",
+      localSessionId: "local-u",
+      identityState: "transcript_only",
+      workspaceSlug: "workspace",
+      createdAt: "2026-05-06T01:00:00.000Z",
+      updatedAt: "2026-05-06T02:00:00.000Z",
+      source: "headless",
+      status: "completed",
+      model: "gpt-test",
+    });
+    const usageEventStore = createUsageEventStore(
+      join(testDir, "usage-events-test.json"),
+    );
+    await usageEventStore.upsertEvent({
+      eventId: "ev-1",
+      sessionId: "local-u",
+      recordId: "rec-u",
+      model: "gpt-test",
+      observedAt: "2026-05-06T02:30:00.000Z",
+      source: "stream_result",
+      provenance: "repository_usage_events",
+      inputTokens: 1,
+      outputTokens: 1,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      totalTokens: 2,
+    });
+    try {
+      const sdk = createCursorAgentSdk({
+        stateRoot: testDir,
+        cursorHome: join(testDir, "cursor"),
+        sessionRepository,
+        usageEventStore,
+        now: () => new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      await expect(
+        sdk.tools.usageStats({ recentDays: 1 }),
+      ).resolves.toMatchObject({
+        usageTokens: {
+          inputTokens: 1,
+          outputTokens: 1,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          totalTokens: 2,
+        },
+        usageSessionsObserved: 1,
+        usageProvenance: "repository_usage_events",
+        usageEvidenceCoverage: {
+          sessionsWithUsageEvents: 1,
+          knownSessionsWithoutUsageEvents: 0,
+          wrapperStartedSessionsWithoutUsageEvents: 0,
+        },
+      });
+    } finally {
+      sessionRepository.close();
+    }
   });
 });

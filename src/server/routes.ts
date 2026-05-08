@@ -29,6 +29,12 @@ import {
 import { handleEventRoute, isEventRoutePath } from "./routes/events";
 import { handleGraphqlRoute } from "./graphql-route";
 import { handleAppServerCompatRoute } from "./app-server-compat";
+import {
+  createResourceServices,
+  dispatchResourceRoutes,
+  isDelegatedResourcePath,
+  type ResourceServices,
+} from "./resource-routes";
 import type { HttpServerConfig } from "./types";
 
 export interface RouteContext {
@@ -36,10 +42,12 @@ export interface RouteContext {
   readonly startedAt: Date;
   readonly sessions: SessionIndexRepository;
   readonly streams?: EventStreamService;
+  readonly resources?: ResourceServices;
 }
 
 interface ResolvedRouteContext extends RouteContext {
   readonly streams: EventStreamService;
+  readonly resources: ResourceServices;
 }
 
 const API_VERSION = "v1";
@@ -219,18 +227,23 @@ function isKnownPath(pathname: string): boolean {
     pathname.startsWith("/api/sessions/") ||
     isEventRoutePath(pathname) ||
     pathname === "/api/search/sessions" ||
-    pathname === "/api/search/transcripts"
+    pathname === "/api/search/transcripts" ||
+    isDelegatedResourcePath(pathname)
   );
 }
 
 export function createHttpRouteHandler(
   context: RouteContext,
 ): (request: Request) => Promise<Response> {
+  const resources =
+    context.resources ??
+    createResourceServices(context.config, context.sessions);
   const resolvedContext: ResolvedRouteContext = {
     ...context,
     streams:
       context.streams ??
       createEventStreamService({ sessions: context.sessions }),
+    resources,
   };
   return async (request: Request): Promise<Response> => {
     try {
@@ -252,6 +265,15 @@ export function createHttpRouteHandler(
       if (permission !== undefined) {
         const auth = await authenticateRequest(request, resolvedContext.config);
         requireAuthPermission(auth, permission.permission);
+      }
+      const resourceResponse = await dispatchResourceRoutes(request, {
+        config: resolvedContext.config,
+        startedAt: resolvedContext.startedAt,
+        sessions: resolvedContext.sessions,
+        resources: resolvedContext.resources,
+      });
+      if (resourceResponse !== undefined) {
+        return resourceResponse;
       }
       const url = new URL(request.url);
       if (request.method !== "GET" && isKnownPath(url.pathname)) {

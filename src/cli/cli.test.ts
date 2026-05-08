@@ -23,6 +23,7 @@ import {
 import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
+import { workspaceSlugFromPath } from "../config/paths";
 
 const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
 const previousConfigDir = process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
@@ -2032,5 +2033,120 @@ describe("CLI queue lifecycle commands", () => {
     ]);
     expect(exit).toBe(2);
     expect(errors[0]).toBe("daemon stop: --force is not supported");
+  });
+});
+
+describe("CLI session fork and image flags", () => {
+  beforeEach(async () => {
+    testDir = await mkdtemp(join(tmpdir(), "curort-cli-fork-"));
+    const dataDir = join(testDir, "data");
+    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    await mkdir(dataDir, { recursive: true });
+    logs = [];
+    errors = [];
+    logSpy = spyOn(console, "log").mockImplementation((message?: unknown) => {
+      logs.push(String(message ?? ""));
+    });
+    errorSpy = spyOn(console, "error").mockImplementation(
+      (message?: unknown) => {
+        errors.push(String(message ?? ""));
+      },
+    );
+  });
+
+  afterEach(async () => {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    restoreEnv();
+    await rm(testDir, { recursive: true, force: true });
+  });
+
+  test("session fork dry-run emits JSON replay plan", async () => {
+    const workspace = join(testDir, "ws");
+    await mkdir(workspace, { recursive: true });
+    const transcriptPath = join(workspace, "t.jsonl");
+    await writeFile(
+      transcriptPath,
+      [transcriptLine("user", "hi"), transcriptLine("assistant", "yo")].join(
+        "\n",
+      ),
+      "utf8",
+    );
+    await seedSessionIndex([
+      {
+        recordId: "rec-fork",
+        localSessionId: "local-fork",
+        identityState: "transcript_only",
+        workspaceSlug: workspaceSlugFromPath(workspace),
+        workspacePath: resolve(workspace),
+        transcriptPath,
+        createdAt: "2026-05-05T00:00:00.000Z",
+        updatedAt: "2026-05-05T01:00:00.000Z",
+        source: "headless",
+        status: "completed",
+      },
+    ]);
+
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "session",
+      "fork",
+      "local-fork",
+      "--prompt",
+      "go on",
+      "--dry-run",
+      "--json",
+      "--stream",
+      "json",
+      "--workspace",
+      resolve(workspace),
+    ]);
+    expect(exit).toBe(0);
+    const line = logs.find((l) => l.startsWith("{"));
+    expect(line).toBeDefined();
+    const payload = JSON.parse(line ?? "{}") as {
+      mode: string;
+      replay: { messageCount: number };
+    };
+    expect(payload.mode).toBe("best_effort_replay");
+    expect(payload.replay.messageCount).toBe(2);
+  });
+
+  test("session fork rejects conflicting boundaries", async () => {
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "session",
+      "fork",
+      "any",
+      "--prompt",
+      "x",
+      "--through-message",
+      "event-0-user",
+      "--nth-message",
+      "1",
+      "--stream",
+      "json",
+    ]);
+    expect(exit).toBe(2);
+    expect(errors.some((e) => e.includes("mutually exclusive"))).toBe(true);
+  });
+
+  test("session run rejects --image without path", async () => {
+    const exit = await runCli([
+      "bun",
+      "curort-cli-agent",
+      "session",
+      "run",
+      "--prompt",
+      "hi",
+      "--image",
+      "--stream",
+      "json",
+    ]);
+    expect(exit).toBe(2);
+    expect(errors.some((e) => e.includes("requires a path"))).toBe(true);
   });
 });

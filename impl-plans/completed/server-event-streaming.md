@@ -195,7 +195,7 @@ export function handleEventRoute(request: Request, dependencies: EventRouteDepen
 
 ### 6. Verification and Handoff Notes
 
-#### `impl-plans/active/server-event-streaming.md`
+#### `impl-plans/completed/server-event-streaming.md`
 
 **Status**: COMPLETED
 
@@ -225,7 +225,7 @@ interface VerificationRecord {
 | Transcript tailer | `src/cursor/transcript-tail.ts` | COMPLETED | `src/cursor/transcript-tail.test.ts` |
 | Stream services | `src/server/event-streams.ts` | COMPLETED | `src/server/event-streams.test.ts` |
 | Route adapters | `src/server/routes/events.ts` | COMPLETED | `src/server/routes/events.test.ts` |
-| Verification notes | `impl-plans/active/server-event-streaming.md` | COMPLETED | Progress log |
+| Verification notes | `impl-plans/completed/server-event-streaming.md` | COMPLETED | Progress log |
 
 ## Dependencies
 
@@ -376,7 +376,7 @@ curl -N http://127.0.0.1:<port>/api/events/sessions/<session-id>
 ### Session: 2026-05-07 Step 6 Revision After Step 7 Last-Event-ID Review
 
 **Tasks Completed**: Addressed the latest Step 7 mid finding for `parity-global-design-plan-implement-loop#P4-SSE`.
-**Files Changed**: `src/server/routes/events.ts`, `src/server/routes/events.test.ts`, `impl-plans/active/server-event-streaming.md`.
+**Files Changed**: `src/server/routes/events.ts`, `src/server/routes/events.test.ts`, `impl-plans/completed/server-event-streaming.md`.
 **Verification**:
 
 - `bun run format`: pass.
@@ -393,7 +393,7 @@ curl -N http://127.0.0.1:<port>/api/events/sessions/<session-id>
 ### Session: 2026-05-07 Step 6 Revision After Step 7 Review
 
 **Tasks Completed**: Addressed all Step 7 mid findings for `parity-global-design-plan-implement-loop#P4-SSE`.
-**Files Changed**: `src/server/event-streams.ts`, `src/cursor/transcript-tail.ts`, `src/server/event-streams.test.ts`, `impl-plans/active/server-event-streaming.md`.
+**Files Changed**: `src/server/event-streams.ts`, `src/cursor/transcript-tail.ts`, `src/server/event-streams.test.ts`, `impl-plans/completed/server-event-streaming.md`.
 **Verification**:
 
 - `bun run format`: pass.
@@ -439,7 +439,7 @@ curl -N http://127.0.0.1:<port>/api/events/sessions/<session-id>
 - Step 5 implementation-plan review accepted the plan with no high or mid findings.
 - Step 7 implementation review requested revision for three mid findings; this rerun addressed listener cleanup in `src/server/event-streams.ts` and `src/cursor/transcript-tail.ts`, plus broker-backed production topic replay in `src/server/event-streams.ts`.
 - Latest Step 7 implementation review requested standard SSE reconnect support; this rerun addressed `Last-Event-ID` header handling in `src/server/routes/events.ts` with query fallback and route test coverage.
-- Plan now uses the preferred implementation-plan path exactly: `impl-plans/active/server-event-streaming.md`.
+- Plan is archived at the completed implementation-plan path: `impl-plans/completed/server-event-streaming.md`.
 - Plan traces implementation tasks to the accepted design and effective Codex reference root `/g/gits/tacogips/codex-agent`.
 
 ## Related Plans

@@ -1,6 +1,6 @@
 # Phase 1: Core Foundation Implementation Plan
 
-**Status**: In Progress
+**Status**: Completed
 **Created**: 2026-03-23
 **Design References**:
 
@@ -310,6 +310,12 @@ Completion criteria:
 **Fix**: Added per-session text render state in `src/cli/cli.ts` so text-mode output suppresses a duplicate final `session.completed.result` when it matches the already printed assistant message. `session resume` and `session attach` now use `explicit --workspace ?? indexed workspacePath ?? current cwd`, preserving explicit override while making known sessions resume/attach in the correct workspace by default.
 
 **Verification**: `bun run typecheck`, `bun run test`, and `bun run build` pass after the fix.
+
+### Session: 2026-05-09
+
+**Tasks completed**: Marked the plan header **Completed** to match shipped phase-1 CLI/adapters/repos and downstream features that depend on this foundation.
+
+**Notes**: No phase-1 scope code changes in this pass; work focused on phase-4 HTTP resources and documentation alignment.
 
 ## Exit Criteria
 

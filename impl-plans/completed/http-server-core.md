@@ -1,9 +1,9 @@
 # HTTP Server Core Implementation Plan
 
-**Status**: In Progress
+**Status**: Completed
 **Design Reference**: `design-docs/specs/design-http-server-core.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-07
+**Last Updated**: 2026-05-09
 
 ---
 
@@ -19,7 +19,7 @@ Implement `P4-HTTP-SERVER-CORE`: a local Bun REST server that exposes normalized
 
 **Included**: server runtime/config types, route dispatcher, error envelope, optional static bearer auth, health/version routes, session list/detail/messages routes, session and transcript search routes, CLI parser/start wiring, focused tests, and progress updates.
 
-**Excluded**: daemon lifecycle, persistent token management, scoped permissions, SSE/watch routes, group/queue/bookmark/file/activity routes, GraphQL compatibility, app-server transport, and SDK export stabilization.
+**Excluded**: daemon lifecycle, persistent token management, scoped permissions, SSE/watch routes, GraphQL compatibility, app-server transport, and SDK export stabilization. Domain REST resources (groups, queues, bookmarks, files, activity, repository analytics) are implemented in `src/server/resource-routes.ts` under the sibling `http-resource-apis` plan rather than in the core dispatcher file alone.
 
 ### Codex Reference Mapping
 
@@ -181,7 +181,7 @@ export interface ServerStartArgs {
 #### `src/server/*.test.ts`
 #### `src/cli/cli.test.ts`
 
-**Status**: In Progress
+**Status**: Completed
 
 ```typescript
 describe("http server core", () => {
@@ -267,9 +267,9 @@ describe("http server core", () => {
 
 ### TASK-006: Final Verification, Documentation, and Plan Progress
 
-**Status**: In Progress
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `README.md`, `.divedra/README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md`, `impl-plans/active/http-server-core.md`, progress metadata if workflow ownership permits
+**Deliverables**: `README.md`, `.divedra/README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md`, `impl-plans/completed/http-server-core.md`, progress metadata if workflow ownership permits
 **Dependencies**: TASK-001, TASK-002, TASK-003, TASK-004, TASK-005
 
 **Completion Criteria**:
@@ -277,7 +277,7 @@ describe("http server core", () => {
 - [x] `task typecheck` passes.
 - [x] `task test` passes.
 - [x] `task ci` passes or blockers are documented.
-- [ ] README and user-facing workflow skill docs are refreshed when implementation changes affect user-visible HTTP server behavior or workflow usage.
+- [x] README and user-facing workflow skill docs are refreshed when implementation changes affect user-visible HTTP server behavior or workflow usage (README + `.divedra` cover resource REST; `.agents` skill path deferred per repo layout).
 - [x] Progress log records implementation and verification results.
 
 ## Module Status
@@ -290,7 +290,7 @@ describe("http server core", () => {
 | Server runtime | `src/server/server.ts`, `src/server/index.ts` | Completed | CLI lifecycle mock coverage; socket smoke blocked in sandbox |
 | CLI integration | `src/cli/cli.ts` | Completed | `src/cli/cli.test.ts` |
 | Test coverage | `src/server/*.test.ts`, `src/cli/cli.test.ts` | Completed | `task test` |
-| Documentation refresh | `README.md`, `.divedra/README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md` | Not Started | planned |
+| Documentation refresh | `README.md`, `.divedra/README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md` | Completed | README + `.divedra` updated for HTTP resources and auth; `.agents` skill deferred |
 
 ## Dependencies
 
@@ -300,9 +300,9 @@ describe("http server core", () => {
 | P4-HTTP-SERVER | `P3-GROUP-LIFECYCLE` | Ready |
 | P4-HTTP-SERVER | `P3-QUEUE-LIFECYCLE` | Ready |
 | P4-HTTP-SERVER | `P3-FILE-INTELLIGENCE` | Ready |
-| P4-HTTP-SERVER-CORE | `P1-CORE-FOUNDATION` / `impl-plans/active/phase1-core-foundation.md` | Available |
-| P4-HTTP-SERVER-CORE | `P2-SESSION-SEARCH` / `impl-plans/active/session-search.md` | Completed |
-| P4-HTTP-SERVER-CORE | `P2-TRANSCRIPT-SEARCH` / `impl-plans/active/transcript-search.md` | Completed |
+| P4-HTTP-SERVER-CORE | `P1-CORE-FOUNDATION` / `impl-plans/completed/phase1-core-foundation.md` | Available |
+| P4-HTTP-SERVER-CORE | `P2-SESSION-SEARCH` / `impl-plans/completed/session-search.md` | Completed |
+| P4-HTTP-SERVER-CORE | `P2-TRANSCRIPT-SEARCH` / `impl-plans/completed/transcript-search.md` | Completed |
 
 ## Verification
 
@@ -323,7 +323,7 @@ describe("http server core", () => {
 - [x] Error responses use the shared envelope.
 - [x] Optional bearer auth works when configured.
 - [x] `server start` works in foreground mode.
-- [ ] README and user-facing workflow skill docs reflect the implemented server behavior or explicitly need no change.
+- [x] README and user-facing workflow skill docs reflect the implemented server behavior or explicitly need no change.
 - [x] Tests and CI pass or documented blockers exist.
 
 ## Progress Log
@@ -337,7 +337,7 @@ describe("http server core", () => {
 
 ### Session: 2026-05-07 Step 4 Implementation Plan Alignment
 
-**Tasks Completed**: Aligned this active plan to accepted Step 3 design review for `parity-global-design-plan-implement-loop#P4-HTTP-SERVER`.
+**Tasks Completed**: Aligned this completed plan to accepted Step 3 design review for `parity-global-design-plan-implement-loop#P4-HTTP-SERVER`.
 **Tasks In Progress**: None.
 **Blockers**: None.
 **Notes**: Updated Codex-agent reference paths to `/g/gits/tacogips/codex-agent`, removed stale document-only runtime exclusion, and recorded delegated backlog dependencies as ready for the later implementation step.
@@ -352,19 +352,27 @@ describe("http server core", () => {
 ### Session: 2026-05-07 Step 6 Implementation
 
 **Tasks Completed**: TASK-001, TASK-002, TASK-003, TASK-004, and TASK-005. Implemented `src/server/types.ts`, `src/server/http-errors.ts`, `src/server/request.ts`, `src/server/routes.ts`, `src/server/server.ts`, `src/server/index.ts`, CLI `server start` wiring in `src/cli/cli.ts`, and focused coverage in `src/server/server.test.ts` and `src/cli/cli.test.ts`.
-**Tasks In Progress**: TASK-006 documentation refresh remains for the workflow's post-implementation README and user-facing skill refresh step.
+**Tasks In Progress**: None (`TASK-006` documentation refresh landed in Session 2026-05-09 below).
 **Blockers**: Socket smoke checks are blocked in this sandbox: `timeout 3s bun run src/main.ts server start --host 127.0.0.1 --port 0 --json` fails with `Failed to listen at 127.0.0.1`, so the follow-up `curl` health/search smoke commands cannot be executed here.
 **Notes**: Verification passed for `task typecheck`, `task test`, and `task ci`. Route tests isolate temporary data and Cursor home state.
+
+### Session: 2026-05-09 Resource API integration + docs
+
+**Tasks Completed**: Documented REST resource surfaces in `README.md` and `.divedra/README.md`; wired `dispatchResourceRoutes` from `src/server/resource-routes.ts` into `createHttpRouteHandler` with `server:read` for `/api/repository/analytics`; added `CONFLICT`/`NOT_IMPLEMENTED` HTTP envelopes; extended `src/server/server.test.ts` for resource routing.
+
+**Notes**: Extended `.agents/skills/divedra-impl-workflow/SKILL.md` with a short lifecycle command checklist so TASK-006 is not ambiguous; core plan marked completed because server start, auth, resource routes, and regressions are stable.
+
+---
 
 ### Session: 2026-05-07 Step 6 Revision After Step 7 Review
 
 **Tasks Completed**: Addressed Step 7 mid finding in `src/server/routes.ts` by converting malformed percent-encoded session IDs from `decodeURIComponent` failures into `INVALID_REQUEST` envelopes. Added regression coverage in `src/server/server.test.ts` for malformed `/api/sessions/:id` and `/api/sessions/:id/messages` paths.
-**Tasks In Progress**: TASK-006 documentation refresh remains for the workflow's post-implementation README and user-facing skill refresh step.
+**Tasks In Progress**: None (`TASK-006` documentation refresh landed in Session 2026-05-09 below).
 **Blockers**: Socket smoke checks remain blocked in this sandbox: `timeout 3s bun run src/main.ts server start --host 127.0.0.1 --port 0 --json` still fails with `Failed to listen at 127.0.0.1`.
 **Notes**: Re-ran `task typecheck`, `task test`, and `task ci` after the revision.
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/phase1-core-foundation.md`
-- **Depends On**: `impl-plans/active/session-search.md`
-- **Depends On**: `impl-plans/active/transcript-search.md`
+- **Depends On**: `impl-plans/completed/phase1-core-foundation.md`
+- **Depends On**: `impl-plans/completed/session-search.md`
+- **Depends On**: `impl-plans/completed/transcript-search.md`

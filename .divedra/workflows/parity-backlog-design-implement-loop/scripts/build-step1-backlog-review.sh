@@ -43,7 +43,11 @@ const preferredPaths = {
   "P2-BOOKMARKS": ["design-docs/specs/design-bookmarks.md", "impl-plans/active/bookmarks.md"],
   "P2-ACTIVITY": ["design-docs/specs/design-activity.md", "impl-plans/active/activity.md"],
   "P2-MARKDOWN-TASKS": ["design-docs/specs/design-markdown-tasks.md", "impl-plans/active/markdown-tasks.md"],
-  "P3-FILE-INTELLIGENCE": ["design-docs/specs/design-file-intelligence.md", "impl-plans/active/file-intelligence.md"],
+  "P3-GROUP-LIFECYCLE": ["design-docs/specs/design-group-lifecycle.md", "impl-plans/completed/group-lifecycle.md"],
+  "P3-FILE-INTELLIGENCE": ["design-docs/specs/design-file-intelligence.md", "impl-plans/completed/file-intelligence.md"],
+  "P4-HTTP-SERVER": ["design-docs/specs/design-http-server-core.md", "impl-plans/completed/http-server-core.md"],
+  "P4-AUTH": ["design-docs/specs/design-token-auth.md", "impl-plans/completed/token-auth.md"],
+  "P4-DAEMON": ["design-docs/specs/design-daemon-lifecycle.md", "impl-plans/completed/daemon-lifecycle.md"],
 };
 
 function asStringArray(value, fallback) {

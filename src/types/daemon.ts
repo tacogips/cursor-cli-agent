@@ -92,7 +92,7 @@ export type DaemonReadinessResult =
   | { readonly ready: true; readonly statusCode: number }
   | {
       readonly ready: false;
-      readonly reason: "timeout" | "unauthorized" | "unreachable";
+      readonly reason: "timeout" | "unauthorized";
       readonly statusCode?: number;
       readonly error?: string;
     };

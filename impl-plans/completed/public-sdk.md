@@ -361,7 +361,7 @@ Verification focus:
 - [x] No raw Cursor adapter payload shapes become public SDK contracts.
 - [x] Daemon startup regression from `src/main.ts` versus `src/bin.ts` is covered by implementation and tests.
 - [x] Verification commands pass or unrelated failures are documented.
-- [ ] README and user-facing workflow skill refresh steps are completed in later workflow nodes after implementation.
+- [x] README and user-facing workflow skill refresh steps are completed in later workflow nodes after implementation.
 
 ## Addressed Review Feedback
 
@@ -395,5 +395,5 @@ Verification focus:
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/http-server-core.md`, `impl-plans/active/server-event-streaming.md`, P2/P3 domain feature plans.
+- **Depends On**: `impl-plans/completed/http-server-core.md`, `impl-plans/completed/server-event-streaming.md`, P2/P3 domain feature plans.
 - **Next**: Step 7 implementation review for `P4-PUBLIC-SDK`.

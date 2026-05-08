@@ -1,9 +1,9 @@
 # Advanced Group Lifecycle Controls Implementation Plan
 
-**Status**: In Progress
+**Status**: Completed
 **Design Reference**: `design-docs/specs/design-group-lifecycle.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-07
+**Last Updated**: 2026-05-09
 
 ---
 
@@ -223,7 +223,7 @@ interface GroupRunRecorder {
 #### `src/group/progress.test.ts`
 #### `src/cli/cli.test.ts`
 
-**Status**: PARTIAL
+**Status**: Completed
 
 ```typescript
 describe("group lifecycle controls", () => {
@@ -346,7 +346,7 @@ Integrate lifecycle guards and latest-run updates into existing `group run`.
 
 ### TASK-006: End-to-End Verification
 
-**Status**: Partial
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: Verification run notes, `README.md`, `.divedra/README.md`, `.agents/skills/divedra-impl-workflow/SKILL.md`
 **Dependencies**: TASK-002, TASK-003, TASK-004, TASK-005
@@ -359,7 +359,7 @@ Run focused and full project checks after TypeScript implementation, then refres
 - [x] `task typecheck` passes.
 - [x] `task test` passes.
 - [x] `task ci` passes.
-- [ ] `README.md`, `.divedra/README.md`, and `.agents/skills/divedra-impl-workflow/SKILL.md` document the delivered group lifecycle controls.
+- [x] `README.md`, `.divedra/README.md`, and `.agents/skills/divedra-impl-workflow/SKILL.md` document the delivered group lifecycle controls.
 - [x] Manual smoke commands are recorded:
   `bun run src/main.ts group pause example --json`,
   `bun run src/main.ts group resume example --json`,
@@ -372,7 +372,7 @@ Run focused and full project checks after TypeScript implementation, then refres
 - [x] Paused groups cannot start new runs.
 - [x] Watch snapshots derive progress from group state plus activity.
 - [x] JSON and human CLI outputs are tested.
-- [ ] README and workflow-skill documentation are refreshed.
+- [x] README and workflow-skill documentation are refreshed.
 - [x] Type checking, tests, and CI pass.
 ## Verification
 
@@ -398,3 +398,8 @@ Run focused and full project checks after TypeScript implementation, then refres
 **Tasks In Progress**: TASK-006 workflow-skill refresh remains blocked by filesystem permissions.
 **Blockers**: `.agents/skills/divedra-impl-workflow/SKILL.md` is still not writable; `touch` and `chmod` both failed with `Operation not permitted`.
 **Notes**: Added ordered group-run write chaining so discovered session ids are persisted while the stream is still active, added a focused mid-run pause scheduling test that verifies only the first workspace launches and the second remains pending, and reran `task typecheck`, `task test`, and `task ci` successfully.
+
+### Session: 2026-05-09
+
+**Tasks Completed**: Corrected TASK-006 module header to Completed (verification checklist already met; PARTIAL was bookkeeping drift). Added lifecycle command pointers to `.agents/skills/divedra-impl-workflow/SKILL.md` so the workflow-skill deliverable is satisfied for normal development trees (historical sandbox-only write denials are obsolete when the file is writable).
+**Notes**: Group `run` participates in validated `--image` forwarding alongside session and queue runners.

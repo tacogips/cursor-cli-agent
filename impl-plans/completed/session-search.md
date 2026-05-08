@@ -194,7 +194,7 @@ Completion criteria:
 
 **Status**: COMPLETED
 **Parallelizable**: No
-**Deliverables**: `impl-plans/active/session-search.md`, README or user-facing skill docs if implementation changes require discoverability updates
+**Deliverables**: `impl-plans/completed/session-search.md`, README or user-facing skill docs if implementation changes require discoverability updates
 **Dependencies**: TASK-001, TASK-002, TASK-003
 
 Completion criteria:
@@ -212,7 +212,7 @@ Completion criteria:
 | Search types | `src/types/session-search.ts` | COMPLETED | `task typecheck` |
 | Session index search | `src/persistence/session-index.ts` | COMPLETED | `src/persistence/session-index.test.ts` |
 | CLI command | `src/cli/cli.ts` | COMPLETED | `src/cli/cli.test.ts` |
-| Plan progress | `impl-plans/active/session-search.md` | COMPLETED | Review |
+| Plan progress | `impl-plans/completed/session-search.md` | COMPLETED | Review |
 
 ## Dependencies
 
@@ -281,5 +281,5 @@ Completion criteria:
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/phase1-core-foundation.md`
-- **Related**: `impl-plans/active/parity-backlog-workflow.md`
+- **Depends On**: `impl-plans/completed/phase1-core-foundation.md`
+- **Related**: `impl-plans/completed/parity-backlog-workflow.md`

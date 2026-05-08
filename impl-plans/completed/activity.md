@@ -366,6 +366,6 @@ describe("activity derivation", () => {
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/phase1-core-foundation.md`
-- **Related**: `impl-plans/active/transcript-search.md`, `impl-plans/active/session-search.md`
+- **Depends On**: `impl-plans/completed/phase1-core-foundation.md`
+- **Related**: `impl-plans/completed/transcript-search.md`, `impl-plans/completed/session-search.md`
 - **Future**: group/queue lifecycle and SSE plans when those backlog slices are active

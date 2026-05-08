@@ -69,14 +69,14 @@ any one item is implemented.
 | `P2-BOOKMARKS` | 2 | `design-docs/specs/design-bookmarks.md` | `impl-plans/active/bookmarks.md` | `src/bookmark/*`, `src/cli/index.ts` bookmark commands | `P2-TRANSCRIPT-SEARCH` |
 | `P2-ACTIVITY` | 2 | `design-docs/specs/design-activity.md` | `impl-plans/active/activity.md` | `src/activity/*`, `src/process/manager.ts` | - |
 | `P2-MARKDOWN-TASKS` | 2 | `design-docs/specs/design-markdown-tasks.md` | `impl-plans/active/markdown-tasks.md` | `src/markdown/*`, `src/cli/index.ts` `session show --tasks` behavior | `P2-TRANSCRIPT-SEARCH` |
-| `P3-GROUP-LIFECYCLE` | 3 | `design-docs/specs/design-group-lifecycle.md` | `impl-plans/active/group-lifecycle.md` | `src/group/*`, `src/cli/index.ts` group commands | `P2-ACTIVITY` |
+| `P3-GROUP-LIFECYCLE` | 3 | `design-docs/specs/design-group-lifecycle.md` | `impl-plans/completed/group-lifecycle.md` | `src/group/*`, `src/cli/index.ts` group commands | `P2-ACTIVITY` |
 | `P3-QUEUE-LIFECYCLE` | 3 | `design-docs/specs/design-queue-lifecycle.md` | `impl-plans/active/queue-lifecycle.md` | `src/queue/*`, `src/cli/index.ts` queue commands | `P2-ACTIVITY` |
-| `P3-FILE-INTELLIGENCE` | 3 | `design-docs/specs/design-file-intelligence.md` | `impl-plans/active/file-intelligence.md` | `src/file-changes/*`, `src/cli/index.ts` files commands | `P2-SESSION-SEARCH` |
+| `P3-FILE-INTELLIGENCE` | 3 | `design-docs/specs/design-file-intelligence.md` | `impl-plans/completed/file-intelligence.md` | `src/file-changes/*`, `src/cli/index.ts` files commands | `P2-SESSION-SEARCH` |
 | `P3-REPO-ANALYTICS` | 3 | `design-docs/specs/design-repository-analytics.md` | `impl-plans/active/repository-analytics.md` | `src/file-changes/*`, completed plan `session-file-patch-history.md` | `P3-FILE-INTELLIGENCE` |
-| `P4-HTTP-SERVER` | 4 | `design-docs/specs/design-http-server-core.md` | `impl-plans/active/http-server-core.md` | `src/server/*`, `src/cli/index.ts` server command | `P2-BOOKMARKS`, `P3-GROUP-LIFECYCLE`, `P3-QUEUE-LIFECYCLE`, `P3-FILE-INTELLIGENCE` |
+| `P4-HTTP-SERVER` | 4 | `design-docs/specs/design-http-server-core.md` | `impl-plans/completed/http-server-core.md` | `src/server/*`, `src/cli/index.ts` server command | `P2-BOOKMARKS`, `P3-GROUP-LIFECYCLE`, `P3-QUEUE-LIFECYCLE`, `P3-FILE-INTELLIGENCE` |
 | `P4-SSE` | 4 | `design-docs/specs/design-server-event-streaming.md` | `impl-plans/active/server-event-streaming.md` | `src/server/sse.ts`, `src/server/websocket.ts`, `src/sdk/events.ts` | `P4-HTTP-SERVER`, `P2-ACTIVITY` |
-| `P4-AUTH` | 4 | `design-docs/specs/design-token-auth.md` | `impl-plans/active/token-auth.md` | `src/auth/*`, `src/server/auth.ts` | `P4-HTTP-SERVER` |
-| `P4-DAEMON` | 4 | `design-docs/specs/design-daemon-lifecycle.md` | `impl-plans/active/daemon-lifecycle.md` | `src/daemon/*`, `src/cli/index.ts` daemon command | `P4-HTTP-SERVER`, `P4-SSE` |
+| `P4-AUTH` | 4 | `design-docs/specs/design-token-auth.md` | `impl-plans/completed/token-auth.md` | `src/auth/*`, `src/server/auth.ts` | `P4-HTTP-SERVER` |
+| `P4-DAEMON` | 4 | `design-docs/specs/design-daemon-lifecycle.md` | `impl-plans/completed/daemon-lifecycle.md` | `src/daemon/*`, `src/cli/index.ts` daemon command | `P4-HTTP-SERVER`, `P4-SSE` |
 | `P4-PUBLIC-SDK` | 4 | `design-docs/specs/design-public-sdk.md` | `impl-plans/active/public-sdk.md` | `src/sdk/*`, `src/main.ts`, `package.json` exports | `P4-HTTP-SERVER` |
 | `P5-COMPAT-BRIDGE` | 5 | `design-docs/specs/design-compat-bridge.md` | `impl-plans/active/compat-bridge.md` | `src/graphql/*`, `src/cli/graphql.ts`, server app transport files | `P4-HTTP-SERVER`, `P4-PUBLIC-SDK` |
 | `P5-TOOL-REGISTRY` | 5 | `design-docs/specs/design-tool-registry-model-helpers.md` | `impl-plans/active/tool-registry-model-helpers.md` | `src/sdk/tool-registry.ts`, `src/sdk/model-availability.ts`, `src/sdk/tool-versions.ts` | `P4-PUBLIC-SDK` |

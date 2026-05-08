@@ -6,6 +6,8 @@ export type HttpErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "METHOD_NOT_ALLOWED"
+  | "CONFLICT"
+  | "NOT_IMPLEMENTED"
   | "INTERNAL_ERROR";
 
 export interface HttpErrorEnvelope {
@@ -23,6 +25,8 @@ const STATUS_BY_CODE: Record<HttpErrorCode, number> = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
+  CONFLICT: 409,
+  NOT_IMPLEMENTED: 501,
   INTERNAL_ERROR: 500,
 };
 

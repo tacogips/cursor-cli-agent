@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 import {
   createActivityManager,
   type ActivityManager,
@@ -7,8 +9,11 @@ import { checkModelAvailability } from "../cursor/model-availability";
 import { getToolVersions } from "../cursor/tool-versions";
 import { createActivityStore } from "../persistence/activity-store";
 import { SessionIndexRepository } from "../persistence/session-index";
+import {
+  createUsageEventStore,
+  type UsageEventStore,
+} from "../persistence/usage-event-store";
 import { createUsageStatsManager } from "../usage/manager";
-import { join } from "node:path";
 import type {
   ModelAvailabilityOptions,
   ModelAvailabilityReport,
@@ -39,6 +44,7 @@ export interface ToolHelperSdkOptions {
   readonly registry?: ToolRegistry;
   readonly sessionRepository?: SessionIndexRepository;
   readonly activityManager?: ActivityManager;
+  readonly usageEventStore?: UsageEventStore;
   readonly commandRunner?: ToolVersionCommandRunner;
 }
 
@@ -95,9 +101,13 @@ export function createToolHelperSdk(
               dataPath(stateRoot, "activity-signals.json"),
             ),
           });
+        const usageEvents =
+          options.usageEventStore ??
+          createUsageEventStore(dataPath(stateRoot, "usage-events.json"));
         return await createUsageStatsManager({
           sessions: repository,
           activity,
+          usageEvents,
         }).stats({
           ...(options.now !== undefined && usageOptions?.now === undefined
             ? { now: options.now() }

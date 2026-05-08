@@ -37,11 +37,11 @@ Intentional divergences:
 
 ## Related Plans
 
-- **Depends On**: `impl-plans/active/http-server-core.md` (`P4-HTTP-SERVER-CORE`)
-- **Depends On**: `impl-plans/active/token-auth.md` (`P4-TOKEN-AUTH`)
-- **Depends On**: `impl-plans/active/http-resource-apis.md` (`P4-HTTP-RESOURCE-APIS`)
-- **Depends On**: `impl-plans/active/server-event-streaming.md` (`P4-SSE`)
-- **Depends On**: `impl-plans/active/public-sdk.md` (`P4-PUBLIC-SDK`)
+- **Depends On**: `impl-plans/completed/http-server-core.md` (`P4-HTTP-SERVER-CORE`)
+- **Depends On**: `impl-plans/completed/token-auth.md` (`P4-TOKEN-AUTH`)
+- **Depends On**: `impl-plans/completed/http-resource-apis.md` (`P4-HTTP-RESOURCE-APIS`)
+- **Depends On**: `impl-plans/completed/server-event-streaming.md` (`P4-SSE`)
+- **Depends On**: `impl-plans/completed/public-sdk.md` (`P4-PUBLIC-SDK`)
 - **Related Design**: `design-docs/specs/design-codex-agent-parity-gap.md#phase-5-compatibility-layer-and-optional-extensions`
 
 ## Modules
@@ -391,7 +391,7 @@ rg -n 'graphql|compat-local|compatibility bridge' README.md impl-plans/README.md
 
 **Tasks Completed**: Reconciled plan-owned Codex reference paths to `/g/gits/tacogips/codex-agent`; updated stale dependency and server hook blocked labels to ready/not-started status because upstream workflow reports `P4-HTTP-SERVER`, `P4-AUTH`, `P4-HTTP-RESOURCE-APIS`, `P4-SSE`, and `P4-PUBLIC-SDK` dependencies ready.
 **Tasks In Progress**: None. **Blockers**: None for plan handoff; implementation still must preserve the task dependency order.
-**Notes**: Addressed Step 3 low finding. Later implementation should keep the exact path `impl-plans/active/compat-bridge.md` and update this progress log after each implementation session.
+**Notes**: Addressed Step 3 low finding. The completed plan is archived at `impl-plans/completed/compat-bridge.md`; update this progress log if future follow-up work reopens the slice.
 
 ### Session: 2026-05-07 Step 5 Review Retry
 **Tasks Completed**: Added TASK-007 and completion/verification coverage for README plus user-facing skill refresh; clarified runtime implementation is in scope for issue resolution.

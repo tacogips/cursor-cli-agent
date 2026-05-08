@@ -56,7 +56,7 @@ Intentional Cursor divergence:
 - Codex scans durable rollout JSONL files; this project persists normalized Cursor usage events at capture time because Cursor transcripts may omit usage after process exit.
 - Codex can derive stats for all rollout-backed sessions; this slice only claims token certainty for wrapper-started runs that emitted usage and were persisted.
 - Cursor-specific payload parsing remains in `src/cursor/stream-normalizer.ts` or a sibling adapter helper; persistence stores only normalized usage event records.
-- The stats response must distinguish `provenance: "repository_usage_events"` from `provenance: "unknown"` instead of reporting zero totals when no usage evidence exists.
+- The stats response must distinguish `usageProvenance: "repository_usage_events"` (a usage event store is wired into aggregation) from `usageProvenance: "unavailable"` (no store was injected) instead of implying repository-owned token evidence or all-zero truth when neither applies.
 
 ## Usage Event Model
 
@@ -120,7 +120,9 @@ Aggregation rules:
 - Sort daily buckets deterministically by date.
 - Group by `model`, with `unknown` allowed only when no reliable model evidence exists.
 - Do not scan Cursor transcripts for token totals unless a future adapter can prove a stable token field.
-- When the store is missing or empty, return empty token totals with `provenance: "repository_usage_events"` and an explicit zero coverage count, not a false claim that all sessions used zero tokens.
+- When no usage event store is available to the aggregator, return empty token totals with `usageProvenance: "unavailable"` and a completeness note that persisted wrapper captures are omitted.
+- When a store is wired but contains no matching events (including a missing on-disk file recovered as empty), return empty token totals with `usageProvenance: "repository_usage_events"` and explicit coverage counts, not a false claim that all sessions used zero tokens.
+- When a wired store's `listEvents` rejects for a given aggregation run (unexpected failure path or non-default store implementations), omit evidence for that run: empty token totals, zeroed coverage counts, an explicit completeness note, and retain `usageProvenance: "repository_usage_events"` so JSON does not claim repository evidence was absent altogether.
 
 ## CLI Contract
 
@@ -182,7 +184,7 @@ None blocking for this slice. Exact CLI naming can be aligned with any existing 
 
 ## References
 
-- `impl-plans/active/usage-event-persistence.md`
+- `impl-plans/completed/usage-event-persistence.md`
 - `design-docs/specs/design-activity.md`
 - `design-docs/specs/architecture.md`
 - `design-docs/references/README.md`

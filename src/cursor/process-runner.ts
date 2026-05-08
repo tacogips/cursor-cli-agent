@@ -29,6 +29,11 @@ function streamLines(
   });
 }
 
+export interface PromptImageArgv {
+  readonly flag: string;
+  readonly paths: readonly string[];
+}
+
 export interface HeadlessRunOptions {
   readonly workspace: string;
   readonly prompt: string;
@@ -46,6 +51,8 @@ export interface HeadlessRunOptions {
   readonly worktree?: true | string;
   readonly worktreeBase?: string;
   readonly skipWorktreeSetup?: boolean;
+  /** Repeated `<flag> <path>` fragments appended before worktree passthrough tokens. */
+  readonly promptImages?: PromptImageArgv;
 }
 
 export type CursorAgentExit = {
@@ -60,6 +67,19 @@ export interface CursorAgentStreamingProcess {
   readonly pid?: number;
   cancel(): Promise<void>;
   interrupt(): Promise<void>;
+}
+
+function appendPromptImageArgs(
+  args: string[],
+  opts: Pick<HeadlessRunOptions, "promptImages">,
+): void {
+  const img = opts.promptImages;
+  if (img === undefined || img.paths.length === 0) {
+    return;
+  }
+  for (const p of img.paths) {
+    args.push(img.flag, p);
+  }
 }
 
 function appendWorktreeArgs(
@@ -116,6 +136,7 @@ function buildHeadlessArgs(opts: HeadlessRunOptions): string[] {
   if (opts.approveMcps === true) {
     args.push("--approve-mcps");
   }
+  appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
   return args;
 }
@@ -263,6 +284,7 @@ function buildResumeArgs(opts: ResumeRunOptions): string[] {
   if (opts.approveMcps === true) {
     args.push("--approve-mcps");
   }
+  appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
   return args;
 }

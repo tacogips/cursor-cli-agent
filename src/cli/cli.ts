@@ -38,15 +38,23 @@ import {
   BookmarkNotFoundError,
   createBookmarkManager,
 } from "../bookmarks/manager";
+import { probeCursorAttachmentCapabilities } from "../cursor/attachment-capability";
 import { createActivitySignalClassifier } from "../cursor/activity-signals";
+import { validatePromptAttachments } from "../cursor/prompt-attachments";
 import {
   createChat,
+  type CursorAgentExit,
   type HeadlessRunOptions,
   isTrustFailureMessage,
+  type PromptImageArgv,
   type ResumeRunOptions,
   resumeStreaming,
   runHeadlessStreaming,
 } from "../cursor/process-runner";
+import {
+  executeSessionReplayFork,
+  SessionReplayForkError,
+} from "../cursor/session-replay-fork";
 import { StreamNormalizerState } from "../cursor/stream-normalizer";
 import {
   createTranscriptSearchService,
@@ -75,6 +83,8 @@ import * as queuesStore from "../persistence/queues-store";
 import { FileIntelligenceIndex } from "../persistence/file-intelligence-index";
 import { RepositoryAnalyticsIndex } from "../persistence/repository-analytics-index";
 import { SessionIndexRepository } from "../persistence/session-index";
+import { createReplayForkStore } from "../persistence/session-replay-forks-store";
+import { createUsageEventStore } from "../persistence/usage-event-store";
 import { createRepositoryAnalyticsService } from "../repository-analytics";
 import {
   resolveHttpServerConfig,
@@ -82,6 +92,10 @@ import {
   type ServerStartResult,
 } from "../server";
 import { runGraphqlCli } from "./graphql";
+import {
+  createUsagePersistenceChain,
+  sessionIdFromEvent,
+} from "./usage-persistence-chain";
 import { createDaemonManager, type DaemonManager } from "../daemon/manager";
 import type { AgentEvent } from "../types/agent-event";
 import type {
@@ -123,6 +137,11 @@ import type {
   TranscriptSearchRole,
 } from "../types/transcript-search";
 import type { MarkdownTaskExtractionResult } from "../types/markdown-task";
+import type {
+  PromptAttachmentInput,
+  PromptAttachmentProvenance,
+  PromptAttachmentSource,
+} from "../types/prompt-attachment";
 import type {
   FileHistoryResult,
   FileIndexRebuildStats,
@@ -188,8 +207,134 @@ const EXIT = {
   TRANSCRIPT: 6,
 } as const;
 
+type ParsedCliFlags = Record<string, string | boolean | string[]>;
+
+function imagePathsFromFlags(flags: ParsedCliFlags): readonly string[] {
+  const v = flags["images"];
+  return Array.isArray(v) ? v : [];
+}
+
+function consumeImageFlagErrors(flags: ParsedCliFlags): string | undefined {
+  if (flags["image-flag-error"] === true) {
+    return "--image requires a path argument";
+  }
+  return undefined;
+}
+
+function emitAttachmentCliError(
+  streamFormat: "text" | "json" | "events",
+  reason:
+    | "attachment_validation_failed"
+    | "attachments_unsupported"
+    | "attachments_capability_unknown",
+  message: string,
+): void {
+  const ev: AgentEvent = {
+    type: "session.error",
+    message,
+    reason,
+  };
+  if (streamFormat === "text") {
+    console.error(message);
+    return;
+  }
+  printEvents([ev], streamFormat === "json");
+}
+
+async function preparePromptAttachmentLaunchFromInputs(
+  workspace: string,
+  source: PromptAttachmentSource,
+  inputs: readonly PromptAttachmentInput[],
+  streamFormat: "text" | "json" | "events",
+): Promise<
+  | {
+      ok: PromptImageArgv | undefined;
+      provenance: readonly PromptAttachmentProvenance[];
+    }
+  | { exit: number }
+> {
+  if (inputs.length === 0) {
+    return { ok: undefined, provenance: [] };
+  }
+  const validated = await validatePromptAttachments(inputs, {
+    workspace,
+    source,
+    now: () => new Date(),
+  });
+  if (!validated.ok) {
+    emitAttachmentCliError(
+      streamFormat,
+      "attachment_validation_failed",
+      `${validated.error.detail} (${validated.error.code})`,
+    );
+    return { exit: EXIT.ERR };
+  }
+  const cap = await probeCursorAttachmentCapabilities({
+    now: () => new Date(),
+  });
+  if (cap.status !== "supported" || cap.imageFlag === undefined) {
+    const reason =
+      cap.status === "unknown"
+        ? "attachments_capability_unknown"
+        : "attachments_unsupported";
+    emitAttachmentCliError(
+      streamFormat,
+      reason,
+      cap.status === "unknown"
+        ? "could not detect cursor-agent image attachment support from --help"
+        : "installed cursor-agent does not advertise a compatible image attachment flag",
+    );
+    return { exit: EXIT.ERR };
+  }
+  return {
+    ok: {
+      flag: cap.imageFlag,
+      paths: validated.value.imagePaths,
+    },
+    provenance: validated.value.attachments,
+  };
+}
+
+async function preparePromptAttachmentLaunch(
+  workspace: string,
+  source: PromptAttachmentSource,
+  paths: readonly string[],
+  streamFormat: "text" | "json" | "events",
+): Promise<
+  | {
+      ok: PromptImageArgv | undefined;
+      provenance: readonly PromptAttachmentProvenance[];
+    }
+  | { exit: number }
+> {
+  const inputs = paths.map(
+    (path): PromptAttachmentInput => ({ kind: "image", path }),
+  );
+  return preparePromptAttachmentLaunchFromInputs(
+    workspace,
+    source,
+    inputs,
+    streamFormat,
+  );
+}
+
+function mergeQueueItemAttachmentInputs(
+  item: QueueItemRecord,
+  runPaths: readonly string[],
+): PromptAttachmentInput[] {
+  const out: PromptAttachmentInput[] =
+    item.attachments?.map((row) => ({
+      kind: "image",
+      path: row.resolvedPath,
+    })) ?? [];
+  for (const p of runPaths) {
+    out.push({ kind: "image", path: p });
+  }
+  return out;
+}
+
 function runnerPassthroughFromFlags(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): Pick<
   HeadlessRunOptions,
   "sandbox" | "approveMcps" | "worktree" | "worktreeBase" | "skipWorktreeSetup"
@@ -212,14 +357,13 @@ function runnerPassthroughFromFlags(
   };
 }
 
-function buildHeadlessRunOptions(
+function buildHeadlessRunOptionsPartial(
   workspace: string,
-  prompt: string,
-  flags: Record<string, string | boolean>,
-): HeadlessRunOptions {
+  flags: ParsedCliFlags,
+  promptImages?: PromptImageArgv,
+): Omit<HeadlessRunOptions, "prompt"> {
   return {
     workspace,
-    prompt,
     ...(typeof flags["model"] === "string" ? { model: flags["model"] } : {}),
     ...(flags["mode"] === "plan" || flags["mode"] === "ask"
       ? { mode: flags["mode"] }
@@ -231,13 +375,29 @@ function buildHeadlessRunOptions(
       ? { streamPartialOutput: true }
       : {}),
     ...runnerPassthroughFromFlags(flags),
+    ...(promptImages !== undefined && promptImages.paths.length > 0
+      ? { promptImages }
+      : {}),
+  };
+}
+
+function buildHeadlessRunOptions(
+  workspace: string,
+  prompt: string,
+  flags: ParsedCliFlags,
+  promptImages?: PromptImageArgv,
+): HeadlessRunOptions {
+  return {
+    ...buildHeadlessRunOptionsPartial(workspace, flags, promptImages),
+    prompt,
   };
 }
 
 function buildResumeRunOptions(
   workspace: string,
   sessionOrChatId: string,
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
+  promptImages?: PromptImageArgv,
 ): ResumeRunOptions {
   return {
     workspace,
@@ -256,15 +416,18 @@ function buildResumeRunOptions(
       ? { streamPartialOutput: true }
       : {}),
     ...runnerPassthroughFromFlags(flags),
+    ...(promptImages !== undefined && promptImages.paths.length > 0
+      ? { promptImages }
+      : {}),
   };
 }
 
 function parseFlags(argv: string[]): {
   rest: string[];
-  flags: Record<string, string | boolean>;
+  flags: ParsedCliFlags;
 } {
   const rest: string[] = [];
-  const flags: Record<string, string | boolean> = {};
+  const flags: ParsedCliFlags = {};
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === undefined) {
@@ -280,6 +443,19 @@ function parseFlags(argv: string[]): {
       flags["yolo"] = true;
     } else if (a === "--stream-partial-output") {
       flags["stream-partial-output"] = true;
+    } else if (a === "--image") {
+      const next = argv[i + 1];
+      if (next === undefined || next.startsWith("--")) {
+        flags["image-flag-error"] = true;
+      } else {
+        const cur = flags["images"];
+        if (Array.isArray(cur)) {
+          cur.push(next);
+        } else {
+          flags["images"] = [next];
+        }
+        i += 1;
+      }
     } else if (a.startsWith("--")) {
       const key = a.slice(2);
       const next = argv[i + 1];
@@ -296,7 +472,7 @@ function parseFlags(argv: string[]): {
   return { rest, flags };
 }
 
-function getWorkspace(flags: Record<string, string | boolean>): string {
+function getWorkspace(flags: ParsedCliFlags): string {
   const w = flags["workspace"];
   if (typeof w === "string" && w.length > 0) {
     return resolve(w);
@@ -304,9 +480,7 @@ function getWorkspace(flags: Record<string, string | boolean>): string {
   return resolve(process.cwd());
 }
 
-function getExplicitWorkspace(
-  flags: Record<string, string | boolean>,
-): string | undefined {
+function getExplicitWorkspace(flags: ParsedCliFlags): string | undefined {
   const w = flags["workspace"];
   if (typeof w === "string" && w.length > 0) {
     return resolve(w);
@@ -349,7 +523,7 @@ function isTranscriptSearchRole(value: string): value is TranscriptSearchRole {
 }
 
 function parsePositiveIntegerFlag(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
   key: string,
   defaultValue: number,
 ): number | undefined {
@@ -368,7 +542,7 @@ function parsePositiveIntegerFlag(
 }
 
 function parseNonNegativeIntegerFlag(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
   key: string,
   defaultValue: number,
 ): number | undefined {
@@ -424,12 +598,12 @@ interface TokenCreateArgs {
 }
 
 function parsePermissionCsvFlag(
-  value: string | boolean | undefined,
+  value: string | boolean | string[] | undefined,
 ): { permissions?: readonly AuthPermission[] } | { error: string } {
   if (value === undefined) {
     return {};
   }
-  if (typeof value !== "string") {
+  if (Array.isArray(value) || typeof value !== "string") {
     return { error: "token create: --permissions requires a CSV value" };
   }
   const parts = value.split(",");
@@ -484,9 +658,7 @@ function parseTokenCreateArgs(
   };
 }
 
-function parseTcpPortFlag(
-  flags: Record<string, string | boolean>,
-): number | undefined | null {
+function parseTcpPortFlag(flags: ParsedCliFlags): number | undefined | null {
   const value = flags["port"];
   if (value === undefined) {
     return undefined;
@@ -594,7 +766,7 @@ function parseDaemonStopArgs(
 
 function parseSessionSearchOptions(
   pos: readonly string[],
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { options: SessionSearchOptions } | { error: string } {
   const query = pos[0];
   if (query === undefined || query.trim().length === 0) {
@@ -656,7 +828,7 @@ function parseSessionSearchOptions(
 }
 
 function parseOptionalPositiveIntegerFlag(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
   key: string,
 ): number | undefined | null {
   const value = flags[key];
@@ -675,7 +847,7 @@ function parseOptionalPositiveIntegerFlag(
 
 function parseTranscriptSearchOptions(
   pos: readonly string[],
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { options: TranscriptSearchOptions } | { error: string } {
   const query = pos[0];
   if (query === undefined || query.trim().length === 0) {
@@ -747,7 +919,7 @@ function parseTranscriptSearchOptions(
   };
 }
 
-function parseActivityOptions(flags: Record<string, string | boolean>):
+function parseActivityOptions(flags: ParsedCliFlags):
   | {
       session?: string;
       status?: ActivityStatus;
@@ -784,7 +956,7 @@ function parseActivityOptions(flags: Record<string, string | boolean>):
 }
 
 function parseToolCommandArgs(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { args: ToolCommandArgs } | { error: string } {
   const timeoutMs = parseOptionalPositiveIntegerFlag(flags, "timeout-ms");
   if (timeoutMs === null) {
@@ -801,7 +973,7 @@ function parseToolCommandArgs(
 }
 
 function parseModelCheckCommandArgs(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { args: ModelCheckCommandArgs } | { error: string } {
   const model = flags["model"];
   if (typeof model !== "string" || model.trim().length === 0) {
@@ -821,7 +993,7 @@ function parseModelCheckCommandArgs(
   };
 }
 
-function parseUsageStatsOptions(flags: Record<string, string | boolean>):
+function parseUsageStatsOptions(flags: ParsedCliFlags):
   | {
       readonly json: boolean;
       readonly options: UsageStatsOptions;
@@ -831,15 +1003,29 @@ function parseUsageStatsOptions(flags: Record<string, string | boolean>):
   if (recentDays === null) {
     return { error: "usage stats: --recent-days must be a positive integer" };
   }
+  const workspace = flags["workspace"];
+  if (workspace !== undefined && typeof workspace !== "string") {
+    return { error: "usage stats: --workspace requires a path string" };
+  }
+  const sessionId = flags["session"];
+  if (sessionId !== undefined && typeof sessionId !== "string") {
+    return { error: "usage stats: --session requires an id string" };
+  }
   return {
     json: flags["json"] === true,
     options: {
       ...(recentDays !== undefined ? { recentDays } : {}),
+      ...(typeof workspace === "string" && workspace.trim().length > 0
+        ? { workspacePath: workspace.trim() }
+        : {}),
+      ...(typeof sessionId === "string" && sessionId.trim().length > 0
+        ? { sessionId: sessionId.trim() }
+        : {}),
     },
   };
 }
 
-function parseMarkdownTaskOptions(flags: Record<string, string | boolean>):
+function parseMarkdownTaskOptions(flags: ParsedCliFlags):
   | {
       sessionId: string;
       messageId?: string;
@@ -881,7 +1067,7 @@ function parseMarkdownTaskOptions(flags: Record<string, string | boolean>):
 }
 
 function parseBookmarkFilter(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { filter: BookmarkFilter } | { error: string } {
   const sessionId = flags["session"];
   if (sessionId !== undefined && typeof sessionId !== "string") {
@@ -909,7 +1095,7 @@ function parseBookmarkFilter(
 }
 
 function parseBookmarkAddInput(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { input: CreateBookmarkInput } | { error: string } {
   const type = flags["type"];
   if (typeof type !== "string" || !isBookmarkType(type)) {
@@ -958,7 +1144,7 @@ function parseBookmarkAddInput(
 }
 
 function parseBookmarkSearchOptions(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { options: BookmarkSearchOptions } | { error: string } {
   const limit = parseOptionalPositiveIntegerFlag(flags, "limit");
   if (limit === null) {
@@ -969,7 +1155,7 @@ function parseBookmarkSearchOptions(
 
 function parseOptionalLimit(
   command: string,
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ):
   | { readonly options: { readonly limit?: number } }
   | { readonly error: string } {
@@ -1232,9 +1418,21 @@ function renderUsageStatsHuman(report: UsageStatsReport): void {
   console.log(`statuses=${JSON.stringify(report.statusCounts)}`);
   console.log(`activity=${JSON.stringify(report.activityStatusCounts)}`);
   console.log(`models=${JSON.stringify(report.models)}`);
+  console.log(
+    `usage.tokens=${JSON.stringify(report.usageTokens)} sessionsObserved=${report.usageSessionsObserved}`,
+  );
+  console.log(`usage.byModel=${JSON.stringify(report.usageTokensByModel)}`);
+  console.log(
+    `usage.coverage=${JSON.stringify(report.usageEvidenceCoverage)} provenance=${report.usageProvenance}`,
+  );
   for (const daily of report.recentDailyActivity) {
     console.log(
       `${daily.date} sessions=${daily.sessionCount} activitySignals=${daily.activitySignalCount}`,
+    );
+  }
+  for (const daily of report.usageRecentDailyActivity) {
+    console.log(
+      `${daily.date} usage.tokensByModel=${JSON.stringify(daily.tokensByModel)}`,
     );
   }
   for (const note of report.completenessNotes) {
@@ -1387,12 +1585,19 @@ function promptPreview(prompt: string): string {
   return prompt.length <= 120 ? prompt : `${prompt.slice(0, 117)}...`;
 }
 
-function initialRunRecord(group: GroupRecord, prompt: string): GroupRunRecord {
+function initialRunRecord(
+  group: GroupRecord,
+  prompt: string,
+  attachments?: readonly PromptAttachmentProvenance[],
+): GroupRunRecord {
   const startedAt = new Date().toISOString();
   return {
     id: runId(group.name, startedAt),
     status: "running",
     promptPreview: promptPreview(prompt),
+    ...(attachments !== undefined && attachments.length > 0
+      ? { attachments }
+      : {}),
     startedAt,
     updatedAt: startedAt,
     workspaces: group.workspaces.map((workspace) => ({
@@ -1403,7 +1608,10 @@ function initialRunRecord(group: GroupRecord, prompt: string): GroupRunRecord {
   };
 }
 
-function initialQueueRunRecord(queue: QueueRecord): QueueRunRecord {
+function initialQueueRunRecord(
+  queue: QueueRecord,
+  runAttachments?: readonly PromptAttachmentProvenance[],
+): QueueRunRecord {
   const startedAt = new Date().toISOString();
   const runnable = queue.items.filter(
     (item) => item.status === "pending" && item.mode === "auto",
@@ -1411,6 +1619,9 @@ function initialQueueRunRecord(queue: QueueRecord): QueueRunRecord {
   return {
     id: runId(queue.name, startedAt),
     status: "running",
+    ...(runAttachments !== undefined && runAttachments.length > 0
+      ? { attachments: runAttachments }
+      : {}),
     startedAt,
     updatedAt: startedAt,
     completedItemIds: [],
@@ -1453,6 +1664,9 @@ function updateQueueRunItem(
     failedItemIds: run.failedItemIds,
     pendingItemIds: run.pendingItemIds,
     ...(run.stoppedAt !== undefined ? { stoppedAt: run.stoppedAt } : {}),
+    ...(run.attachments !== undefined && run.attachments.length > 0
+      ? { attachments: run.attachments }
+      : {}),
   };
   return {
     ...runWithoutCurrent,
@@ -1533,7 +1747,7 @@ interface TextStreamRenderState {
  * An explicit `--stream <value>` must be `text`, `json`, or `events`.
  */
 function resolveStreamMode(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
 ): { mode: "text" | "json" | "events" } | { error: true } {
   const s = flags["stream"];
   if (s === "text" || s === "json" || s === "events") {
@@ -1590,22 +1804,6 @@ function openRepositoryAnalyticsIndex(): RepositoryAnalyticsIndex {
   );
 }
 
-function sessionIdFromEvent(event: AgentEvent): string | undefined {
-  switch (event.type) {
-    case "session.started":
-    case "session.user_message":
-    case "session.thinking":
-    case "session.assistant_message":
-    case "session.completed":
-      return event.sessionId;
-    case "session.error":
-      return event.sessionId;
-    case "session.pending":
-    case "session.materialized":
-      return undefined;
-  }
-}
-
 async function recordActivitySignal(
   manager: ReturnType<typeof createActivityManager>,
   sessionId: string | undefined,
@@ -1625,10 +1823,11 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent session list [--workspace <path>] [--limit N] [--json]
   curort-cli-agent session show <id> [--workspace <path>] [--json]
   curort-cli-agent session watch <id> [--workspace <path>] [--json]
-  curort-cli-agent session run --prompt <text> [options]
+  curort-cli-agent session run --prompt <text> [--image <path>]... [options]
   curort-cli-agent session create [--workspace <path>] [--json]
-  curort-cli-agent session resume <id> [--prompt <text>] [options]
+  curort-cli-agent session resume <id> [--prompt <text>] [--image <path>]... [options]
   curort-cli-agent session continue [--workspace <path>] [--stream <text|json|events>] [--json]
+  curort-cli-agent session fork <id> --prompt <text> [--through-message <id>] [--nth-message <n>] [--dry-run] [--stream <text|json|events>] [--json] [options]
   curort-cli-agent session attach <id> [--workspace <path>]
   curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
   curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
@@ -1648,7 +1847,7 @@ export async function runCli(argv: string[]): Promise<number> {
   curort-cli-agent tool run <name> --input <json|@path> [--json]
   curort-cli-agent tool versions [--include-git] [--include-bun] [--timeout-ms N] [--json]
   curort-cli-agent model check --model <model> [--probe] [--timeout-ms N] [--json]
-  curort-cli-agent usage stats [--recent-days N] [--json]
+  curort-cli-agent usage stats [--workspace <path>] [--session <id>] [--recent-days N] [--json]
   curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
   curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
   curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
@@ -1659,13 +1858,13 @@ export async function runCli(argv: string[]): Promise<number> {
     create <name> | list | show <name> | add <name> [--workspace <path>] | remove <name> [--workspace <path>]
     pause <name> [--json] | resume <name> [--json] | delete <name> [--force] [--json]
     watch <name> [--interval <seconds>] [--once] [--json]
-    run <name> --prompt <text> [--stream <text|json|events>] [--json]
+    run <name> --prompt <text> [--image <path>]... [--stream <text|json|events>] [--json]
   curort-cli-agent queue <subcommand> ...
-    create <name> [--workspace <path>] | list | show <name> | add <name> --prompt <text> | remove <name> --item <id>
+    create <name> [--workspace <path>] | list | show <name> | add <name> --prompt <text> [--image <path>]... | remove <name> --item <id>
     pause <name> [--json] | resume <name> [--json] | delete <name> [--force] [--json]
     update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
     move <name> --from <n> --to <n> [--json] | mode <name> --item <id> --mode <auto|manual> [--json] | stop <name> [--json]
-    run <name> [--stream <text|json|events>] [--json]
+    run <name> [--image <path>]... [--stream <text|json|events>] [--json]
   curort-cli-agent skill list [--workspace <path>] [--json]
   curort-cli-agent skill show <name> [--workspace <path>] [--json]
   curort-cli-agent graphql <document|command> [--param <json|@path>] [--variables <json|@path>] [--json]
@@ -2080,19 +2279,37 @@ function createCliToolRegistry(): ReturnType<typeof createToolRegistry> {
         type: "object",
         properties: {
           recentDays: { type: "number" },
+          workspacePath: { type: "string" },
+          sessionId: { type: "string" },
         },
       },
       async run(input) {
         const recentDays = optionalNumber(input["recentDays"]);
+        const workspacePath =
+          typeof input["workspacePath"] === "string"
+            ? input["workspacePath"].trim()
+            : undefined;
+        const sessionId =
+          typeof input["sessionId"] === "string"
+            ? input["sessionId"].trim()
+            : undefined;
         const repo = await openRepo();
         try {
           await repo.importTranscriptsFromFilesystem();
           const activity = createActivityManager({ sessions: repo });
+          const usageEvents = createUsageEventStore();
           return await createUsageStatsManager({
             sessions: repo,
             activity,
+            usageEvents,
           }).stats({
             ...(recentDays !== undefined ? { recentDays } : {}),
+            ...(workspacePath !== undefined && workspacePath.length > 0
+              ? { workspacePath }
+              : {}),
+            ...(sessionId !== undefined && sessionId.length > 0
+              ? { sessionId }
+              : {}),
           });
         } finally {
           repo.close();
@@ -2103,9 +2320,9 @@ function createCliToolRegistry(): ReturnType<typeof createToolRegistry> {
 }
 
 async function parseToolRunInput(
-  value: string | boolean | undefined,
+  value: string | boolean | string[] | undefined,
 ): Promise<{ input: Record<string, unknown> } | { error: string }> {
-  if (typeof value !== "string" || value.length === 0) {
+  if (Array.isArray(value) || typeof value !== "string" || value.length === 0) {
     return { error: "tool run: --input is required" };
   }
   let source: string;
@@ -2164,6 +2381,21 @@ function validateOptionalNumberField(
   return null;
 }
 
+function validateOptionalStringField(
+  toolName: string,
+  input: Record<string, unknown>,
+  field: string,
+): string | null {
+  const value = input[field];
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return `${toolName} input field ${field} must be a string`;
+  }
+  return null;
+}
+
 function validateToolRunInput(
   toolName: string,
   input: Record<string, unknown>,
@@ -2186,7 +2418,11 @@ function validateToolRunInput(
     );
   }
   if (toolName === "usage.stats") {
-    return validateOptionalNumberField(toolName, input, "recentDays");
+    return (
+      validateOptionalNumberField(toolName, input, "recentDays") ??
+      validateOptionalStringField(toolName, input, "workspacePath") ??
+      validateOptionalStringField(toolName, input, "sessionId")
+    );
   }
   return null;
 }
@@ -2384,9 +2620,11 @@ async function runUsage(argv: string[]): Promise<number> {
   try {
     await repo.importTranscriptsFromFilesystem();
     const activity = createActivityManager({ sessions: repo });
+    const usageEvents = createUsageEventStore();
     const report = await createUsageStatsManager({
       sessions: repo,
       activity,
+      usageEvents,
     }).stats(parsed.options);
     if (parsed.json) {
       printJson(report);
@@ -2823,6 +3061,11 @@ async function runSession(argv: string[]): Promise<number> {
   let resumeSessionId: string | undefined;
   let headlessStreamMode: "text" | "json" | "events" | undefined;
   let searchOptions: SessionSearchOptions | undefined;
+  let forkSourceId: string | undefined;
+  let forkContinuation: string | undefined;
+  let forkThrough: string | undefined;
+  let forkNth: number | undefined;
+  let forkDryRun = false;
 
   if (sub === "run") {
     const prompt =
@@ -2861,6 +3104,62 @@ async function runSession(argv: string[]): Promise<number> {
     }
     headlessStreamMode = sm.mode;
   }
+  if (sub === "fork") {
+    const sid = pos[0];
+    if (sid === undefined || sid.length === 0) {
+      console.error("session fork: missing session id");
+      return EXIT.USAGE;
+    }
+    const fprompt =
+      typeof flags["prompt"] === "string" ? flags["prompt"] : undefined;
+    if (fprompt === undefined || fprompt.trim().length === 0) {
+      console.error("session fork: --prompt is required");
+      return EXIT.USAGE;
+    }
+    const throughRaw = flags["through-message"];
+    const nthRaw = flags["nth-message"];
+    const through =
+      typeof throughRaw === "string" && throughRaw.length > 0
+        ? throughRaw
+        : undefined;
+    const nthParsed =
+      typeof nthRaw === "string" && nthRaw.length > 0
+        ? Number(nthRaw)
+        : undefined;
+    if (through !== undefined && nthParsed !== undefined) {
+      console.error(
+        "session fork: --through-message and --nth-message are mutually exclusive",
+      );
+      return EXIT.USAGE;
+    }
+    if (
+      nthParsed !== undefined &&
+      (!Number.isInteger(nthParsed) || nthParsed <= 0)
+    ) {
+      console.error("session fork: --nth-message must be a positive integer");
+      return EXIT.USAGE;
+    }
+    if (
+      through !== undefined &&
+      !/^event-\d+-(user|assistant)$/.test(through)
+    ) {
+      console.error(
+        "session fork: --through-message must look like event-<offset>-<user|assistant>",
+      );
+      return EXIT.USAGE;
+    }
+    const smFork = resolveStreamMode(flags);
+    if ("error" in smFork) {
+      console.error("session fork: --stream must be text, json, or events");
+      return EXIT.USAGE;
+    }
+    forkSourceId = sid;
+    forkContinuation = fprompt;
+    forkThrough = through;
+    forkNth = nthParsed;
+    forkDryRun = flags["dry-run"] === true;
+    headlessStreamMode = smFork.mode;
+  }
   if (sub === "search") {
     const parsed = parseSessionSearchOptions(pos, flags);
     if ("error" in parsed) {
@@ -2880,8 +3179,82 @@ async function runSession(argv: string[]): Promise<number> {
 
   const repo = await openRepo();
   await repo.importTranscriptsFromFilesystem();
+
+  if (sub === "fork") {
+    const store = createReplayForkStore();
+    const usagePersistence = createUsagePersistenceChain(repo);
+    try {
+      const streamFork = headlessStreamMode ?? "events";
+      const textState: TextStreamRenderState = {
+        lastAssistantBySession: new Map(),
+      };
+      const result = await executeSessionReplayFork(
+        {
+          sourceSessionId: forkSourceId!,
+          continuationPrompt: forkContinuation!,
+          ...(forkThrough !== undefined
+            ? { throughMessageId: forkThrough }
+            : {}),
+          ...(forkNth !== undefined ? { nthMessage: forkNth } : {}),
+          dryRun: forkDryRun,
+        },
+        buildHeadlessRunOptionsPartial(workspace, flags),
+        {
+          sessions: repo,
+          store,
+          ...(forkDryRun === false
+            ? {
+                onNormalizedEvents: (events: readonly AgentEvent[]) => {
+                  emitStreamedAgentEvents(streamFork, events, textState);
+                  usagePersistence.capture(events);
+                },
+              }
+            : {}),
+        },
+      );
+      if (json) {
+        printJson(result);
+      } else {
+        console.log(`${result.mode}: source ${result.sourceSession.recordId}`);
+        console.log(
+          `replay: ${result.replay.messageCount} message(s); truncated=${result.replay.truncated}`,
+        );
+        if (result.newSession !== undefined) {
+          console.log(
+            `new session: ${result.newSession.localSessionId ?? result.newSession.recordId}`,
+          );
+        }
+        for (const w of result.warnings) {
+          console.error(`warning: ${w}`);
+        }
+        for (const lim of result.limitations) {
+          console.error(`limitation: ${lim}`);
+        }
+      }
+      return EXIT.OK;
+    } catch (e) {
+      if (e instanceof SessionReplayForkError) {
+        console.error(e.message);
+        if (e.code === "not_found") {
+          return EXIT.NOT_FOUND;
+        }
+        if (e.code === "trust_required") {
+          return EXIT.TRUST;
+        }
+        if (e.code === "transcript_unavailable" || e.code === "slice_error") {
+          return EXIT.TRANSCRIPT;
+        }
+        return EXIT.CURSOR;
+      }
+      throw e;
+    } finally {
+      await usagePersistence.flush();
+    }
+  }
+
   const activityManager = createActivityManager({ sessions: repo });
   const activityClassifier = createActivitySignalClassifier();
+  const usagePersistence = createUsagePersistenceChain(repo);
   let activityWriteChain: Promise<void> = Promise.resolve();
   let lastActivitySessionId: string | undefined;
   const enqueueActivitySignal = (
@@ -2906,6 +3279,7 @@ async function runSession(argv: string[]): Promise<number> {
         activityClassifier.classifyStreamEvent(event),
       );
     }
+    usagePersistence.capture(events, fallbackSessionId);
   };
   const recordProcessResult = async (
     exitCode: number | null,
@@ -3149,18 +3523,61 @@ async function runSession(argv: string[]): Promise<number> {
   if (sub === "run") {
     const stream = headlessStreamMode!;
     const prompt = runHeadlessPrompt!;
+    const imgErr = consumeImageFlagErrors(flags);
+    if (imgErr !== undefined) {
+      console.error(`session run: ${imgErr}`);
+      return EXIT.USAGE;
+    }
+    const rawImages = imagePathsFromFlags(flags);
+    const prep = await preparePromptAttachmentLaunch(
+      workspace,
+      "cli",
+      rawImages,
+      stream,
+    );
+    if ("exit" in prep) {
+      return prep.exit;
+    }
     const norm = new StreamNormalizerState();
     const textState: TextStreamRenderState = {
       lastAssistantBySession: new Map(),
     };
-    const exit = await runHeadlessStreaming(
-      buildHeadlessRunOptions(workspace, prompt, flags),
-      (line) => {
-        const events = norm.processLine(line);
-        emitStreamedAgentEvents(stream, events, textState);
-        captureActivityEvents(events);
-      },
-    );
+    const attachmentProv =
+      prep.provenance.length > 0 ? prep.provenance : undefined;
+    let attachmentActivityRecorded = false;
+    let exit: CursorAgentExit;
+    try {
+      exit = await runHeadlessStreaming(
+        buildHeadlessRunOptions(workspace, prompt, flags, prep.ok),
+        (line) => {
+          const events = norm.processLine(line);
+          emitStreamedAgentEvents(stream, events, textState);
+          for (const event of events) {
+            const sessionId = sessionIdFromEvent(event);
+            if (sessionId !== undefined) {
+              lastActivitySessionId = sessionId;
+              if (attachmentProv !== undefined && !attachmentActivityRecorded) {
+                attachmentActivityRecorded = true;
+                enqueueActivitySignal(sessionId, {
+                  source: "process",
+                  status: "running",
+                  observedAt: new Date().toISOString(),
+                  detail: "prompt attachments forwarded",
+                  attachments: [...attachmentProv],
+                });
+              }
+            }
+            enqueueActivitySignal(
+              sessionId,
+              activityClassifier.classifyStreamEvent(event),
+            );
+          }
+          usagePersistence.capture(events);
+        },
+      );
+    } finally {
+      await usagePersistence.flush();
+    }
     await recordProcessResult(exit.code, exit.stderr, exit.stdout);
     if (isTrustFailureMessage(exit.stderr)) {
       console.error(exit.stderr);
@@ -3197,6 +3614,30 @@ async function runSession(argv: string[]): Promise<number> {
     const known = repo.resolveSessionKey(sid);
     const resumeWorkspace =
       explicitWorkspace ?? known?.workspacePath ?? workspace;
+    const imgErr = consumeImageFlagErrors(flags);
+    if (imgErr !== undefined) {
+      console.error(`session resume: ${imgErr}`);
+      return EXIT.USAGE;
+    }
+    const rawImages = imagePathsFromFlags(flags);
+    if (rawImages.length > 0) {
+      const p = flags["prompt"];
+      if (typeof p !== "string" || p.trim().length === 0) {
+        console.error(
+          "session resume: --prompt is required when using --image",
+        );
+        return EXIT.USAGE;
+      }
+    }
+    const prep = await preparePromptAttachmentLaunch(
+      resumeWorkspace,
+      "cli",
+      rawImages,
+      stream,
+    );
+    if ("exit" in prep) {
+      return prep.exit;
+    }
     const norm = new StreamNormalizerState();
     const textState: TextStreamRenderState = {
       lastAssistantBySession: new Map(),
@@ -3206,15 +3647,23 @@ async function runSession(argv: string[]): Promise<number> {
       status: "running",
       observedAt: new Date().toISOString(),
       detail: "resume process started",
+      ...(prep.provenance.length > 0
+        ? { attachments: [...prep.provenance] }
+        : {}),
     });
-    const exit = await resumeStreaming(
-      buildResumeRunOptions(resumeWorkspace, sid, flags),
-      (line) => {
-        const events = norm.processLine(line);
-        emitStreamedAgentEvents(stream, events, textState);
-        captureActivityEvents(events, sid);
-      },
-    );
+    let exit: CursorAgentExit;
+    try {
+      exit = await resumeStreaming(
+        buildResumeRunOptions(resumeWorkspace, sid, flags, prep.ok),
+        (line) => {
+          const events = norm.processLine(line);
+          emitStreamedAgentEvents(stream, events, textState);
+          captureActivityEvents(events, sid);
+        },
+      );
+    } finally {
+      await usagePersistence.flush();
+    }
     await recordProcessResult(exit.code, exit.stderr, exit.stdout, sid);
     if (isTrustFailureMessage(exit.stderr)) {
       console.error(exit.stderr);
@@ -3240,6 +3689,15 @@ async function runSession(argv: string[]): Promise<number> {
     }
     const sid = latest.localSessionId ?? latest.cursorChatId ?? "";
     const stream = headlessStreamMode!;
+    const imgErrContinue = consumeImageFlagErrors(flags);
+    if (imgErrContinue !== undefined) {
+      console.error(`session continue: ${imgErrContinue}`);
+      return EXIT.USAGE;
+    }
+    if (imagePathsFromFlags(flags).length > 0) {
+      console.error("session continue: --image is not supported");
+      return EXIT.USAGE;
+    }
     const textState: TextStreamRenderState = {
       lastAssistantBySession: new Map(),
     };
@@ -3250,14 +3708,19 @@ async function runSession(argv: string[]): Promise<number> {
       observedAt: new Date().toISOString(),
       detail: "continue process started",
     });
-    const exit = await resumeStreaming(
-      buildResumeRunOptions(workspace, sid, flags),
-      (line) => {
-        const events = norm.processLine(line);
-        emitStreamedAgentEvents(stream, events, textState);
-        captureActivityEvents(events, sid);
-      },
-    );
+    let exit: CursorAgentExit;
+    try {
+      exit = await resumeStreaming(
+        buildResumeRunOptions(workspace, sid, flags),
+        (line) => {
+          const events = norm.processLine(line);
+          emitStreamedAgentEvents(stream, events, textState);
+          captureActivityEvents(events, sid);
+        },
+      );
+    } finally {
+      await usagePersistence.flush();
+    }
     await recordProcessResult(exit.code, exit.stderr, exit.stdout, sid);
     if (isTrustFailureMessage(exit.stderr)) {
       console.error(exit.stderr);
@@ -3522,6 +3985,22 @@ async function runGroup(argv: string[]): Promise<number> {
       return EXIT.USAGE;
     }
     const stream = sm.mode;
+    const gw = getWorkspace(flags);
+    const imgErrGroup = consumeImageFlagErrors(flags);
+    if (imgErrGroup !== undefined) {
+      console.error(`group run: ${imgErrGroup}`);
+      return EXIT.USAGE;
+    }
+    const rawGroupImages = imagePathsFromFlags(flags);
+    const grpPrep = await preparePromptAttachmentLaunch(
+      gw,
+      "group",
+      rawGroupImages,
+      stream,
+    );
+    if ("exit" in grpPrep) {
+      return grpPrep.exit;
+    }
     const repo = await openRepo();
     const activityManager = createActivityManager({ sessions: repo });
     const activityClassifier = createActivitySignalClassifier();
@@ -3537,7 +4016,11 @@ async function runGroup(argv: string[]): Promise<number> {
         });
       });
     };
-    let run = initialRunRecord(g, prompt);
+    let run = initialRunRecord(
+      g,
+      prompt,
+      grpPrep.provenance.length > 0 ? grpPrep.provenance : undefined,
+    );
     enqueueGroupRunUpdate(run, "active");
     await groupWriteChain;
     for (const w of g.workspaces) {
@@ -3559,8 +4042,10 @@ async function runGroup(argv: string[]): Promise<number> {
       const textState: TextStreamRenderState = {
         lastAssistantBySession: new Map(),
       };
+      const usagePersistence = createUsagePersistenceChain(repo);
       let activityWriteChain: Promise<void> = Promise.resolve();
       let lastSessionId: string | undefined;
+      let workspaceAttachmentRecorded = false;
       const enqueueActivitySignal = (
         sessionId: string | undefined,
         signal: ActivitySignal | null,
@@ -3569,28 +4054,47 @@ async function runGroup(argv: string[]): Promise<number> {
           recordActivitySignal(activityManager, sessionId, signal),
         );
       };
-      const exit = await runHeadlessStreamingImpl(
-        buildHeadlessRunOptions(resolve(w), prompt, flags),
-        (line) => {
-          const events = norm.processLine(line);
-          emitStreamedAgentEvents(stream, events, textState);
-          for (const event of events) {
-            const sessionId = sessionIdFromEvent(event);
-            if (sessionId !== undefined) {
-              lastSessionId = sessionId;
-              run = updateRunWorkspace(run, w, {
-                localSessionId: sessionId,
-                status: "running",
-              });
-              enqueueGroupRunUpdate(run);
+      let exit: CursorAgentExit;
+      try {
+        exit = await runHeadlessStreamingImpl(
+          buildHeadlessRunOptions(resolve(w), prompt, flags, grpPrep.ok),
+          (line) => {
+            const events = norm.processLine(line);
+            emitStreamedAgentEvents(stream, events, textState);
+            for (const event of events) {
+              const sessionId = sessionIdFromEvent(event);
+              if (sessionId !== undefined) {
+                lastSessionId = sessionId;
+                if (
+                  grpPrep.provenance.length > 0 &&
+                  !workspaceAttachmentRecorded
+                ) {
+                  workspaceAttachmentRecorded = true;
+                  enqueueActivitySignal(sessionId, {
+                    source: "process",
+                    status: "running",
+                    observedAt: new Date().toISOString(),
+                    detail: "group run prompt attachments forwarded",
+                    attachments: [...grpPrep.provenance],
+                  });
+                }
+                run = updateRunWorkspace(run, w, {
+                  localSessionId: sessionId,
+                  status: "running",
+                });
+                enqueueGroupRunUpdate(run);
+              }
+              enqueueActivitySignal(
+                sessionId,
+                activityClassifier.classifyStreamEvent(event),
+              );
             }
-            enqueueActivitySignal(
-              sessionId,
-              activityClassifier.classifyStreamEvent(event),
-            );
-          }
-        },
-      );
+            usagePersistence.capture(events);
+          },
+        );
+      } finally {
+        await usagePersistence.flush();
+      }
       const completedAt = new Date().toISOString();
       const workspaceUpdate: Partial<GroupRunWorkspaceRecord> = {
         status: exit.code === 0 || exit.code === null ? "completed" : "failed",
@@ -3665,7 +4169,7 @@ function isQueueItemMode(value: string): value is QueueItemMode {
 }
 
 function parseQueueIndex(
-  flags: Record<string, string | boolean>,
+  flags: ParsedCliFlags,
   key: string,
 ): number | undefined {
   const value = flags[key];
@@ -3963,7 +4467,38 @@ async function runQueue(argv: string[]): Promise<number> {
       console.error("queue add: --prompt is required");
       return EXIT.USAGE;
     }
-    await queuesStore.addQueueItem(name, prompt);
+    const queueRef = await queuesStore.getQueue(name);
+    if (queueRef === undefined) {
+      console.error("queue not found");
+      return EXIT.NOT_FOUND;
+    }
+    const imgErrAdd = consumeImageFlagErrors(flags);
+    if (imgErrAdd !== undefined) {
+      console.error(`queue add: ${imgErrAdd}`);
+      return EXIT.USAGE;
+    }
+    const rawAddImages = imagePathsFromFlags(flags);
+    const attachStream: "text" | "json" | "events" =
+      flags["json"] === true ? "json" : "text";
+    const prepAdd = await preparePromptAttachmentLaunch(
+      queueRef.workspace,
+      "queue",
+      rawAddImages,
+      attachStream,
+    );
+    if ("exit" in prepAdd) {
+      return prepAdd.exit;
+    }
+    const qAdded = await queuesStore.addQueueItem(
+      name,
+      prompt,
+      prepAdd.provenance.length > 0
+        ? { attachments: [...prepAdd.provenance] }
+        : undefined,
+    );
+    if (json) {
+      printJson(qAdded);
+    }
     return EXIT.OK;
   }
   if (sub === "remove") {
@@ -4005,6 +4540,21 @@ async function runQueue(argv: string[]): Promise<number> {
       return EXIT.USAGE;
     }
     const stream = sm.mode;
+    const queueRunImgErr = consumeImageFlagErrors(flags);
+    if (queueRunImgErr !== undefined) {
+      console.error(`queue run: ${queueRunImgErr}`);
+      return EXIT.USAGE;
+    }
+    const runRawPaths = imagePathsFromFlags(flags);
+    const prepRunLevel = await preparePromptAttachmentLaunch(
+      initialQueue.workspace,
+      "queue",
+      runRawPaths,
+      stream,
+    );
+    if ("exit" in prepRunLevel) {
+      return prepRunLevel.exit;
+    }
     const repo = await openRepo();
     const activityManager = createActivityManager({ sessions: repo });
     const activityClassifier = createActivitySignalClassifier();
@@ -4022,7 +4572,10 @@ async function runQueue(argv: string[]): Promise<number> {
         });
       });
     };
-    let run = initialQueueRunRecord(initialQueue);
+    let run = initialQueueRunRecord(
+      initialQueue,
+      prepRunLevel.provenance.length > 0 ? prepRunLevel.provenance : undefined,
+    );
     enqueueQueueRunUpdate(run, "active");
     await queueWriteChain;
     for (const item of initialQueue.items) {
@@ -4067,8 +4620,19 @@ async function runQueue(argv: string[]): Promise<number> {
       const textState: TextStreamRenderState = {
         lastAssistantBySession: new Map(),
       };
+      const mergedPrep = await preparePromptAttachmentLaunchFromInputs(
+        initialQueue.workspace,
+        "queue",
+        mergeQueueItemAttachmentInputs(item, runRawPaths),
+        stream,
+      );
+      if ("exit" in mergedPrep) {
+        return mergedPrep.exit;
+      }
+      const usagePersistence = createUsagePersistenceChain(repo);
       let activityWriteChain: Promise<void> = Promise.resolve();
       let lastSessionId: string | undefined;
+      let queueItemAttachmentRecorded = false;
       const enqueueActivitySignal = (
         sessionId: string | undefined,
         signal: ActivitySignal | null,
@@ -4077,33 +4641,57 @@ async function runQueue(argv: string[]): Promise<number> {
           recordActivitySignal(activityManager, sessionId, signal),
         );
       };
-      const exit = await runHeadlessStreamingImpl(
-        buildHeadlessRunOptions(initialQueue.workspace, item.prompt, flags),
-        (line) => {
-          const events = norm.processLine(line);
-          emitStreamedAgentEvents(stream, events, textState);
-          for (const event of events) {
-            const sessionId = sessionIdFromEvent(event);
-            if (sessionId !== undefined) {
-              lastSessionId = sessionId;
-              currentItems = currentItems.map((queueItem) =>
-                queueItem.id === item.id
-                  ? {
-                      ...queueItem,
-                      localSessionId: sessionId,
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : queueItem,
+      let exit: CursorAgentExit;
+      try {
+        exit = await runHeadlessStreamingImpl(
+          buildHeadlessRunOptions(
+            initialQueue.workspace,
+            item.prompt,
+            flags,
+            mergedPrep.ok,
+          ),
+          (line) => {
+            const events = norm.processLine(line);
+            emitStreamedAgentEvents(stream, events, textState);
+            for (const event of events) {
+              const sessionId = sessionIdFromEvent(event);
+              if (sessionId !== undefined) {
+                lastSessionId = sessionId;
+                if (
+                  mergedPrep.provenance.length > 0 &&
+                  !queueItemAttachmentRecorded
+                ) {
+                  queueItemAttachmentRecorded = true;
+                  enqueueActivitySignal(sessionId, {
+                    source: "process",
+                    status: "running",
+                    observedAt: new Date().toISOString(),
+                    detail: "queue run prompt attachments forwarded",
+                    attachments: [...mergedPrep.provenance],
+                  });
+                }
+                currentItems = currentItems.map((queueItem) =>
+                  queueItem.id === item.id
+                    ? {
+                        ...queueItem,
+                        localSessionId: sessionId,
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : queueItem,
+                );
+                enqueueQueueRunUpdate(run, undefined, currentItems);
+              }
+              enqueueActivitySignal(
+                sessionId,
+                activityClassifier.classifyStreamEvent(event),
               );
-              enqueueQueueRunUpdate(run, undefined, currentItems);
             }
-            enqueueActivitySignal(
-              sessionId,
-              activityClassifier.classifyStreamEvent(event),
-            );
-          }
-        },
-      );
+            usagePersistence.capture(events);
+          },
+        );
+      } finally {
+        await usagePersistence.flush();
+      }
       enqueueActivitySignal(
         lastSessionId,
         activityClassifier.classifyProcessResult(

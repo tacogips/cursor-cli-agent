@@ -128,7 +128,7 @@ function dedupeSignals(
   const seen = new Set<string>();
   const deduped: ActivitySignal[] = [];
   for (const signal of [...signals].sort(compareSignalsForProvenance)) {
-    const key = `${signal.source}\0${signal.status}\0${signal.observedAt}\0${signal.detail ?? ""}`;
+    const key = `${signal.source}\0${signal.status}\0${signal.observedAt}\0${signal.detail ?? ""}\0${signal.attachments?.map((a) => a.id).join(",") ?? ""}`;
     if (seen.has(key)) {
       continue;
     }

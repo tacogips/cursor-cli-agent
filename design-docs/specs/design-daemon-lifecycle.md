@@ -19,7 +19,7 @@ This design maps the `codex-agent` Phase 4 daemon/app-server behavior onto this 
 - Target area: daemon mode
 - Requested behavior: daemon start, stop, status, PID metadata, stale process cleanup, server supervision, readiness checks, and CLI daemon commands
 - Dependencies: `P4-HTTP-SERVER`, `P4-SSE`, `P4-AUTH`
-- Assigned implementation plan: `impl-plans/active/daemon-lifecycle.md`
+- Assigned implementation plan: `impl-plans/completed/daemon-lifecycle.md`
 
 ## Codex-Agent Reference Mapping
 

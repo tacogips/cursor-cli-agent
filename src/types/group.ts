@@ -1,3 +1,5 @@
+import type { PromptAttachmentProvenance } from "./prompt-attachment";
+
 export type GroupLifecycleState = "active" | "paused" | "completed" | "failed";
 
 export type GroupRunStatus = "running" | "completed" | "failed" | "paused";
@@ -25,6 +27,8 @@ export interface GroupRunRecord {
   readonly id: string;
   readonly status: GroupRunStatus;
   readonly promptPreview?: string;
+  /** Run-level image attachment provenance (repository-owned). */
+  readonly attachments?: readonly PromptAttachmentProvenance[];
   readonly startedAt: string;
   readonly updatedAt: string;
   readonly completedAt?: string;

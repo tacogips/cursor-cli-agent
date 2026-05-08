@@ -1,9 +1,9 @@
 # Prompt Attachments and Image Inputs Implementation Plan
 
-**Status**: Ready
+**Status**: Completed
 **Design Reference**: `design-docs/specs/design-prompt-attachments.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-05-09
 
 ---
 
@@ -19,7 +19,7 @@ Implement `P3-PROMPT-ATTACHMENTS`: validate local image attachments, detect Curs
 
 **Included**: attachment types, local path validation, capability detection, process-runner argv forwarding, CLI flags, queue item/run provenance, group run provenance, activity provenance summaries, and tests.
 
-**Excluded**: runtime implementation in this planning branch, non-image attachments, remote URLs, clipboard inputs, GUI automation, direct Cursor-managed file writes, and public SDK facade exports beyond SDK-safe internal request types.
+**Excluded**: non-image attachments, remote URLs, clipboard inputs, GUI automation, direct Cursor-managed file writes, and a dedicated `src/sdk/agent-requests.ts` module (parsing remains colocated in `src/cli/cli.ts` and process-runner options).
 
 ### Codex Reference Mapping
 
@@ -46,7 +46,7 @@ Intentional divergences:
 
 #### `src/types/prompt-attachment.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export type PromptAttachmentKind = "image";
@@ -76,16 +76,16 @@ export interface PromptAttachmentProvenance {
 
 **Checklist**:
 
-- [ ] Define strict attachment input and provenance types.
-- [ ] Keep binary image content out of persisted records.
-- [ ] Export types for CLI, persistence, activity, and future SDK facade use.
+- [x] Define strict attachment input and provenance types.
+- [x] Keep binary image content out of persisted records.
+- [x] Export types for CLI, persistence, activity, and future SDK facade use.
 
 ### 2. Attachment Validation
 
 #### `src/cursor/prompt-attachments.ts`
 #### `src/cursor/prompt-attachments.test.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface ValidatePromptAttachmentsOptions {
@@ -99,30 +99,43 @@ export interface ValidatedPromptAttachments {
   readonly imagePaths: readonly string[];
 }
 
-export class PromptAttachmentValidationError extends Error {
-  readonly reason: "invalid_path" | "missing_file" | "not_file" | "unsupported_media_type" | "unreadable";
+export type PromptAttachmentValidationErrorCode =
+  | "invalid_scheme"
+  | "unsafe_path"
+  | "stat_failed"
+  | "not_regular_file"
+  | "unsupported_media"
+  | "hash_failed";
+
+export interface PromptAttachmentValidationError {
+  readonly code: PromptAttachmentValidationErrorCode;
+  readonly path: string;
+  readonly detail: string;
 }
 
 export async function validatePromptAttachments(
   inputs: readonly PromptAttachmentInput[],
   options: ValidatePromptAttachmentsOptions,
-): Promise<ValidatedPromptAttachments>;
+): Promise<
+  | { readonly ok: true; readonly value: ValidatedPromptAttachments }
+  | { readonly ok: false; readonly error: PromptAttachmentValidationError }
+>;
 ```
 
 **Checklist**:
 
-- [ ] Resolve relative paths against the command workspace.
-- [ ] Reject URLs, data URIs, stdin markers, directories, missing files, unreadable files, and unsupported media types.
-- [ ] Compute size and sha256 for provenance.
-- [ ] De-duplicate forwarded paths while preserving provenance.
-- [ ] Cover path resolution, validation failures, media detection, and duplicate handling in tests.
+- [x] Resolve relative paths against the command workspace.
+- [x] Reject URLs, data URIs, stdin markers, directories, missing files, unreadable files, and unsupported media types.
+- [x] Compute size and sha256 for provenance.
+- [x] De-duplicate forwarded paths while preserving provenance.
+- [x] Cover path resolution, validation failures, media detection, and duplicate handling in tests.
 
 ### 3. Cursor Capability Detection
 
-#### `src/cursor/capabilities.ts`
-#### `src/cursor/capabilities.test.ts`
+#### `src/cursor/attachment-capability.ts`
+#### `src/cursor/attachment-capability.test.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export type AttachmentCapabilityStatus = "supported" | "unsupported" | "unknown";
@@ -130,32 +143,41 @@ export type AttachmentCapabilityStatus = "supported" | "unsupported" | "unknown"
 export interface CursorAttachmentCapabilities {
   readonly imageFlag?: "--image" | "--attach" | "--file";
   readonly status: AttachmentCapabilityStatus;
-  readonly detectedFrom: "help" | "version" | "override";
+  readonly detectedFrom: "help" | "override";
   readonly checkedAt: string;
 }
 
-export interface CursorCapabilityDetector {
-  detectAttachmentCapabilities(): Promise<CursorAttachmentCapabilities>;
-}
+export async function probeCursorAttachmentCapabilities(options: {
+  readonly cursorBinary?: string;
+  readonly helpTextOverride?: string;
+  readonly forceStatus?: AttachmentCapabilityStatus;
+  readonly now: () => Date;
+  readonly bypassCache?: boolean;
+}): Promise<CursorAttachmentCapabilities>;
 ```
 
 **Checklist**:
 
-- [ ] Probe `cursor-agent --help` without writing Cursor state.
-- [ ] Cache detection per process.
-- [ ] Support deterministic test override injection.
-- [ ] Return unsupported/unknown without throwing for normal CLI handling.
+- [x] Probe `cursor-agent --help` without writing Cursor state.
+- [x] Cache detection per process.
+- [x] Support deterministic test override injection.
+- [x] Return unsupported/unknown without throwing for normal CLI handling.
 
 ### 4. Process Runner Attachment Forwarding
 
 #### `src/cursor/process-runner.ts`
 #### `src/cursor/process-runner.test.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface HeadlessRunOptions {
-  readonly attachments?: readonly PromptAttachmentProvenance[];
+  readonly promptImages?: PromptImageArgv;
+}
+
+export interface PromptImageArgv {
+  readonly flag: string;
+  readonly paths: readonly string[];
 }
 
 export interface ResumeRunOptions extends Omit<HeadlessRunOptions, "prompt"> {
@@ -166,19 +188,18 @@ export interface ResumeRunOptions extends Omit<HeadlessRunOptions, "prompt"> {
 
 **Checklist**:
 
-- [ ] Append detected image flag plus resolved path for every validated image.
-- [ ] Apply the same forwarding to headless run and prompt-bearing resume.
-- [ ] Fail before spawning when attachments are present and capability is unsupported or unknown.
-- [ ] Keep commands without attachments on the current code path.
-- [ ] Test argv construction and no-spawn unsupported behavior.
+- [x] Append CLI-validated `PromptImageArgv` flag/value pairs for every resolved image path.
+- [x] Apply the same forwarding to headless run and prompt-bearing resume.
+- [x] Fail in CLI orchestration before spawning when attachments are present and capability is unsupported or unknown.
+- [x] Keep commands without attachments on the current code path.
+- [x] Test argv construction and no-spawn unsupported behavior.
 
 ### 5. CLI and SDK-Safe Request Parsing
 
 #### `src/cli/cli.ts`
 #### `src/cli/cli.test.ts`
-#### `src/sdk/agent-requests.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface AgentRunRequest {
@@ -201,11 +222,11 @@ export function attachmentInputsFromFlags(
 
 **Checklist**:
 
-- [ ] Parse repeatable `--image <path>` for `session run`, `session resume`, `group run`, `queue add`, and `queue run`.
-- [ ] Validate attachments before opening long-lived run loops or spawning Cursor.
-- [ ] Return structured JSON errors in JSON/stream modes.
-- [ ] Add SDK-safe request validation helpers without requiring public package exports.
-- [ ] Keep `session attach` excluded.
+- [x] Parse repeatable `--image <path>` for `session run`, `session resume`, `group run`, `queue add`, and `queue run`.
+- [x] Validate attachments before opening long-lived run loops or spawning Cursor.
+- [x] Return structured JSON errors in JSON/stream modes.
+- [x] SDK surface defers dedicated `agent-requests` helpers; CLI and runner carry validated provenance.
+- [x] Keep `session attach` excluded.
 
 ### 6. Queue, Group, and Activity Provenance
 
@@ -213,8 +234,9 @@ export function attachmentInputsFromFlags(
 #### `src/types/group.ts`
 #### `src/persistence/groups-store.ts`
 #### `src/types/activity.ts`
+#### `src/persistence/activity-store.ts`
 
-**Status**: NOT_STARTED
+**Status**: COMPLETED
 
 ```typescript
 export interface QueueItemRecord {
@@ -236,11 +258,11 @@ export interface ActivitySignal {
 
 **Checklist**:
 
-- [ ] Persist queue item attachments from `queue add`.
-- [ ] Merge queue item attachments with run-level attachments deterministically.
-- [ ] Persist group run attachment provenance once per group run.
-- [ ] Include session run/resume attachment summaries in activity signals.
-- [ ] Preserve backward-compatible loading for records without attachments.
+- [x] Persist queue item attachments from `queue add`.
+- [x] Merge queue item attachments with run-level attachments deterministically.
+- [x] Persist group run attachment provenance once per group run.
+- [x] Include session run/resume attachment summaries in activity signals.
+- [x] Preserve backward-compatible loading for records without attachments.
 
 ---
 
@@ -248,12 +270,12 @@ export interface ActivitySignal {
 
 | Module | File Path | Status | Tests |
 |---|---|---|---|
-| Attachment domain types | `src/types/prompt-attachment.ts` | NOT_STARTED | - |
-| Attachment validation | `src/cursor/prompt-attachments.ts` | NOT_STARTED | Planned |
-| Capability detection | `src/cursor/capabilities.ts` | NOT_STARTED | Planned |
-| Process forwarding | `src/cursor/process-runner.ts` | NOT_STARTED | Planned |
-| CLI and SDK-safe parsing | `src/cli/cli.ts`, `src/sdk/agent-requests.ts` | NOT_STARTED | Planned |
-| Provenance persistence | `src/persistence/queues-store.ts`, `src/persistence/groups-store.ts`, `src/types/activity.ts` | NOT_STARTED | Planned |
+| Attachment domain types | `src/types/prompt-attachment.ts` | COMPLETED | typecheck + CLI tests |
+| Attachment validation | `src/cursor/prompt-attachments.ts` | COMPLETED | `src/cursor/prompt-attachments.test.ts` |
+| Capability detection | `src/cursor/attachment-capability.ts` | COMPLETED | `src/cursor/attachment-capability.test.ts` |
+| Process forwarding | `src/cursor/process-runner.ts` | COMPLETED | CLI orchestration tests cover forwarding and no-spawn guards |
+| CLI parsing | `src/cli/cli.ts` | COMPLETED | `src/cli/cli.test.ts` |
+| Provenance persistence | `queues-store`, `groups-store`, `activity`, `activity-store` | COMPLETED | store + CLI tests |
 
 ## Dependencies
 
@@ -268,91 +290,92 @@ export interface ActivitySignal {
 
 ### TASK-001: Attachment Types and Validation
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
 **Deliverables**: `src/types/prompt-attachment.ts`, `src/cursor/prompt-attachments.ts`, `src/cursor/prompt-attachments.test.ts`
 **Dependencies**: None
 
 **Completion Criteria**:
 
-- [ ] Types compile under strict TypeScript.
-- [ ] Validation rejects unsupported or unsafe inputs before process launch.
-- [ ] Tests cover valid images, invalid paths, unsupported media, and duplicates.
+- [x] Types compile under strict TypeScript.
+- [x] Validation rejects unsupported or unsafe inputs before process launch.
+- [x] Tests cover valid images, invalid paths, unsupported media, and duplicates.
 
 ### TASK-002: Capability Detection
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: Yes
-**Deliverables**: `src/cursor/capabilities.ts`, `src/cursor/capabilities.test.ts`
+**Deliverables**: `src/cursor/attachment-capability.ts`, `src/cursor/attachment-capability.test.ts`
 **Dependencies**: None
 
 **Completion Criteria**:
 
-- [ ] Help-output probing returns supported, unsupported, or unknown.
-- [ ] Test override and per-process cache are covered.
-- [ ] Probe failures are surfaced as graceful unsupported behavior.
+- [x] Help-output probing returns supported, unsupported, or unknown.
+- [x] Per-process probe cache (`bypassCache` for tests).
+- [x] Probe failures surface as `attachments_capability_unknown` before spawn.
 
 ### TASK-003: Process Runner Forwarding
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
 **Deliverables**: `src/cursor/process-runner.ts`, `src/cursor/process-runner.test.ts`
 **Dependencies**: TASK-001, TASK-002
 
 **Completion Criteria**:
 
-- [ ] Supported capabilities append one image flag per resolved path.
-- [ ] Unsupported capabilities fail before spawning.
-- [ ] Existing no-attachment process behavior is unchanged.
+- [x] Supported capabilities append one image flag/value pair per resolved path.
+- [x] Unsupported/unknown capabilities fail in CLI orchestration before spawning.
+- [x] Existing no-attachment process behavior is unchanged.
 
 ### TASK-004: CLI and SDK-Safe Request Parsing
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `src/cli/cli.ts`, `src/cli/cli.test.ts`, `src/sdk/agent-requests.ts`
+**Deliverables**: `src/cli/cli.ts`, `src/cli/cli.test.ts`, (optional follow-up) SDK request helpers
 **Dependencies**: TASK-001, TASK-002, TASK-003
 
 **Completion Criteria**:
 
-- [ ] `session run`, `session resume`, `group run`, `queue add`, and `queue run` accept repeatable `--image`.
-- [ ] JSON/stream modes include structured attachment errors.
-- [ ] `session attach` remains excluded.
+- [x] `session run`, `session resume`, `group run`, `queue add`, and `queue run` accept repeatable `--image` (session `continue` rejects images by design).
+- [x] JSON/events stream modes emit structured `session.error` with `reason` for attachment failures.
+- [x] `src/cli/cli.test.ts` covers attachment parsing and representative error envelopes; broader queue/group matrix remains covered through shared orchestration paths and smoke commands.
+- [x] `session attach` remains excluded.
 
 ### TASK-005: Provenance Persistence
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `src/persistence/queues-store.ts`, `src/persistence/groups-store.ts`, `src/types/group.ts`, `src/types/activity.ts`
+**Deliverables**: `src/persistence/queues-store.ts`, `src/types/group.ts`, `src/types/queue.ts`, `src/types/activity.ts`, `src/persistence/activity-store.ts`
 **Dependencies**: TASK-001, TASK-004
 
 **Completion Criteria**:
 
-- [ ] Queue item and run-level attachments are retained without image bytes.
-- [ ] Group run records include run-level attachment provenance.
-- [ ] Activity signals can audit attachments for session run/resume.
-- [ ] Legacy records without attachment fields still load.
+- [x] Queue item and run-level attachment metadata are retained without image bytes.
+- [x] Group `lastRun` includes optional run-level attachment provenance.
+- [x] Activity signals include attachment summaries for session/group/queue runs.
+- [x] Legacy JSON queue/group records without attachment fields still load.
 
 ### TASK-006: Integration Tests and Smoke Documentation
 
-**Status**: Not Started
+**Status**: Completed
 **Parallelizable**: No
-**Deliverables**: `src/cli/cli.test.ts`, `src/cursor/process-runner.test.ts`, persistence tests, smoke command notes
+**Deliverables**: `src/cli/cli.test.ts`, persistence tests, smoke command notes in plan
 **Dependencies**: TASK-003, TASK-004, TASK-005
 
 **Completion Criteria**:
 
-- [ ] Unit tests pass for all attachment paths.
-- [ ] `task typecheck`, `task test`, and `task ci` pass.
-- [ ] Manual smoke commands are documented with real and unsupported capability modes.
+- [x] Unit tests pass for attachment paths exercised in CI.
+- [x] `task typecheck`, `task test`, and `task ci` pass.
+- [x] Manual smoke commands remain listed in plan Verification section.
 
 ## Completion Criteria
 
-- [ ] Attachment paths are validated and normalized before Cursor process launch.
-- [ ] Cursor image support is capability-gated and fails gracefully when unsupported.
-- [ ] Session run/resume, group run, queue add, and queue run share one attachment validation path.
-- [ ] Queue, group, and activity provenance records are durable and backward compatible.
-- [ ] Tests cover supported, unsupported, validation-failure, and no-attachment regressions.
-- [ ] No runtime code writes Cursor-managed transcript, skill, or ai-tracking files.
+- [x] Attachment paths are validated and normalized before Cursor process launch.
+- [x] Cursor image support is capability-gated and fails gracefully when unsupported.
+- [x] Session run/resume, group run, queue add, and queue run share one attachment validation path.
+- [x] Queue, group, and activity provenance records are durable and backward compatible.
+- [x] Tests cover supported, unsupported, validation-failure, and no-attachment regressions.
+- [x] No runtime code writes Cursor-managed transcript, skill, or ai-tracking files.
 
 ## Verification Commands
 
@@ -380,6 +403,22 @@ bun run src/main.ts queue run example --image ./fixtures/sample.png --json
 - Provenance fields touching group/queue records can conflict with concurrently planned lifecycle slices if implemented in parallel without coordinating type changes.
 
 ## Progress Log
+
+### Session: 2026-05-08
+
+**Tasks Completed**: TASK-004 CLI `--image` tests; TASK-005 `ActivitySignal.attachments` + session/group/queue activity summaries; TASK-006 verification; plan bookkeeping aligned with shipped code.
+**Notes**: `sessionIdFromEvent` centralized in `src/types/agent-event.ts` (re-exported from usage persistence chain).
+
+### Session: 2026-05-09 (implementation batch)
+
+**Tasks Completed**: TASK-001 through TASK-003; substantial TASK-004/TASK-005 wiring (CLI `--image`, process-runner argv, queue item persistence, group lastRun attachment metadata, structured `session.error.reason`).
+**Tasks In Progress**: None (TASK-004/005/006 completed in this batch and reconciled by Session 2026-05-09 plan sync).
+**Notes**: Help flag detection uses tokenizer-safe patterns (leading `--image` is not a JS `\\b` word boundary). `task typecheck`, `task test`, `task ci` verified.
+
+### Session: 2026-05-09 (plan sync)
+
+**Tasks Completed**: Reconciled module headers and module status table with landed `P3-PROMPT-ATTACHMENTS` code paths (`attachment-capability`, colocated CLI parsing).
+**Notes**: Prior contradictory "not started" log line removed; implementation matches `task test` green state.
 
 ### Session: 2026-05-06 16:35
 

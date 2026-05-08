@@ -6,6 +6,7 @@ export const AUTH_PERMISSIONS = [
   "queue:*",
   "bookmark:*",
   "files:*",
+  "server:read",
   "server:admin",
 ] as const;
 
@@ -86,6 +87,12 @@ export function hasAuthPermission(
     return true;
   }
   if (required.startsWith("files:") && granted.includes("files:*")) {
+    return true;
+  }
+  if (
+    required === "server:read" &&
+    (granted.includes("server:read") || granted.includes("server:admin"))
+  ) {
     return true;
   }
   return false;

@@ -39,8 +39,28 @@ function isActivitySignal(value: unknown): value is ActivitySignal {
       status === "completed" ||
       status === "failed") &&
     typeof record["observedAt"] === "string" &&
-    (record["detail"] === undefined || typeof record["detail"] === "string")
+    (record["detail"] === undefined || typeof record["detail"] === "string") &&
+    attachmentsFieldOk(record["attachments"])
   );
+}
+
+function attachmentsFieldOk(value: unknown): boolean {
+  if (value === undefined) {
+    return true;
+  }
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  for (const item of value) {
+    if (typeof item !== "object" || item === null) {
+      return false;
+    }
+    const p = item as Record<string, unknown>;
+    if (typeof p["id"] !== "string") {
+      return false;
+    }
+  }
+  return true;
 }
 
 async function load(path: string): Promise<StoredActivitySignals> {
