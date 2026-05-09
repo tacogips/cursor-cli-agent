@@ -164,7 +164,7 @@ export const DEFAULT_TRANSCRIPT_SEARCH_TIMEOUT_MS = 30_000;
 **Status**: COMPLETED
 
 ```typescript
-curort-cli-agent transcript search <query> [--session <id>] [--role <role>] [--limit <n>] [--offset <n>] [--max-sessions <n>] [--max-bytes <n>] [--max-events <n>] [--json]
+cursor-cli-agent transcript search <query> [--session <id>] [--role <role>] [--limit <n>] [--offset <n>] [--max-sessions <n>] [--max-bytes <n>] [--max-events <n>] [--json]
 ```
 
 **Checklist**:
@@ -343,7 +343,7 @@ describe("transcript full-text search", () => {
 **Tasks Completed**: Addressed Step 7 revision rerun by tightening transcript scan accounting.
 **Tasks In Progress**: None.
 **Blockers**: Latest Step 7 payload was truncated in the provided execution context and no matching local candidate artifact existed for execution `div-design-and-implement-review-loop-1777949666-19515852`; revision used visible review decision plus design and Codex-reference alignment.
-**Verification**: `bun run format`, `bun test src/cursor/transcript-reader.test.ts src/cursor/transcript-search.test.ts`, `task typecheck`, `task test`, `task ci`, `CURORT_CLI_AGENT_DATA_DIR=/tmp/curort-cli-agent-smoke-data CURORT_CLI_AGENT_CURSOR_HOME=/tmp/curort-cli-agent-smoke-cursor bun run src/main.ts transcript search needle --json`.
+**Verification**: `bun run format`, `bun test src/cursor/transcript-reader.test.ts src/cursor/transcript-search.test.ts`, `task typecheck`, `task test`, `task ci`, `CURSOR_CLI_AGENT_DATA_DIR=/tmp/cursor-cli-agent-smoke-data CURSOR_CLI_AGENT_CURSOR_HOME=/tmp/cursor-cli-agent-smoke-cursor bun run src/main.ts transcript search needle --json`.
 **Notes**: Added scan-row streaming metadata so malformed and unknown-role transcript rows count toward scan counters and budgets without becoming hits, preserved the searchable-line adapter API, and accepted `input_text` transcript content blocks alongside `text` and `output_text`.
 
 ## Related Plans

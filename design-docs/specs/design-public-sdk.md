@@ -1,6 +1,6 @@
 # Public SDK Facade
 
-This document defines the Phase 4 `P4-PUBLIC-SDK` design for stable package exports in `curort-cli-agent`.
+This document defines the Phase 4 `P4-PUBLIC-SDK` design for stable package exports in `cursor-cli-agent`.
 
 ## Overview
 
@@ -232,8 +232,8 @@ bun run scripts/check-package-exports.ts
 Package smoke tests should verify:
 
 ```bash
-bun -e 'import("curort-cli-agent").then(() => console.log("import ok"))'
-bun -e 'import("curort-cli-agent/sdk/testing").then(() => console.log("testing ok"))'
+bun -e 'import("cursor-cli-agent").then(() => console.log("import ok"))'
+bun -e 'import("cursor-cli-agent/sdk/testing").then(() => console.log("testing ok"))'
 ```
 
 The root import smoke test must not execute CLI behavior.

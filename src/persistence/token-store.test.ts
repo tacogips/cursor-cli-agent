@@ -10,7 +10,7 @@ let configDir: string;
 
 describe("file token store", () => {
   beforeEach(async () => {
-    configDir = await mkdtemp(join(tmpdir(), "curort-token-store-"));
+    configDir = await mkdtemp(join(tmpdir(), "cursor-token-store-"));
   });
 
   afterEach(async () => {

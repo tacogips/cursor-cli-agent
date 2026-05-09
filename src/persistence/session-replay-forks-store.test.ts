@@ -17,8 +17,10 @@ describe("session-replay-forks-store", () => {
   });
 
   function setup(): { path: string } {
-    const d = dir!;
-    return { path: join(d, "forks.json") };
+    if (dir === undefined) {
+      throw new Error("dir not initialized");
+    }
+    return { path: join(dir, "forks.json") };
   }
 
   test("records and lists by source id", async () => {

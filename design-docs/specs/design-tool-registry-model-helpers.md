@@ -4,7 +4,7 @@ This document defines the Phase 5 `P5-TOOL-REGISTRY` slice for Cursor-safe tool 
 
 ## Overview
 
-The feature provides scriptable and SDK-facing helper APIs around the local `curort-cli-agent` runtime. It mirrors useful `codex-agent` helper concepts while adapting them to Cursor's local boundaries: `cursor-agent` subprocesses, repository-owned state, local transcript indexes, activity signals, optional `ai-tracking` enrichment, and import-safe public SDK exports.
+The feature provides scriptable and SDK-facing helper APIs around the local `cursor-cli-agent` runtime. It mirrors useful `codex-agent` helper concepts while adapting them to Cursor's local boundaries: `cursor-agent` subprocesses, repository-owned state, local transcript indexes, activity signals, optional `ai-tracking` enrichment, and import-safe public SDK exports.
 
 Included:
 
@@ -29,12 +29,12 @@ Excluded:
 Proposed commands:
 
 ```bash
-curort-cli-agent tool list [--json]
-curort-cli-agent tool show <name> [--json]
-curort-cli-agent tool run <name> --input <json|path> [--json]
-curort-cli-agent tool versions [--include-git] [--include-bun] [--json] [--timeout-ms <ms>]
-curort-cli-agent model check --model <model> [--probe] [--json] [--timeout-ms <ms>]
-curort-cli-agent usage stats [--recent-days <n>] [--json]
+cursor-cli-agent tool list [--json]
+cursor-cli-agent tool show <name> [--json]
+cursor-cli-agent tool run <name> --input <json|path> [--json]
+cursor-cli-agent tool versions [--include-git] [--include-bun] [--json] [--timeout-ms <ms>]
+cursor-cli-agent model check --model <model> [--probe] [--json] [--timeout-ms <ms>]
+cursor-cli-agent usage stats [--recent-days <n>] [--json]
 ```
 
 Rules:

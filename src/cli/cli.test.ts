@@ -25,9 +25,9 @@ import * as queuesStore from "../persistence/queues-store";
 import { SessionIndexRepository } from "../persistence/session-index";
 import { workspaceSlugFromPath } from "../config/paths";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
-const previousConfigDir = process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
+const previousConfigDir = process.env["CURSOR_CLI_AGENT_CONFIG_DIR"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
 
 let testDir: string;
 let logs: string[];
@@ -38,7 +38,7 @@ let errorSpy: Mock<(message?: unknown) => void>;
 async function seedSessionIndex(
   records: Parameters<SessionIndexRepository["upsert"]>[0][],
 ): Promise<void> {
-  const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+  const dataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   if (dataDir === undefined) {
     throw new Error("test data dir was not configured");
   }
@@ -54,19 +54,19 @@ async function seedSessionIndex(
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
   if (previousConfigDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_CONFIG_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
+    process.env["CURSOR_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
   }
   if (previousCursorHome === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
   } else {
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
   }
 }
 
@@ -79,10 +79,10 @@ function transcriptLine(role: string, text: string): string {
 
 describe("CLI search commands", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-cli-search-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-cli-search-"));
     const dataDir = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     await mkdir(dataDir, { recursive: true });
     logs = [];
     errors = [];
@@ -124,7 +124,7 @@ describe("CLI search commands", () => {
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "search",
       "json",
@@ -173,7 +173,7 @@ describe("CLI search commands", () => {
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "search",
       "chat-pending",
@@ -189,7 +189,7 @@ describe("CLI search commands", () => {
   test("rejects invalid search input with usage exit code", async () => {
     const invalidMode = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "search",
       "query",
@@ -205,7 +205,7 @@ describe("CLI search commands", () => {
     errors = [];
     const blankQuery = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "search",
       "   ",
@@ -240,7 +240,7 @@ describe("CLI search commands", () => {
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "transcript",
       "search",
       "needle",
@@ -271,7 +271,7 @@ describe("CLI search commands", () => {
   test("rejects invalid transcript search flags", async () => {
     const invalidRole = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "transcript",
       "search",
       "query",
@@ -287,7 +287,7 @@ describe("CLI search commands", () => {
     errors = [];
     const invalidBudget = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "transcript",
       "search",
       "query",
@@ -302,7 +302,7 @@ describe("CLI search commands", () => {
   });
 
   test("renders files subcommands with ai-tracking provenance and rebuilt index", async () => {
-    const cursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    const cursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
     if (cursorHome === undefined) {
       throw new Error("test cursor home was not configured");
     }
@@ -372,7 +372,7 @@ CREATE TABLE tracked_file_content (
 
     const listExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "files",
       "list",
       "conv-files",
@@ -389,7 +389,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const snapshotsExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "files",
       "snapshots",
       "conv-files",
@@ -406,7 +406,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const rebuildExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "files",
       "rebuild",
       "--json",
@@ -417,7 +417,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const findExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "files",
       "find",
       "src/old.ts",
@@ -433,7 +433,7 @@ CREATE TABLE tracked_file_content (
   });
 
   test("renders repo analytics rebuild and query JSON results", async () => {
-    const cursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    const cursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
     if (cursorHome === undefined) {
       throw new Error("test cursor home was not configured");
     }
@@ -508,7 +508,7 @@ CREATE TABLE tracked_file_content (
 
     const rebuildExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "repo",
       "analytics",
       "rebuild",
@@ -530,7 +530,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const summaryExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "repo",
       "analytics",
       "summary",
@@ -554,7 +554,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const commitsExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "repo",
       "analytics",
       "commits",
@@ -572,7 +572,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const sessionsExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "repo",
       "analytics",
       "sessions",
@@ -584,7 +584,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const filesExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "repo",
       "analytics",
       "files",
@@ -596,7 +596,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const invalidLimit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "repo",
       "analytics",
       "commits",
@@ -640,7 +640,7 @@ CREATE TABLE tracked_file_content (
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "markdown",
       "tasks",
       "--session",
@@ -670,7 +670,7 @@ CREATE TABLE tracked_file_content (
   test("rejects invalid markdown task flags", async () => {
     const missingSession = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "markdown",
       "tasks",
     ]);
@@ -682,7 +682,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const invalidChecked = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "markdown",
       "tasks",
       "--session",
@@ -721,7 +721,7 @@ CREATE TABLE tracked_file_content (
 
     const addExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "bookmark",
       "add",
       "--type",
@@ -750,7 +750,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const listExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "bookmark",
       "list",
       "--session",
@@ -767,7 +767,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const searchExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "bookmark",
       "search",
       "needle",
@@ -802,7 +802,7 @@ CREATE TABLE tracked_file_content (
 
     const sessionExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "bookmark",
       "add",
       "--type",
@@ -819,7 +819,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const messageExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "bookmark",
       "add",
       "--type",
@@ -839,7 +839,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const showMissingExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "bookmark",
       "show",
       "missing",
@@ -876,7 +876,7 @@ CREATE TABLE tracked_file_content (
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "activity",
       "--status",
       "running",
@@ -918,7 +918,7 @@ CREATE TABLE tracked_file_content (
 
     const lookupExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "activity",
       "--session",
       "chat-activity-lookup",
@@ -936,7 +936,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const invalidStatus = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "activity",
       "--status",
       "waiting_approval",
@@ -947,7 +947,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const missing = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "activity",
       "--session",
       "missing",
@@ -959,7 +959,7 @@ CREATE TABLE tracked_file_content (
   test("supports group pause, resume, delete, and JSON output", async () => {
     const createExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "create",
       "lifecycle",
@@ -969,7 +969,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const pauseExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "pause",
       "lifecycle",
@@ -984,7 +984,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const resumeExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "resume",
       "lifecycle",
@@ -999,7 +999,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const deleteExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "delete",
       "lifecycle",
@@ -1013,14 +1013,14 @@ CREATE TABLE tracked_file_content (
   });
 
   test("guards paused group runs before launching Cursor", async () => {
-    await runCli(["bun", "curort-cli-agent", "group", "create", "paused-run"]);
-    await runCli(["bun", "curort-cli-agent", "group", "pause", "paused-run"]);
+    await runCli(["bun", "cursor-cli-agent", "group", "create", "paused-run"]);
+    await runCli(["bun", "cursor-cli-agent", "group", "pause", "paused-run"]);
     logs = [];
     errors = [];
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "run",
       "paused-run",
@@ -1033,7 +1033,7 @@ CREATE TABLE tracked_file_content (
     logs = [];
     const showExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "show",
       "paused-run",
@@ -1073,10 +1073,10 @@ CREATE TABLE tracked_file_content (
       },
     });
     try {
-      await runCli(["bun", "curort-cli-agent", "group", "create", "mid-run"]);
+      await runCli(["bun", "cursor-cli-agent", "group", "create", "mid-run"]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "group",
         "add",
         "mid-run",
@@ -1085,7 +1085,7 @@ CREATE TABLE tracked_file_content (
       ]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "group",
         "add",
         "mid-run",
@@ -1097,7 +1097,7 @@ CREATE TABLE tracked_file_content (
 
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "group",
         "run",
         "mid-run",
@@ -1121,7 +1121,7 @@ CREATE TABLE tracked_file_content (
   });
 
   test("rejects deleting a running latest run unless forced", async () => {
-    const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    const dataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
     if (dataDir === undefined) {
       throw new Error("test data dir was not configured");
     }
@@ -1154,7 +1154,7 @@ CREATE TABLE tracked_file_content (
 
     const blocked = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "delete",
       "running",
@@ -1166,7 +1166,7 @@ CREATE TABLE tracked_file_content (
     errors = [];
     const forced = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "delete",
       "running",
@@ -1178,7 +1178,7 @@ CREATE TABLE tracked_file_content (
   });
 
   test("renders one-shot group watch snapshots from activity", async () => {
-    const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    const dataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
     if (dataDir === undefined) {
       throw new Error("test data dir was not configured");
     }
@@ -1225,7 +1225,7 @@ CREATE TABLE tracked_file_content (
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "watch",
       "watching",
@@ -1245,7 +1245,7 @@ CREATE TABLE tracked_file_content (
   });
 
   test("renders polling group watch JSON as newline-delimited compact objects", async () => {
-    const dataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    const dataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
     if (dataDir === undefined) {
       throw new Error("test data dir was not configured");
     }
@@ -1281,7 +1281,7 @@ CREATE TABLE tracked_file_content (
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "group",
       "watch",
       "watch-lines",
@@ -1304,10 +1304,10 @@ CREATE TABLE tracked_file_content (
 
 describe("CLI server command", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-cli-server-"));
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    testDir = await mkdtemp(join(tmpdir(), "cursor-cli-server-"));
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
+    process.env["CURSOR_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     logs = [];
     errors = [];
     logSpy = spyOn(console, "log").mockImplementation((message?: unknown) => {
@@ -1401,7 +1401,7 @@ describe("CLI server command", () => {
     try {
       const run = runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "server",
         "start",
         "--port",
@@ -1429,7 +1429,7 @@ describe("CLI server command", () => {
   test("manages local API tokens in human and JSON modes", async () => {
     const createdExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "create",
       "--name",
@@ -1452,7 +1452,7 @@ describe("CLI server command", () => {
     logs = [];
     const listExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "list",
       "--json",
@@ -1468,7 +1468,7 @@ describe("CLI server command", () => {
     logs = [];
     const rotateExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "rotate",
       created.metadata.id,
@@ -1481,7 +1481,7 @@ describe("CLI server command", () => {
     logs = [];
     const revokeExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "revoke",
       created.metadata.id,
@@ -1493,7 +1493,7 @@ describe("CLI server command", () => {
   test("rejects token usage, invalid permissions, invalid expiry, and missing ids", async () => {
     const missingName = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "create",
     ]);
@@ -1503,7 +1503,7 @@ describe("CLI server command", () => {
     errors = [];
     const invalidPermission = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "create",
       "--name",
@@ -1517,7 +1517,7 @@ describe("CLI server command", () => {
     errors = [];
     const invalidExpiry = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "create",
       "--name",
@@ -1533,7 +1533,7 @@ describe("CLI server command", () => {
     errors = [];
     const notFound = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "token",
       "revoke",
       "missing",
@@ -1545,10 +1545,10 @@ describe("CLI server command", () => {
 
 describe("CLI queue lifecycle commands", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-cli-queue-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-cli-queue-"));
     const dataDir = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     await mkdir(dataDir, { recursive: true });
     logs = [];
     errors = [];
@@ -1572,7 +1572,7 @@ describe("CLI queue lifecycle commands", () => {
   test("pauses, resumes, updates, moves, modes, stops, and deletes queues as JSON", async () => {
     await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "create",
       "lifecycle",
@@ -1581,7 +1581,7 @@ describe("CLI queue lifecycle commands", () => {
     ]);
     await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "add",
       "lifecycle",
@@ -1590,7 +1590,7 @@ describe("CLI queue lifecycle commands", () => {
     ]);
     await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "add",
       "lifecycle",
@@ -1603,7 +1603,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const pauseExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "pause",
       "lifecycle",
@@ -1615,7 +1615,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const resumeExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "resume",
       "lifecycle",
@@ -1627,7 +1627,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const updateExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "update",
       "lifecycle",
@@ -1643,7 +1643,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const modeExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "mode",
       "lifecycle",
@@ -1659,7 +1659,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const moveExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "move",
       "lifecycle",
@@ -1675,7 +1675,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const stopExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "stop",
       "lifecycle",
@@ -1687,7 +1687,7 @@ describe("CLI queue lifecycle commands", () => {
     logs = [];
     const deleteExit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "queue",
       "delete",
       "lifecycle",
@@ -1711,27 +1711,27 @@ describe("CLI queue lifecycle commands", () => {
     try {
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "create",
         "paused-run",
       ]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "add",
         "paused-run",
         "--prompt",
         "should not launch",
       ]);
-      await runCli(["bun", "curort-cli-agent", "queue", "pause", "paused-run"]);
+      await runCli(["bun", "cursor-cli-agent", "queue", "pause", "paused-run"]);
       logs = [];
       errors = [];
 
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "run",
         "paused-run",
@@ -1765,10 +1765,10 @@ describe("CLI queue lifecycle commands", () => {
       },
     });
     try {
-      await runCli(["bun", "curort-cli-agent", "queue", "create", "run"]);
+      await runCli(["bun", "cursor-cli-agent", "queue", "create", "run"]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "add",
         "run",
@@ -1777,7 +1777,7 @@ describe("CLI queue lifecycle commands", () => {
       ]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "add",
         "run",
@@ -1787,7 +1787,7 @@ describe("CLI queue lifecycle commands", () => {
       const manualItem = (await queuesStore.getQueue("run"))?.items[1]?.id;
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "mode",
         "run",
@@ -1801,7 +1801,7 @@ describe("CLI queue lifecycle commands", () => {
 
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "run",
         "run",
@@ -1844,10 +1844,10 @@ describe("CLI queue lifecycle commands", () => {
       },
     });
     try {
-      await runCli(["bun", "curort-cli-agent", "queue", "create", "stop-run"]);
+      await runCli(["bun", "cursor-cli-agent", "queue", "create", "stop-run"]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "add",
         "stop-run",
@@ -1856,7 +1856,7 @@ describe("CLI queue lifecycle commands", () => {
       ]);
       await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "add",
         "stop-run",
@@ -1866,7 +1866,7 @@ describe("CLI queue lifecycle commands", () => {
 
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "queue",
         "run",
         "stop-run",
@@ -1985,7 +1985,7 @@ describe("CLI queue lifecycle commands", () => {
     try {
       const startExit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "daemon",
         "start",
         "--port",
@@ -1998,7 +1998,7 @@ describe("CLI queue lifecycle commands", () => {
       logs = [];
       const statusExit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "daemon",
         "status",
         "--token",
@@ -2011,7 +2011,7 @@ describe("CLI queue lifecycle commands", () => {
       logs = [];
       const stopExit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "daemon",
         "stop",
         "--json",
@@ -2026,7 +2026,7 @@ describe("CLI queue lifecycle commands", () => {
   test("rejects daemon force stop in this slice", async () => {
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "daemon",
       "stop",
       "--force",
@@ -2038,10 +2038,10 @@ describe("CLI queue lifecycle commands", () => {
 
 describe("CLI session fork and image flags", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-cli-fork-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-cli-fork-"));
     const dataDir = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     await mkdir(dataDir, { recursive: true });
     logs = [];
     errors = [];
@@ -2090,7 +2090,7 @@ describe("CLI session fork and image flags", () => {
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "fork",
       "local-fork",
@@ -2117,7 +2117,7 @@ describe("CLI session fork and image flags", () => {
   test("session fork rejects conflicting boundaries", async () => {
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "fork",
       "any",
@@ -2137,7 +2137,7 @@ describe("CLI session fork and image flags", () => {
   test("session run rejects --image without path", async () => {
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "session",
       "run",
       "--prompt",

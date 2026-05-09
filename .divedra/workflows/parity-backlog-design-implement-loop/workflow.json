@@ -1,6 +1,6 @@
 {
   "workflowId": "parity-backlog-design-implement-loop",
-  "description": "Derive the remaining curort-cli-agent parity backlog from repository design and implementation-plan state, select one ready item at a time, delegate it into design-and-implement-review-loop, and continue until no ready item remains or the per-run limit is reached.",
+  "description": "Derive the remaining cursor-cli-agent parity backlog from repository design and implementation-plan state, select one ready item at a time, delegate it into design-and-implement-review-loop, and continue until no ready item remains or the per-run limit is reached.",
   "defaults": {
     "maxLoopIterations": 24,
     "nodeTimeoutMs": 3600000

@@ -4,7 +4,7 @@ This document defines the Phase 4 design for canonical backlog slice `P4-AUTH`.
 
 ## Overview
 
-`curort-cli-agent` will support local API token management and bearer-token
+`cursor-cli-agent` will support local API token management and bearer-token
 authorization for the planned HTTP server. The feature mirrors the useful
 `codex-agent` token lifecycle while mapping auth state to this repository's
 local config, normalized server route contracts, and Cursor-specific adapter
@@ -109,8 +109,8 @@ Cursor CLI payloads through auth decisions.
 
 Token config lives under this repository's config directory:
 
-- default: `~/.config/curort-cli-agent/tokens.json`
-- override: `CURORT_CLI_AGENT_CONFIG_DIR`
+- default: `~/.config/cursor-cli-agent/tokens.json`
+- override: `CURSOR_CLI_AGENT_CONFIG_DIR`
 - legacy fallback: `CURSOR_CLI_AGENT_CONFIG_DIR`
 
 The token config shape is:

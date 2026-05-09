@@ -1,7 +1,7 @@
 # Parity Backlog Workflow Design
 
 This document defines a project-local `divedra` workflow that keeps
-`curort-cli-agent` moving through the remaining parity backlog by selecting one
+`cursor-cli-agent` moving through the remaining parity backlog by selecting one
 ready capability slice at a time and delegating that slice into
 `design-and-implement-review-loop`.
 

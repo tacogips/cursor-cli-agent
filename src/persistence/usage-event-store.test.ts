@@ -42,7 +42,7 @@ function sampleEvent(
 
 describe("usage event store", () => {
   test("upserts are idempotent and sorts deterministically", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     const store = createUsageEventStore(path);
     const a = sampleEvent({
@@ -68,7 +68,7 @@ describe("usage event store", () => {
   });
 
   test("filters session id by local id, record id, or cursor chat id", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     const store = createUsageEventStore(path);
     const ev = sampleEvent({ eventId: "e1" });
@@ -89,7 +89,7 @@ describe("usage event store", () => {
   });
 
   test("filters by workspace path alias", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     const store = createUsageEventStore(path);
     await store.upsertEvent(sampleEvent({ eventId: "home", sessionId: "s1" }));
@@ -108,7 +108,7 @@ describe("usage event store", () => {
   });
 
   test("tolerates corrupt JSON as empty store", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     await Bun.write(path, "{ not json");
     const store = createUsageEventStore(path);
@@ -116,7 +116,7 @@ describe("usage event store", () => {
   });
 
   test("drops rows with non-string optional fields", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     const badRecordId = sampleEvent({ eventId: "bad-id" });
     await Bun.write(
@@ -134,7 +134,7 @@ describe("usage event store", () => {
   });
 
   test("upsertEvents merges multiple rows in one write", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     const store = createUsageEventStore(path);
     const x = sampleEvent({
@@ -153,7 +153,7 @@ describe("usage event store", () => {
   });
 
   test("upsertEvents with empty batch is a no-op", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-ev-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-ev-"));
     const path = join(testDir, "usage-events.json");
     const store = createUsageEventStore(path);
     const row = sampleEvent({ eventId: "kept", sessionId: "s-kept" });

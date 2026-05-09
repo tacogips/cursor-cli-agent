@@ -59,7 +59,7 @@ describe("node daemon process inspector", () => {
       },
       async readProcField(_pid, field) {
         return field === "environ"
-          ? "CURORT_CLI_AGENT_DAEMON_MARKER=owned-marker\0"
+          ? "CURSOR_CLI_AGENT_DAEMON_MARKER=owned-marker\0"
           : undefined;
       },
     });

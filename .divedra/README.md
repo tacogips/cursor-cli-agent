@@ -146,7 +146,7 @@ provenance and completeness notes, repository-owned analytics indexes, valid
 `0%` AI preservation, TEXT numeric column handling, and degraded-state
 reporting.
 
-For `P4-HTTP-SERVER`, it covers `curort-cli-agent server start`, foreground
+For `P4-HTTP-SERVER`, it covers `cursor-cli-agent server start`, foreground
 Bun HTTP server startup/shutdown, loopback tokenless operation, non-loopback
 startup token requirements, `GET /api/health`, `GET /api/version`,
 normalized `GET /api/sessions`, `GET /api/sessions/:id`, `GET
@@ -164,7 +164,7 @@ wildcard family permissions, managed bearer verification for HTTP requests,
 `401` invalid/missing credential envelopes, `403` missing-permission envelopes,
 and route permission mapping for session, group, queue, bookmark, file,
 `server:read` (repository analytics), and server-admin routes. The refresh should also document that startup `--token` or
-`CURORT_CLI_AGENT_SERVER_TOKEN` enables required auth mode for exposed servers,
+`CURSOR_CLI_AGENT_SERVER_TOKEN` enables required auth mode for exposed servers,
 while request credentials come from `token create` or `token rotate`, and that
 unmapped API paths currently fall through to normal `404` handling.
 
@@ -178,7 +178,7 @@ group and queue progress snapshots, `replay=latest|none`, `heartbeatMs`,
 fallback, and the accepted sandbox limitation that real curl SSE smoke checks
 may need to be rerun outside restricted workflow execution environments.
 
-For `P4-DAEMON`, it covers `curort-cli-agent daemon start`, `daemon status`,
+For `P4-DAEMON`, it covers `cursor-cli-agent daemon start`, `daemon status`,
 and `daemon stop` on top of the existing local HTTP/SSE server. The refresh
 includes config-owned PID metadata at `daemon.json`, data-owned JSONL lifecycle
 logs at `daemon.log`, default host `127.0.0.1`, default port `0` with actual
@@ -202,7 +202,7 @@ regression fix: daemon server startup resolves an absolute executable
 the caller's current working directory.
 
 For `P5-COMPAT-BRIDGE`, it covers the optional Codex-agent-like compatibility
-surface: `curort-cli-agent graphql <document|command>`, shorthand command
+surface: `cursor-cli-agent graphql <document|command>`, shorthand command
 normalization, `--param`, `--variables`, inline JSON and `@path` JSON loading,
 the opt-in `server start --compat-graphql` `/api/graphql` route, and
 `/api/compat/app-server` compat-local metadata. The refresh includes the
@@ -214,7 +214,7 @@ is a behavioral reference while this repository dispatches through
 Cursor-normalized SDK, domain, server, and SSE boundaries.
 
 For `P5-TOOL-REGISTRY`, it covers local tool and model helper behavior:
-`curort-cli-agent tool list`, `tool show`, `tool run`, `tool versions`, `model
+`cursor-cli-agent tool list`, `tool show`, `tool run`, `tool versions`, `model
 check`, and `usage stats`, plus the public SDK `tools` facade. The refresh
 includes the typed local helper registry, registered helper names
 `tool.versions`, `model.check`, and `usage.stats`, positive-integer validation

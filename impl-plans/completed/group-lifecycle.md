@@ -172,10 +172,10 @@ export async function deriveGroupProgressSnapshot(
 **Status**: COMPLETED
 
 ```typescript
-curort-cli-agent group pause <name> [--json]
-curort-cli-agent group resume <name> [--json]
-curort-cli-agent group delete <name> [--force] [--json]
-curort-cli-agent group watch <name> [--interval <seconds>] [--once] [--json]
+cursor-cli-agent group pause <name> [--json]
+cursor-cli-agent group resume <name> [--json]
+cursor-cli-agent group delete <name> [--force] [--json]
+cursor-cli-agent group watch <name> [--interval <seconds>] [--once] [--json]
 ```
 
 **Checklist**:

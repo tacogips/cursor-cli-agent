@@ -1,5 +1,4 @@
 import { homedir } from "node:os";
-import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 function expandHome(p: string): string {
@@ -19,49 +18,24 @@ function envOverride(...names: readonly string[]): string | undefined {
   return undefined;
 }
 
-function preferRenamedDefault(nextPath: string, legacyPath: string): string {
-  if (existsSync(nextPath)) {
-    return nextPath;
-  }
-  if (existsSync(legacyPath)) {
-    return legacyPath;
-  }
-  return nextPath;
-}
-
 export function getDataDir(): string {
-  const override = envOverride(
-    "CURORT_CLI_AGENT_DATA_DIR",
-    "CURSOR_CLI_AGENT_DATA_DIR",
-  );
+  const override = envOverride("CURSOR_CLI_AGENT_DATA_DIR");
   if (override !== undefined) {
     return override;
   }
-  return preferRenamedDefault(
-    join(homedir(), ".local/share/curort-cli-agent"),
-    join(homedir(), ".local/share/cursor-cli-agent"),
-  );
+  return join(homedir(), ".local/share/cursor-cli-agent");
 }
 
 export function getConfigDir(): string {
-  const override = envOverride(
-    "CURORT_CLI_AGENT_CONFIG_DIR",
-    "CURSOR_CLI_AGENT_CONFIG_DIR",
-  );
+  const override = envOverride("CURSOR_CLI_AGENT_CONFIG_DIR");
   if (override !== undefined) {
     return override;
   }
-  return preferRenamedDefault(
-    join(homedir(), ".config/curort-cli-agent"),
-    join(homedir(), ".config/cursor-cli-agent"),
-  );
+  return join(homedir(), ".config/cursor-cli-agent");
 }
 
 export function getCursorHome(): string {
-  const override = envOverride(
-    "CURORT_CLI_AGENT_CURSOR_HOME",
-    "CURSOR_CLI_AGENT_CURSOR_HOME",
-  );
+  const override = envOverride("CURSOR_CLI_AGENT_CURSOR_HOME");
   if (override !== undefined) {
     return override;
   }

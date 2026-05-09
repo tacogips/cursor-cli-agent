@@ -4,7 +4,7 @@ This document defines the bounded Phase 2 design for backlog slice `P2-BOOKMARKS
 
 ## Overview
 
-`curort-cli-agent` will provide local bookmark CRUD and search for Cursor sessions, transcript messages, and transcript ranges. The feature mirrors the useful `codex-agent` bookmark lifecycle while preserving Cursor-specific session identity and transcript materialization rules.
+`cursor-cli-agent` will provide local bookmark CRUD and search for Cursor sessions, transcript messages, and transcript ranges. The feature mirrors the useful `codex-agent` bookmark lifecycle while preserving Cursor-specific session identity and transcript materialization rules.
 
 The primary user-facing surface is:
 
@@ -81,7 +81,7 @@ Reused concepts:
 
 Intentional divergences:
 
-- `curort-cli-agent` uses `show` in the command contract where `codex-agent` uses `get`.
+- `cursor-cli-agent` uses `show` in the command contract where `codex-agent` uses `get`.
 - Cursor pending `chat_only` records are valid for `session` bookmarks only.
 - Message and range bookmarks require transcript-backed stable Cursor message IDs.
 - Bookmark excerpts preserve both raw and display text because Cursor transcript rendering can differ from raw event content.

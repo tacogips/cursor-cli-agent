@@ -167,7 +167,7 @@ export interface TranscriptMarkdownTaskExtractor {
 **Status**: COMPLETED
 
 ```typescript
-curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
+cursor-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
 ```
 
 **Checklist**:

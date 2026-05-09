@@ -215,7 +215,7 @@ export interface SessionReplayForkService {
 **Status**: COMPLETED
 
 ```typescript
-curort-cli-agent session fork <id> --prompt <text> [--through-message <message-id>] [--nth-message <n>] [--dry-run] [--json]
+cursor-cli-agent session fork <id> --prompt <text> [--through-message <message-id>] [--nth-message <n>] [--dry-run] [--json]
 ```
 
 **Checklist**:

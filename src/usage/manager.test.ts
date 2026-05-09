@@ -23,8 +23,15 @@ afterEach(async () => {
 });
 
 async function createRepo(): Promise<SessionIndexRepository> {
-  testDir = await mkdtemp(join(tmpdir(), "curort-usage-stats-"));
+  testDir = await mkdtemp(join(tmpdir(), "cursor-usage-stats-"));
   return new SessionIndexRepository(join(testDir, "state.db"));
+}
+
+function usageEventsPath(): string {
+  if (testDir === undefined) {
+    throw new Error("testDir not initialized");
+  }
+  return join(testDir, "usage-events.json");
 }
 
 describe("usage stats manager", () => {
@@ -78,7 +85,7 @@ describe("usage stats manager", () => {
       recordSignal: async () => {},
     };
 
-    const usagePath = join(testDir!, "usage-events.json");
+    const usagePath = usageEventsPath();
     const usageStore = createUsageEventStore(usagePath);
     const sampleEv: UsageEventRecord = {
       eventId: "u1",
@@ -207,7 +214,7 @@ describe("usage stats manager", () => {
       recordSignal: async () => {},
     };
 
-    const usagePath = join(testDir!, "usage-events.json");
+    const usagePath = usageEventsPath();
     const usageStore = createUsageEventStore(usagePath);
 
     const bySession = await createUsageStatsManager({
@@ -243,7 +250,7 @@ describe("usage stats manager", () => {
 
   test("reports missing optional activity source without false token totals", async () => {
     const repo = await createRepo();
-    const usagePath = join(testDir!, "usage-events.json");
+    const usagePath = usageEventsPath();
     const usageStore = createUsageEventStore(usagePath);
     const report = await createUsageStatsManager({
       sessions: repo,
@@ -274,7 +281,7 @@ describe("usage stats manager", () => {
       status: "completed",
     });
 
-    const usagePath = join(testDir!, "usage-events.json");
+    const usagePath = usageEventsPath();
     const usageStore = createUsageEventStore(usagePath);
 
     const report = await createUsageStatsManager({

@@ -15,8 +15,8 @@ import {
 import { runCli } from "./cli";
 import { SessionIndexRepository } from "../persistence/session-index";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
 const previousPath = process.env["PATH"];
 
 let testDir: string;
@@ -27,14 +27,14 @@ let errorSpy: Mock<(message?: unknown) => void>;
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
   if (previousCursorHome === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
   } else {
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
   }
   if (previousPath === undefined) {
     delete process.env["PATH"];
@@ -83,10 +83,10 @@ esac
 
 describe("tool, model, and usage CLI helpers", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-tool-cli-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-tool-cli-"));
     const dataDir = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     await mkdir(dataDir, { recursive: true });
     logs = [];
     errors = [];
@@ -110,7 +110,7 @@ describe("tool, model, and usage CLI helpers", () => {
   test("lists registered helper tools as JSON", async () => {
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "tool",
       "list",
       "--json",
@@ -129,7 +129,7 @@ describe("tool, model, and usage CLI helpers", () => {
 
   test("runs usage.stats through tool run with structured JSON input", async () => {
     const repo = new SessionIndexRepository(
-      join(process.env["CURORT_CLI_AGENT_DATA_DIR"] ?? "", "state.db"),
+      join(process.env["CURSOR_CLI_AGENT_DATA_DIR"] ?? "", "state.db"),
     );
     repo.upsert({
       recordId: "rec-cli",
@@ -146,7 +146,7 @@ describe("tool, model, and usage CLI helpers", () => {
 
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "tool",
       "run",
       "usage.stats",
@@ -170,7 +170,7 @@ describe("tool, model, and usage CLI helpers", () => {
 
     let exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "tool",
       "run",
       "usage.stats",
@@ -186,7 +186,7 @@ describe("tool, model, and usage CLI helpers", () => {
     logs = [];
     exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "tool",
       "run",
       "usage.stats",
@@ -205,7 +205,7 @@ describe("tool, model, and usage CLI helpers", () => {
       errors = [];
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "tool",
         "run",
         "usage.stats",
@@ -232,7 +232,7 @@ describe("tool, model, and usage CLI helpers", () => {
       errors = [];
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "tool",
         "run",
         "model.check",
@@ -307,7 +307,7 @@ describe("tool, model, and usage CLI helpers", () => {
       errors = [];
       const exit = await runCli([
         "bun",
-        "curort-cli-agent",
+        "cursor-cli-agent",
         "tool",
         "run",
         item.name,
@@ -324,7 +324,7 @@ describe("tool, model, and usage CLI helpers", () => {
   test("rejects extra positional arguments for tool show and run", async () => {
     let exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "tool",
       "show",
       "usage.stats",
@@ -339,7 +339,7 @@ describe("tool, model, and usage CLI helpers", () => {
     logs = [];
     exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "tool",
       "run",
       "usage.stats",
@@ -356,7 +356,7 @@ describe("tool, model, and usage CLI helpers", () => {
   test("model check without probe returns JSON and does not fail when binary is missing", async () => {
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "model",
       "check",
       "--model",
@@ -385,7 +385,7 @@ describe("tool, model, and usage CLI helpers", () => {
 
     let exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "model",
       "check",
       "--model",
@@ -411,7 +411,7 @@ describe("tool, model, and usage CLI helpers", () => {
     logs = [];
     exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "model",
       "check",
       "--model",
@@ -431,7 +431,7 @@ describe("tool, model, and usage CLI helpers", () => {
     logs = [];
     exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "model",
       "check",
       "--model",
@@ -450,7 +450,7 @@ describe("tool, model, and usage CLI helpers", () => {
 
     exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "model",
       "check",
       "--model",
@@ -463,7 +463,7 @@ describe("tool, model, and usage CLI helpers", () => {
   test("usage stats command emits local aggregate JSON", async () => {
     const exit = await runCli([
       "bun",
-      "curort-cli-agent",
+      "cursor-cli-agent",
       "usage",
       "stats",
       "--recent-days",

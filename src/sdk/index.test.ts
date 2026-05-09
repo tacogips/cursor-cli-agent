@@ -12,7 +12,7 @@ let testDir: string;
 
 describe("public SDK facade", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-sdk-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-sdk-"));
   });
 
   afterEach(async () => {

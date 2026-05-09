@@ -50,7 +50,7 @@ function mockRepo(
 
 describe("usage persistence chain", () => {
   test("persists normalized completion usage through injected store", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-chain-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-chain-"));
     const storePath = join(testDir, "usage-events.json");
     const store = createUsageEventStore(storePath);
     const ws = "/tmp/usage-chain-workspace";
@@ -83,7 +83,7 @@ describe("usage persistence chain", () => {
   });
 
   test("prefers stream session.started model over index model", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-chain-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-chain-"));
     const store = createUsageEventStore(join(testDir, "usage-events.json"));
     const repo = mockRepo({
       "sess-a": baseRecord({
@@ -113,7 +113,7 @@ describe("usage persistence chain", () => {
   });
 
   test("shares observedAt across multiple completions in one capture batch", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-chain-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-chain-"));
     const store = createUsageEventStore(join(testDir, "usage-events.json"));
     const repo = mockRepo({
       s1: baseRecord({ recordId: "r1", localSessionId: "s1" }),
@@ -139,13 +139,16 @@ describe("usage persistence chain", () => {
     const rows2 = await store.listEvents({ sessionId: "s2" });
     expect(rows.length).toBe(1);
     expect(rows2.length).toBe(1);
-    expect(rows[0]).toBeDefined();
-    expect(rows2[0]).toBeDefined();
-    expect(rows[0]!.observedAt).toBe(rows2[0]!.observedAt);
+    const firstRow = rows[0];
+    const secondRow = rows2[0];
+    if (firstRow === undefined || secondRow === undefined) {
+      throw new Error("expected usage events for both sessions");
+    }
+    expect(firstRow.observedAt).toBe(secondRow.observedAt);
   });
 
   test("skips zero-token completions and does not write rows", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-chain-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-chain-"));
     const store = createUsageEventStore(join(testDir, "usage-events.json"));
     const repo = mockRepo({
       z: baseRecord({ recordId: "rz", localSessionId: "z" }),
@@ -164,7 +167,7 @@ describe("usage persistence chain", () => {
   });
 
   test("flush waits when capture extends chain during pending upsert", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-chain-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-chain-"));
     const storePath = join(testDir, "usage-events.json");
     const inner = createUsageEventStore(storePath);
     const repo = mockRepo({
@@ -246,7 +249,7 @@ describe("usage persistence chain", () => {
   });
 
   test("unresolvable sessionId preserves sessionId and omits enriched metadata", async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-usage-chain-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-usage-chain-"));
     const store = createUsageEventStore(join(testDir, "usage-events.json"));
     const repo = mockRepo({});
     const chain = createUsagePersistenceChain(repo, { store });

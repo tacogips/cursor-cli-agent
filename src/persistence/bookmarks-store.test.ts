@@ -22,7 +22,7 @@ function bookmark(overrides: Partial<BookmarkRecord>): BookmarkRecord {
 
 describe("bookmarks store", () => {
   test("treats missing files as empty and supports CRUD", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-bookmarks-store-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-bookmarks-store-"));
     const path = join(dir, "bookmarks.json");
     try {
       const store = createBookmarksStore(path);
@@ -62,7 +62,7 @@ describe("bookmarks store", () => {
   });
 
   test("searches metadata and excerpts with deterministic scores", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-bookmarks-store-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-bookmarks-store-"));
     const path = join(dir, "bookmarks.json");
     try {
       const store = createBookmarksStore(path);

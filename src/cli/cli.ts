@@ -77,6 +77,7 @@ import {
 import {
   parseTranscriptLine,
   readTranscriptFile,
+  type TranscriptSummary,
 } from "../cursor/transcript-reader";
 import * as groupsStore from "../persistence/groups-store";
 import * as queuesStore from "../persistence/queues-store";
@@ -1387,7 +1388,7 @@ function renderActivityHuman(activity: {
 }
 
 function renderToolVersionsHuman(report: ToolVersionReport): void {
-  console.log(`curort-cli-agent ${report.packageVersion}`);
+  console.log(`cursor-cli-agent ${report.packageVersion}`);
   for (const item of report.tools) {
     const version = item.version ?? "-";
     const error = item.error !== undefined ? `  error=${item.error}` : "";
@@ -1819,69 +1820,69 @@ export async function runCli(argv: string[]): Promise<number> {
   const [, , cmd, ...tail] = argv;
   if (cmd === undefined || cmd === "-h" || cmd === "--help") {
     console.log(`Usage:
-  curort-cli-agent version
-  curort-cli-agent session list [--workspace <path>] [--limit N] [--json]
-  curort-cli-agent session show <id> [--workspace <path>] [--json]
-  curort-cli-agent session watch <id> [--workspace <path>] [--json]
-  curort-cli-agent session run --prompt <text> [--image <path>]... [options]
-  curort-cli-agent session create [--workspace <path>] [--json]
-  curort-cli-agent session resume <id> [--prompt <text>] [--image <path>]... [options]
-  curort-cli-agent session continue [--workspace <path>] [--stream <text|json|events>] [--json]
-  curort-cli-agent session fork <id> --prompt <text> [--through-message <id>] [--nth-message <n>] [--dry-run] [--stream <text|json|events>] [--json] [options]
-  curort-cli-agent session attach <id> [--workspace <path>]
-  curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
-  curort-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
-  curort-cli-agent files list <session-id> [--json]
-  curort-cli-agent files snapshots <session-id> [--json] [--include-content]
-  curort-cli-agent files deleted <session-id> [--json]
-  curort-cli-agent files find <path> [--json]
-  curort-cli-agent files rebuild [--json]
-  curort-cli-agent repo analytics summary [--json]
-  curort-cli-agent repo analytics commits [--limit N] [--json]
-  curort-cli-agent repo analytics sessions [--limit N] [--json]
-  curort-cli-agent repo analytics files [--limit N] [--json]
-  curort-cli-agent repo analytics rebuild [--json]
-  curort-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
-  curort-cli-agent tool list [--json]
-  curort-cli-agent tool show <name> [--json]
-  curort-cli-agent tool run <name> --input <json|@path> [--json]
-  curort-cli-agent tool versions [--include-git] [--include-bun] [--timeout-ms N] [--json]
-  curort-cli-agent model check --model <model> [--probe] [--timeout-ms N] [--json]
-  curort-cli-agent usage stats [--workspace <path>] [--session <id>] [--recent-days N] [--json]
-  curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
-  curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
-  curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
-  curort-cli-agent bookmark show <id> [--json]
-  curort-cli-agent bookmark delete <id> [--json]
-  curort-cli-agent bookmark search <query> [--limit N] [--json]
-  curort-cli-agent group <subcommand> ...
+  cursor-cli-agent version
+  cursor-cli-agent session list [--workspace <path>] [--limit N] [--json]
+  cursor-cli-agent session show <id> [--workspace <path>] [--json]
+  cursor-cli-agent session watch <id> [--workspace <path>] [--json]
+  cursor-cli-agent session run --prompt <text> [--image <path>]... [options]
+  cursor-cli-agent session create [--workspace <path>] [--json]
+  cursor-cli-agent session resume <id> [--prompt <text>] [--image <path>]... [options]
+  cursor-cli-agent session continue [--workspace <path>] [--stream <text|json|events>] [--json]
+  cursor-cli-agent session fork <id> --prompt <text> [--through-message <id>] [--nth-message <n>] [--dry-run] [--stream <text|json|events>] [--json] [options]
+  cursor-cli-agent session attach <id> [--workspace <path>]
+  cursor-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit N] [--offset N] [--json]
+  cursor-cli-agent transcript search <query> [--session <id>] [--role <user|assistant|system|tool>] [--limit N] [--offset N] [--max-sessions N] [--max-bytes N] [--max-events N] [--json]
+  cursor-cli-agent files list <session-id> [--json]
+  cursor-cli-agent files snapshots <session-id> [--json] [--include-content]
+  cursor-cli-agent files deleted <session-id> [--json]
+  cursor-cli-agent files find <path> [--json]
+  cursor-cli-agent files rebuild [--json]
+  cursor-cli-agent repo analytics summary [--json]
+  cursor-cli-agent repo analytics commits [--limit N] [--json]
+  cursor-cli-agent repo analytics sessions [--limit N] [--json]
+  cursor-cli-agent repo analytics files [--limit N] [--json]
+  cursor-cli-agent repo analytics rebuild [--json]
+  cursor-cli-agent activity [--session <id>] [--status <idle|running|waiting_trust|waiting_input|completed|failed>] [--limit N] [--json]
+  cursor-cli-agent tool list [--json]
+  cursor-cli-agent tool show <name> [--json]
+  cursor-cli-agent tool run <name> --input <json|@path> [--json]
+  cursor-cli-agent tool versions [--include-git] [--include-bun] [--timeout-ms N] [--json]
+  cursor-cli-agent model check --model <model> [--probe] [--timeout-ms N] [--json]
+  cursor-cli-agent usage stats [--workspace <path>] [--session <id>] [--recent-days N] [--json]
+  cursor-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
+  cursor-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
+  cursor-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
+  cursor-cli-agent bookmark show <id> [--json]
+  cursor-cli-agent bookmark delete <id> [--json]
+  cursor-cli-agent bookmark search <query> [--limit N] [--json]
+  cursor-cli-agent group <subcommand> ...
     create <name> | list | show <name> | add <name> [--workspace <path>] | remove <name> [--workspace <path>]
     pause <name> [--json] | resume <name> [--json] | delete <name> [--force] [--json]
     watch <name> [--interval <seconds>] [--once] [--json]
     run <name> --prompt <text> [--image <path>]... [--stream <text|json|events>] [--json]
-  curort-cli-agent queue <subcommand> ...
+  cursor-cli-agent queue <subcommand> ...
     create <name> [--workspace <path>] | list | show <name> | add <name> --prompt <text> [--image <path>]... | remove <name> --item <id>
     pause <name> [--json] | resume <name> [--json] | delete <name> [--force] [--json]
     update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
     move <name> --from <n> --to <n> [--json] | mode <name> --item <id> --mode <auto|manual> [--json] | stop <name> [--json]
     run <name> [--image <path>]... [--stream <text|json|events>] [--json]
-  curort-cli-agent skill list [--workspace <path>] [--json]
-  curort-cli-agent skill show <name> [--workspace <path>] [--json]
-  curort-cli-agent graphql <document|command> [--param <json|@path>] [--variables <json|@path>] [--json]
-  curort-cli-agent token create --name <name> [--permissions <csv>] [--expires-at <iso8601>] [--json]
-  curort-cli-agent token list [--json]
-  curort-cli-agent token revoke <id> [--json]
-  curort-cli-agent token rotate <id> [--json]
-  curort-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--compat-graphql] [--json]
-  curort-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms N] [--json]
-  curort-cli-agent daemon stop [--timeout-ms N] [--json]
-  curort-cli-agent daemon status [--token <token>] [--json]
+  cursor-cli-agent skill list [--workspace <path>] [--json]
+  cursor-cli-agent skill show <name> [--workspace <path>] [--json]
+  cursor-cli-agent graphql <document|command> [--param <json|@path>] [--variables <json|@path>] [--json]
+  cursor-cli-agent token create --name <name> [--permissions <csv>] [--expires-at <iso8601>] [--json]
+  cursor-cli-agent token list [--json]
+  cursor-cli-agent token revoke <id> [--json]
+  cursor-cli-agent token rotate <id> [--json]
+  cursor-cli-agent server start [--host <host>] [--port <port>] [--token <token>] [--compat-graphql] [--json]
+  cursor-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms N] [--json]
+  cursor-cli-agent daemon stop [--timeout-ms N] [--json]
+  cursor-cli-agent daemon status [--token <token>] [--json]
 `);
     return EXIT.USAGE;
   }
 
   if (cmd === "version") {
-    console.log(`curort-cli-agent ${pkg.version}`);
+    console.log(`cursor-cli-agent ${pkg.version}`);
     return EXIT.OK;
   }
 
@@ -3181,6 +3182,10 @@ async function runSession(argv: string[]): Promise<number> {
   await repo.importTranscriptsFromFilesystem();
 
   if (sub === "fork") {
+    if (forkSourceId === undefined || forkContinuation === undefined) {
+      console.error("session fork: missing source session or prompt");
+      return EXIT.USAGE;
+    }
     const store = createReplayForkStore();
     const usagePersistence = createUsagePersistenceChain(repo);
     try {
@@ -3190,8 +3195,8 @@ async function runSession(argv: string[]): Promise<number> {
       };
       const result = await executeSessionReplayFork(
         {
-          sourceSessionId: forkSourceId!,
-          continuationPrompt: forkContinuation!,
+          sourceSessionId: forkSourceId,
+          continuationPrompt: forkContinuation,
           ...(forkThrough !== undefined
             ? { throughMessageId: forkThrough }
             : {}),
@@ -3315,7 +3320,11 @@ async function runSession(argv: string[]): Promise<number> {
   }
 
   if (sub === "search") {
-    const result = repo.searchSessions(searchOptions!);
+    if (searchOptions === undefined) {
+      console.error("session search: missing search configuration");
+      return EXIT.USAGE;
+    }
+    const result = repo.searchSessions(searchOptions);
     if (json) {
       printJson(result);
     } else {
@@ -3359,7 +3368,7 @@ async function runSession(argv: string[]): Promise<number> {
       console.error("session has no transcript path");
       return EXIT.TRANSCRIPT;
     }
-    let summary;
+    let summary: TranscriptSummary;
     try {
       summary = await readTranscriptFile(rec.transcriptPath);
     } catch {
@@ -3521,8 +3530,12 @@ async function runSession(argv: string[]): Promise<number> {
   }
 
   if (sub === "run") {
-    const stream = headlessStreamMode!;
-    const prompt = runHeadlessPrompt!;
+    if (runHeadlessPrompt === undefined || headlessStreamMode === undefined) {
+      console.error("session run: missing prompt or stream mode");
+      return EXIT.USAGE;
+    }
+    const stream = headlessStreamMode;
+    const prompt = runHeadlessPrompt;
     const imgErr = consumeImageFlagErrors(flags);
     if (imgErr !== undefined) {
       console.error(`session run: ${imgErr}`);
@@ -3609,8 +3622,12 @@ async function runSession(argv: string[]): Promise<number> {
   }
 
   if (sub === "resume") {
-    const stream = headlessStreamMode!;
-    const sid = resumeSessionId!;
+    if (resumeSessionId === undefined || headlessStreamMode === undefined) {
+      console.error("session resume: missing session id or stream mode");
+      return EXIT.USAGE;
+    }
+    const stream = headlessStreamMode;
+    const sid = resumeSessionId;
     const known = repo.resolveSessionKey(sid);
     const resumeWorkspace =
       explicitWorkspace ?? known?.workspacePath ?? workspace;
@@ -3688,7 +3705,11 @@ async function runSession(argv: string[]): Promise<number> {
       return EXIT.NOT_FOUND;
     }
     const sid = latest.localSessionId ?? latest.cursorChatId ?? "";
-    const stream = headlessStreamMode!;
+    if (headlessStreamMode === undefined) {
+      console.error("session continue: missing stream mode");
+      return EXIT.USAGE;
+    }
+    const stream = headlessStreamMode;
     const imgErrContinue = consumeImageFlagErrors(flags);
     if (imgErrContinue !== undefined) {
       console.error(`session continue: ${imgErrContinue}`);

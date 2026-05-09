@@ -127,7 +127,7 @@ describe("daemon manager", () => {
     const store = createMemoryStore();
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({}),
       readinessProbe: createReadinessProbe(true),
       now: () => new Date("2026-05-07T00:00:00.000Z"),
@@ -161,7 +161,7 @@ describe("daemon manager", () => {
     });
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({ alive: false }),
       readinessProbe: createReadinessProbe(true),
       async spawnServer() {
@@ -187,7 +187,7 @@ describe("daemon manager", () => {
     let terminated = false;
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({}),
       readinessProbe: createReadinessProbe(false),
       async spawnServer() {
@@ -221,7 +221,7 @@ describe("daemon manager", () => {
     let observedToken: string | undefined;
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({}),
       readinessProbe: {
         async waitUntilReady(options) {
@@ -248,7 +248,7 @@ describe("daemon manager", () => {
     let terminateCount = 0;
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: {
         async isAlive() {
           return true;
@@ -289,7 +289,7 @@ describe("daemon manager", () => {
     let spawnCount = 0;
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({ terminateState: "failed" }),
       readinessProbe: createReadinessProbe(true),
       async spawnServer() {
@@ -321,7 +321,7 @@ describe("daemon manager", () => {
     });
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({ owned: true }),
     });
 
@@ -338,7 +338,7 @@ describe("daemon manager", () => {
     });
     const manager = createDaemonManager({
       store,
-      lifecycleLogPath: "/tmp/curort-daemon-manager-test.log",
+      lifecycleLogPath: "/tmp/cursor-daemon-manager-test.log",
       processInspector: createProcessInspector({ owned: false }),
     });
 

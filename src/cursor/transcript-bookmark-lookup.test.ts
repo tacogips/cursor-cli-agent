@@ -15,7 +15,7 @@ function transcriptLine(role: string, text: string): string {
 
 describe("transcript bookmark lookup", () => {
   test("finds stable message ids and inclusive ranges", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-bookmark-lookup-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-bookmark-lookup-"));
     const transcriptPath = join(dir, "session.jsonl");
     try {
       await writeFile(

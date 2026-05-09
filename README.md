@@ -1,6 +1,6 @@
-# curort-cli-agent
+# cursor-cli-agent
 
-`curort-cli-agent` is a Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
+`cursor-cli-agent` is a Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
 
 This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-agent`.
 
@@ -82,10 +82,10 @@ Planned capabilities:
 Public SDK examples:
 
 ```ts
-import { createCursorAgentSdk } from "curort-cli-agent";
-import type { CursorAgentSdk } from "curort-cli-agent/types";
-import { createResourceHandlers } from "curort-cli-agent/server";
-import { createMockCursorAgentSdk } from "curort-cli-agent/sdk/testing";
+import { createCursorAgentSdk } from "cursor-cli-agent";
+import type { CursorAgentSdk } from "cursor-cli-agent/types";
+import { createResourceHandlers } from "cursor-cli-agent/server";
+import { createMockCursorAgentSdk } from "cursor-cli-agent/sdk/testing";
 
 const sdk: CursorAgentSdk = createCursorAgentSdk();
 const sessions = await sdk.sessions.list({ limit: 20 });
@@ -95,9 +95,9 @@ const stats = await sdk.tools.usageStats({ recentDays: 7 });
 const handlers = createResourceHandlers(createMockCursorAgentSdk());
 ```
 
-Importing `curort-cli-agent` or any SDK subpath does not parse CLI arguments,
+Importing `cursor-cli-agent` or any SDK subpath does not parse CLI arguments,
 spawn Cursor, start the daemon, or write state by itself. CLI execution remains
-behind `src/bin.ts` and the published `curort-cli-agent` binary, while
+behind `src/bin.ts` and the published `cursor-cli-agent` binary, while
 `src/main.ts` exposes callable CLI entrypoints for programmatic use.
 
 Bookmark command examples:
@@ -238,8 +238,8 @@ bun run src/main.ts token rotate <token-id> --json
 
 `token create` defaults to `session:read` when `--permissions` is omitted and
 prints or returns the raw bearer token exactly once. Token records are stored in
-repository-owned config at `~/.config/curort-cli-agent/tokens.json`, or under
-`CURORT_CLI_AGENT_CONFIG_DIR` when set; raw token secrets are never persisted.
+repository-owned config at `~/.config/cursor-cli-agent/tokens.json`, or under
+`CURSOR_CLI_AGENT_CONFIG_DIR` when set; raw token secrets are never persisted.
 Supported permissions are `session:create`, `session:read`, `session:cancel`,
 `group:*`, `queue:*`, `bookmark:*`, `files:*`, `server:read`, and `server:admin`.
 
@@ -269,7 +269,7 @@ curl -H "Authorization: Bearer <token-create-output>" http://127.0.0.1:<port>/ap
 default host is `127.0.0.1` and the default port is `0`, which asks the runtime
 to allocate an available port. Loopback hosts may run without a token;
 non-loopback hosts require `--token <token>` or
-`CURORT_CLI_AGENT_SERVER_TOKEN`.
+`CURSOR_CLI_AGENT_SERVER_TOKEN`.
 When startup auth is configured, requests must include `Authorization: Bearer
 <token>` using a raw token returned by `token create` or `token rotate`; the
 startup token only enables required auth mode and is not the request credential.
@@ -323,16 +323,16 @@ bun run src/main.ts daemon stop --json
 
 `daemon start` launches the same local HTTP/SSE server as `server start` in a
 repository-owned background process. It defaults to host `127.0.0.1` and port
-`0`, records the actual bound URL in `~/.config/curort-cli-agent/daemon.json`
-or `CURORT_CLI_AGENT_CONFIG_DIR`, writes JSONL lifecycle entries to
-`~/.local/share/curort-cli-agent/daemon.log` or `CURORT_CLI_AGENT_DATA_DIR`,
+`0`, records the actual bound URL in `~/.config/cursor-cli-agent/daemon.json`
+or `CURSOR_CLI_AGENT_CONFIG_DIR`, writes JSONL lifecycle entries to
+`~/.local/share/cursor-cli-agent/daemon.log` or `CURSOR_CLI_AGENT_DATA_DIR`,
 resolves the executable server entrypoint as an absolute `src/bin.ts` or
 `dist/bin.js` path so daemon startup does not depend on the caller's current
 working directory, and waits for `GET /api/health` before reporting success.
 `daemon status`
 reports `stopped`, `running`, `stale`, or failure states without exposing raw
 token values; when auth is required, pass `--token <token>` or set
-`CURORT_CLI_AGENT_SERVER_TOKEN` so the status health probe can authenticate.
+`CURSOR_CLI_AGENT_SERVER_TOKEN` so the status health probe can authenticate.
 `daemon stop` removes metadata after owned shutdown and refuses foreign or
 PID-reused processes; ownership requires the daemon process environment to match
 the metadata marker. `daemon stop --force` is intentionally outside this slice.
@@ -390,7 +390,7 @@ Primary reference:
 Important difference:
 
 - `codex-agent` is built around Codex rollout files plus a SQLite state DB
-- `curort-cli-agent` must treat `cursor-agent` transcripts and headless JSON streams as the source of truth
+- `cursor-cli-agent` must treat `cursor-agent` transcripts and headless JSON streams as the source of truth
 
 ## Cursor Agent Notes
 

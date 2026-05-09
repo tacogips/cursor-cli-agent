@@ -27,7 +27,7 @@ remain SDK-only until input schemas are finalized?
 
 | Option | Behavior | Tradeoff |
 |---|---|---|
-| Ship in CLI by default | `curort-cli-agent tool run <name> --input <json\|path>` executes registered local helper tools | Matches the current design and enables scriptable helpers, but exposes the execution contract earlier |
+| Ship in CLI by default | `cursor-cli-agent tool run <name> --input <json\|path>` executes registered local helper tools | Matches the current design and enables scriptable helpers, but exposes the execution contract earlier |
 | SDK-only first | Registry execution is available only through SDK helpers | Smaller CLI surface, but less parity with Codex helper workflows |
 
 **Default for implementation planning**: Ship `tool run` in the first CLI

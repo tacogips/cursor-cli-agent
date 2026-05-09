@@ -127,9 +127,9 @@ Timeout, interval, and endpoint settings should have defaults and CLI overrides.
 Command shape:
 
 ```bash
-curort-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms <n>] [--json]
-curort-cli-agent daemon stop [--timeout-ms <n>] [--json]
-curort-cli-agent daemon status [--json]
+cursor-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms <n>] [--json]
+cursor-cli-agent daemon stop [--timeout-ms <n>] [--json]
+cursor-cli-agent daemon status [--json]
 ```
 
 Human output should be compact and operational:
@@ -147,7 +147,7 @@ Default paths:
 - metadata: `getConfigDir()/daemon.json`
 - logs: JSONL daemon lifecycle records at `getDataDir()/daemon.log` and server logs under `getDataDir()/logs/`
 
-The path module should expose helpers rather than scattering path strings through CLI code. Tests should use `CURORT_CLI_AGENT_CONFIG_DIR` and `CURORT_CLI_AGENT_DATA_DIR` overrides.
+The path module should expose helpers rather than scattering path strings through CLI code. Tests should use `CURSOR_CLI_AGENT_CONFIG_DIR` and `CURSOR_CLI_AGENT_DATA_DIR` overrides.
 
 ## Dependencies
 
@@ -172,8 +172,8 @@ task ci
 Manual smoke commands:
 
 ```bash
-CURORT_CLI_AGENT_DATA_DIR=/private/tmp/curort-daemon-data \
-CURORT_CLI_AGENT_CONFIG_DIR=/private/tmp/curort-daemon-config \
+CURSOR_CLI_AGENT_DATA_DIR=/private/tmp/cursor-daemon-data \
+CURSOR_CLI_AGENT_CONFIG_DIR=/private/tmp/cursor-daemon-config \
 bun run src/main.ts daemon start --port 0 --json
 
 bun run src/main.ts daemon status --json

@@ -11,28 +11,28 @@ import { createAppServerCompatMetadata } from "./app-server-compat";
 import { createHttpRouteHandler } from "./routes";
 import { resolveHttpServerConfig } from "./types";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
-const previousConfigDir = process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
+const previousConfigDir = process.env["CURSOR_CLI_AGENT_CONFIG_DIR"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
 
 let testDir: string;
 let repo: SessionIndexRepository;
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
   if (previousConfigDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_CONFIG_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
+    process.env["CURSOR_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
   }
   if (previousCursorHome === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
   } else {
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
   }
 }
 
@@ -53,11 +53,11 @@ async function jsonFor(response: Response): Promise<Record<string, unknown>> {
 
 describe("app-server compatibility metadata", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-app-server-compat-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-app-server-compat-"));
     const dataDir = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
-    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     await mkdir(dataDir, { recursive: true });
     repo = new SessionIndexRepository(join(dataDir, "state.db"));
   });

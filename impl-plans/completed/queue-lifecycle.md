@@ -230,13 +230,13 @@ export async function deriveQueueProgressSnapshot(
 **Status**: Completed
 
 ```typescript
-curort-cli-agent queue pause <name> [--json]
-curort-cli-agent queue resume <name> [--json]
-curort-cli-agent queue delete <name> [--force] [--json]
-curort-cli-agent queue update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
-curort-cli-agent queue move <name> --from <n> --to <n> [--json]
-curort-cli-agent queue mode <name> --item <id> --mode <auto|manual> [--json]
-curort-cli-agent queue stop <name> [--json]
+cursor-cli-agent queue pause <name> [--json]
+cursor-cli-agent queue resume <name> [--json]
+cursor-cli-agent queue delete <name> [--force] [--json]
+cursor-cli-agent queue update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
+cursor-cli-agent queue move <name> --from <n> --to <n> [--json]
+cursor-cli-agent queue mode <name> --item <id> --mode <auto|manual> [--json]
+cursor-cli-agent queue stop <name> [--json]
 ```
 
 **Checklist**:

@@ -45,7 +45,7 @@ async function writeTranscript(
 
 describe("transcript full-text search", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-transcript-search-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-transcript-search-"));
     repo = new SessionIndexRepository(join(testDir, "state.db"));
   });
 

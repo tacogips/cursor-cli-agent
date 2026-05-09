@@ -211,7 +211,7 @@ export declare function runGraphqlCli(
 ): Promise<number>;
 ```
 
-**Checklist**: [x] route `curort-cli-agent graphql`; [x] infer shorthand kind from registry; [x] load JSON params/variables from literals or files; [x] print single JSON or NDJSON streams.
+**Checklist**: [x] route `cursor-cli-agent graphql`; [x] infer shorthand kind from registry; [x] load JSON params/variables from literals or files; [x] print single JSON or NDJSON streams.
 
 ### 6. Server And App-Server Hooks
 

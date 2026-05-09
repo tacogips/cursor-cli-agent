@@ -401,17 +401,17 @@ bun run src/main.ts repo analytics rebuild --json
 ### Session: 2026-05-07 Step 6
 
 **Tasks Completed**: TASK-001 through TASK-006.
-**Verification**: `task typecheck`, `task test`, `task ci`, and sequential `repo analytics` JSON smoke commands with `CURORT_CLI_AGENT_DATA_DIR=/tmp/curort-repo-analytics-smoke` passed.
+**Verification**: `task typecheck`, `task test`, `task ci`, and sequential `repo analytics` JSON smoke commands with `CURSOR_CLI_AGENT_DATA_DIR=/tmp/cursor-repo-analytics-smoke` passed.
 **Notes**: Implemented repository analytics contracts, read-only scored commit ingestion with degraded provenance, repository-owned analytics index rebuild/query support, service coordination with file-intelligence rebuilds, CLI subcommands, and focused tests. Local smoke rebuild indexed 72 unique scored commits, 763 sessions, and 313 files; duplicate local `scored_commits` hashes are deduplicated by newest commit date before indexing.
 
 ### Session: 2026-05-07 Step 6 Revision
 
 **Tasks Completed**: Addressed Step 7 mid finding for unweighted AI percentage fallback.
-**Verification**: `task typecheck`, `task test`, `task ci`, and sequential `repo analytics` JSON smoke commands with `CURORT_CLI_AGENT_DATA_DIR=/tmp/curort-repo-analytics-smoke` passed.
+**Verification**: `task typecheck`, `task test`, `task ci`, and sequential `repo analytics` JSON smoke commands with `CURSOR_CLI_AGENT_DATA_DIR=/tmp/cursor-repo-analytics-smoke` passed.
 **Notes**: Repository summary now falls back to unweighted v1/v2 AI averages when scored commits include percentages but no usable composer line counts, and stores completeness notes describing that fallback. Added persistence and CLI coverage for missing line-count columns with explicit JSON summary percentages and provenance/completeness details.
 
 ### Session: 2026-05-07 Step 6 Revision 2
 
 **Tasks Completed**: Addressed Step 7 mid finding for observed Cursor `scored_commits` TEXT numeric columns.
-**Verification**: `task typecheck`, `task test`, `task ci`, and sequential `repo analytics` JSON smoke commands with `CURORT_CLI_AGENT_DATA_DIR=/tmp/curort-repo-analytics-smoke` passed.
+**Verification**: `task typecheck`, `task test`, `task ci`, and sequential `repo analytics` JSON smoke commands with `CURSOR_CLI_AGENT_DATA_DIR=/tmp/cursor-repo-analytics-smoke` passed.
 **Notes**: The ai-tracking scored-commit reader now accepts finite numeric strings for percentage and line-count fields while rejecting blank/non-numeric values. Added reader and CLI coverage for TEXT `v1AiPercentage`/`v2AiPercentage`, including valid `0.00` preservation. Local smoke summary now reports weightedV1AiPercentage 92.67128030442825 and weightedV2AiPercentage 100 from observed Cursor TEXT percentage values.

@@ -162,7 +162,7 @@ export interface ActivitySignalClassifier {
 **Status**: COMPLETED
 
 ```typescript
-curort-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
+cursor-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
 ```
 
 **Checklist**:
@@ -337,15 +337,15 @@ describe("activity derivation", () => {
 **Tasks Completed**: TASK-001, TASK-002, TASK-003, TASK-004, TASK-005, and TASK-006.
 **Tasks In Progress**: None.
 **Blockers**: None.
-**Verification**: `task typecheck`, `task test`, and `task ci` passed. Manual smokes passed with `CURORT_CLI_AGENT_DATA_DIR=/private/tmp/curort-activity-smoke`: `bun run src/main.ts activity --limit 1 --json`, `bun run src/main.ts activity --session e20f0aa8-2eb1-48e2-9e6f-251ca8d47776 --json`, and `bun run src/main.ts activity --status running --limit 3 --json`.
-**Notes**: Implemented derived activity types, cache, classifier, manager, CLI integration, wrapper-run signal recording, README command documentation, and focused test coverage. The default-data-dir manual smoke was blocked by sandbox write restrictions to `/Users/taco/.local/share/curort-cli-agent`, so the same command path was verified with the repository-supported data-dir override under `/private/tmp`.
+**Verification**: `task typecheck`, `task test`, and `task ci` passed. Manual smokes passed with `CURSOR_CLI_AGENT_DATA_DIR=/private/tmp/cursor-activity-smoke`: `bun run src/main.ts activity --limit 1 --json`, `bun run src/main.ts activity --session e20f0aa8-2eb1-48e2-9e6f-251ca8d47776 --json`, and `bun run src/main.ts activity --status running --limit 3 --json`.
+**Notes**: Implemented derived activity types, cache, classifier, manager, CLI integration, wrapper-run signal recording, README command documentation, and focused test coverage. The default-data-dir manual smoke was blocked by sandbox write restrictions to `/Users/taco/.local/share/cursor-cli-agent`, so the same command path was verified with the repository-supported data-dir override under `/private/tmp`.
 
 ### Session: 2026-05-05 Step 6 Review Revision
 
 **Tasks Completed**: Addressed Step 7 high finding from `comm-000008` by changing activity selection so later dynamic terminal signals override stale dynamic running signals, and added regression coverage for completed-after-running and failed-after-running cases.
 **Tasks In Progress**: None.
 **Blockers**: None.
-**Verification**: `bun test src/activity/manager.test.ts`, `task typecheck`, `task test`, and `task ci` passed. Manual smokes passed with `CURORT_CLI_AGENT_DATA_DIR=/private/tmp/curort-activity-smoke`: `bun run src/main.ts activity --limit 1 --json`, `bun run src/main.ts activity --session e20f0aa8-2eb1-48e2-9e6f-251ca8d47776 --json`, and `bun run src/main.ts activity --status running --limit 3 --json`.
+**Verification**: `bun test src/activity/manager.test.ts`, `task typecheck`, `task test`, and `task ci` passed. Manual smokes passed with `CURSOR_CLI_AGENT_DATA_DIR=/private/tmp/cursor-activity-smoke`: `bun run src/main.ts activity --limit 1 --json`, `bun run src/main.ts activity --session e20f0aa8-2eb1-48e2-9e6f-251ca8d47776 --json`, and `bun run src/main.ts activity --status running --limit 3 --json`.
 **Notes**: The activity implementation remains aligned with `design-docs/specs/design-activity.md`: running wins only when it is the latest dynamic evidence; later process or stream completion/failure now becomes the selected status and `updatedAt` source. Unrelated `divedra` submodule working-tree state is outside the `P2-ACTIVITY` write scope.
 
 ### Session: 2026-05-05 Step 6 Review Revision for comm-000010

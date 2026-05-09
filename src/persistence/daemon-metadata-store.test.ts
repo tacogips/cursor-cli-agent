@@ -32,7 +32,7 @@ function metadata(overrides: Partial<DaemonMetadata> = {}): DaemonMetadata {
 
 describe("daemon metadata store", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-daemon-store-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-daemon-store-"));
     metadataPath = join(testDir, "config", "daemon.json");
   });
 

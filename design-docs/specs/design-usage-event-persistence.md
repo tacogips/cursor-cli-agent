@@ -4,7 +4,7 @@ This document defines the `P5-USAGE-EVENT-PERSISTENCE` slice for durable capture
 
 ## Overview
 
-`curort-cli-agent` can currently read Cursor transcripts and normalize live `cursor-agent --print --output-format stream-json` output, but Cursor transcripts do not reliably preserve token usage totals. Usage stats must therefore avoid reporting false zeroes or vague missing-source notes when this wrapper has already observed authoritative usage in a live stream.
+`cursor-cli-agent` can currently read Cursor transcripts and normalize live `cursor-agent --print --output-format stream-json` output, but Cursor transcripts do not reliably preserve token usage totals. Usage stats must therefore avoid reporting false zeroes or vague missing-source notes when this wrapper has already observed authoritative usage in a live stream.
 
 This slice adds a repository-owned usage event store for normalized events captured from wrapper-started `session run`, `session resume`, `session continue`, `group run`, and `queue run` executions. The store is evidence, not a Cursor-managed source of truth: imported foreign transcripts can still have unknown usage, but wrapper-started runs should retain token totals after the process exits.
 
@@ -131,7 +131,7 @@ The exact command shape may reuse the existing usage stats entrypoint if present
 Recommended command:
 
 ```bash
-curort-cli-agent usage stats [--workspace <path>] [--session <id>] [--recent-days <n>] [--json]
+cursor-cli-agent usage stats [--workspace <path>] [--session <id>] [--recent-days <n>] [--json]
 ```
 
 Behavior:

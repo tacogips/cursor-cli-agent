@@ -16,7 +16,7 @@ import {
   updateGroupRun,
 } from "./groups-store";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
 
 let testDir: string;
 
@@ -26,16 +26,16 @@ function groupsPath(): string {
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
 }
 
 describe("groups store lifecycle persistence", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-groups-store-"));
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
+    testDir = await mkdtemp(join(tmpdir(), "cursor-groups-store-"));
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
     await mkdir(join(testDir, "data"), { recursive: true });
   });
 

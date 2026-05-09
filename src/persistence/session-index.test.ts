@@ -9,7 +9,7 @@ import type { CursorSessionRecord } from "../types/session-record";
 
 let testDir: string;
 let repo: SessionIndexRepository;
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
 
 function record(
   overrides: Partial<CursorSessionRecord> &
@@ -29,16 +29,16 @@ function record(
 
 describe("SessionIndexRepository session metadata search", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-session-search-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-session-search-"));
     repo = new SessionIndexRepository(join(testDir, "state.db"));
   });
 
   afterEach(async () => {
     repo.close();
     if (previousCursorHome === undefined) {
-      delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+      delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
     } else {
-      process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+      process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
     }
     await rm(testDir, { recursive: true, force: true });
   });
@@ -199,7 +199,7 @@ describe("SessionIndexRepository session metadata search", () => {
 
   test("imports nested Cursor transcript files from observed local layout", async () => {
     const cursorHome = join(testDir, "cursor");
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = cursorHome;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = cursorHome;
     const transcriptDir = join(
       cursorHome,
       "projects",

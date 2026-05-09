@@ -32,7 +32,7 @@ describe("parseTranscriptLine", () => {
 
 describe("streamTranscriptSearchLines", () => {
   it("streams searchable rows with deterministic offsets and skips malformed input", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-transcript-reader-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-transcript-reader-"));
     const transcriptPath = join(dir, "session.jsonl");
     try {
       const first = JSON.stringify({
@@ -86,7 +86,7 @@ describe("streamTranscriptSearchLines", () => {
   });
 
   it("streams scan rows for malformed and unknown-role input", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-transcript-reader-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-transcript-reader-"));
     const transcriptPath = join(dir, "session.jsonl");
     try {
       const unknown = JSON.stringify({

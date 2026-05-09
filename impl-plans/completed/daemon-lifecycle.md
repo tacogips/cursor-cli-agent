@@ -294,7 +294,7 @@ interface DaemonLifecycleTestMatrix {
 **Deliverables**: `src/cli/cli.ts`, `src/cli/cli.test.ts`
 **Dependencies**: TASK-004
 
-**Description**: Expose `curort-cli-agent daemon start|stop|status` with validation, JSON output, human output, and existing exit-code conventions.
+**Description**: Expose `cursor-cli-agent daemon start|stop|status` with validation, JSON output, human output, and existing exit-code conventions.
 **Completion Criteria**:
 - [x] Current daemon stub is replaced by implemented subcommands.
 - [x] Start/stop/status support `--json`; start/status support token inputs for readiness, and start supports host, port, and timeout options.
@@ -376,8 +376,8 @@ git diff --check -- README.md .divedra/README.md .agents/skills/divedra-impl-wor
 Manual smoke after implementation and dependency completion:
 
 ```bash
-CURORT_CLI_AGENT_DATA_DIR=/private/tmp/curort-daemon-data \
-CURORT_CLI_AGENT_CONFIG_DIR=/private/tmp/curort-daemon-config \
+CURSOR_CLI_AGENT_DATA_DIR=/private/tmp/cursor-daemon-data \
+CURSOR_CLI_AGENT_CONFIG_DIR=/private/tmp/cursor-daemon-config \
 bun run src/main.ts daemon start --port 0 --json
 
 bun run src/main.ts daemon status --json
@@ -403,4 +403,4 @@ bun run src/main.ts daemon stop --json
 
 ### Session: 2026-05-07 23:55
 **Tasks Completed**: Completed TASK-001 through TASK-005 and most TASK-006 implementation verification for `P4-DAEMON`.
-**Notes**: Added daemon contracts, config/data path helpers, atomic metadata store, process ownership adapter, HTTP readiness probe, daemon manager, CLI `daemon start|status|stop`, focused tests, README refresh, and `.divedra/README.md` refresh. Step 7 feedback was addressed by requiring exact `CURORT_CLI_AGENT_DAEMON_MARKER` ownership, adding `src/daemon/process.test.ts`, making auth-required status probe with a runtime token, and terminating alive owned failed or stopping metadata before retry. `bun test src/daemon/process.test.ts src/daemon/manager.test.ts src/persistence/daemon-metadata-store.test.ts src/cli/cli.test.ts`, `task typecheck`, `task test`, and `task ci` passed. Isolated daemon smoke was blocked by this sandbox because the foreground server command failed to bind `127.0.0.1` with `Failed to listen at 127.0.0.1`. `.agents/skills/divedra-impl-workflow/SKILL.md` refresh remains for Step 8 because this Step 6 attempt could not edit that skill file through the available patch tool.
+**Notes**: Added daemon contracts, config/data path helpers, atomic metadata store, process ownership adapter, HTTP readiness probe, daemon manager, CLI `daemon start|status|stop`, focused tests, README refresh, and `.divedra/README.md` refresh. Step 7 feedback was addressed by requiring exact `CURSOR_CLI_AGENT_DAEMON_MARKER` ownership, adding `src/daemon/process.test.ts`, making auth-required status probe with a runtime token, and terminating alive owned failed or stopping metadata before retry. `bun test src/daemon/process.test.ts src/daemon/manager.test.ts src/persistence/daemon-metadata-store.test.ts src/cli/cli.test.ts`, `task typecheck`, `task test`, and `task ci` passed. Isolated daemon smoke was blocked by this sandbox because the foreground server command failed to bind `127.0.0.1` with `Failed to listen at 127.0.0.1`. `.agents/skills/divedra-impl-workflow/SKILL.md` refresh remains for Step 8 because this Step 6 attempt could not edit that skill file through the available patch tool.

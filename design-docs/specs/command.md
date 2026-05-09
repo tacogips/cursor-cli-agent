@@ -1,6 +1,6 @@
 # Command Design
 
-This document defines the planned CLI contract for `curort-cli-agent`.
+This document defines the planned CLI contract for `cursor-cli-agent`.
 
 ## Design Principles
 
@@ -11,22 +11,22 @@ This document defines the planned CLI contract for `curort-cli-agent`.
 ## Top-Level Commands
 
 ```text
-curort-cli-agent session <subcommand>
-curort-cli-agent transcript <subcommand>
-curort-cli-agent group <subcommand>
-curort-cli-agent queue <subcommand>
-curort-cli-agent bookmark <subcommand>
-curort-cli-agent activity [options]
-curort-cli-agent markdown <subcommand>
-curort-cli-agent files <subcommand>
-curort-cli-agent token <subcommand>
-curort-cli-agent tool <subcommand>
-curort-cli-agent model <subcommand>
-curort-cli-agent usage <subcommand>
-curort-cli-agent skill <subcommand>
-curort-cli-agent server <subcommand>
-curort-cli-agent daemon <subcommand>
-curort-cli-agent version
+cursor-cli-agent session <subcommand>
+cursor-cli-agent transcript <subcommand>
+cursor-cli-agent group <subcommand>
+cursor-cli-agent queue <subcommand>
+cursor-cli-agent bookmark <subcommand>
+cursor-cli-agent activity [options]
+cursor-cli-agent markdown <subcommand>
+cursor-cli-agent files <subcommand>
+cursor-cli-agent token <subcommand>
+cursor-cli-agent tool <subcommand>
+cursor-cli-agent model <subcommand>
+cursor-cli-agent usage <subcommand>
+cursor-cli-agent skill <subcommand>
+cursor-cli-agent server <subcommand>
+cursor-cli-agent daemon <subcommand>
+cursor-cli-agent version
 ```
 
 ## Session Commands
@@ -38,7 +38,7 @@ List known sessions from the local index, including pending chat-only records cr
 Example:
 
 ```bash
-curort-cli-agent session list --workspace /repo/path --limit 20
+cursor-cli-agent session list --workspace /repo/path --limit 20
 ```
 
 ### `session show <session-id-or-chat-id>`
@@ -252,7 +252,7 @@ See `design-docs/specs/design-bookmarks.md` for the detailed behavior, validatio
 Phase-2 scope:
 
 ```bash
-curort-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
+cursor-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
 ```
 
 Activity rules:
@@ -398,13 +398,9 @@ See `design-docs/specs/design-tool-registry-model-helpers.md`.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CURSOR_API_KEY` | No | none | Native Cursor CLI authentication override |
-| `CURORT_CLI_AGENT_CONFIG_DIR` | No | `~/.config/curort-cli-agent` | Config location |
-| `CURORT_CLI_AGENT_DATA_DIR` | No | `~/.local/share/curort-cli-agent` | State and repository data |
-| `CURORT_CLI_AGENT_CURSOR_HOME` | No | `~/.cursor` | Override Cursor home for testing |
-
-Compatibility note:
-
-- the implementation may continue to accept legacy `CURSOR_CLI_AGENT_*` variable names during the rename transition, but docs should prefer `CURORT_CLI_AGENT_*`
+| `CURSOR_CLI_AGENT_CONFIG_DIR` | No | `~/.config/cursor-cli-agent` | Config location |
+| `CURSOR_CLI_AGENT_DATA_DIR` | No | `~/.local/share/cursor-cli-agent` | State and repository data |
+| `CURSOR_CLI_AGENT_CURSOR_HOME` | No | `~/.cursor` | Override Cursor home for testing |
 
 ## Exit Codes
 

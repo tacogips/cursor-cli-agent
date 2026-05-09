@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
 import { runGraphqlCli } from "./graphql";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
 
 let testDir: string;
 let logs: string[];
@@ -17,23 +17,24 @@ let errorSpy: ReturnType<typeof spyOn>;
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
   if (previousCursorHome === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
   } else {
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
   }
 }
 
 describe("GraphQL CLI", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-graphql-cli-"));
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
-    await mkdir(process.env["CURORT_CLI_AGENT_DATA_DIR"]!, { recursive: true });
+    testDir = await mkdtemp(join(tmpdir(), "cursor-graphql-cli-"));
+    const dataDir = join(testDir, "data");
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    await mkdir(dataDir, { recursive: true });
     logs = [];
     errors = [];
     logSpy = spyOn(console, "log").mockImplementation((message?: unknown) => {

@@ -12,7 +12,7 @@ Notable items that do not fit into architecture or client categories.
 
 ## 2026-04-09 Design Review
 
-Compared the current `curort-cli-agent` design set against `/g/gits/tacogips/codex-agent`.
+Compared the current `cursor-cli-agent` design set against `/g/gits/tacogips/codex-agent`.
 
 Main finding:
 

@@ -1,10 +1,10 @@
 # Codex-Agent Parity Gap Analysis for Curort CLI Agent
 
-This document compares `/g/gits/tacogips/codex-agent` to the planned `curort-cli-agent` and defines the multi-phase parity roadmap for the Cursor-oriented variant.
+This document compares `/g/gits/tacogips/codex-agent` to the planned `cursor-cli-agent` and defines the multi-phase parity roadmap for the Cursor-oriented variant.
 
 ## Summary
 
-`codex-agent` is the feature baseline. `curort-cli-agent` should preserve the orchestration shape, but it cannot copy the Codex implementation mechanically because Cursor has a different session model.
+`codex-agent` is the feature baseline. `cursor-cli-agent` should preserve the orchestration shape, but it cannot copy the Codex implementation mechanically because Cursor has a different session model.
 
 The current repository already covers the phase-1 foundation in design and mostly in code. The remaining gap is that the design set did not yet define the post-foundation parity path clearly enough.
 
@@ -28,7 +28,7 @@ Status labels:
 - `Phase 5`: optional compatibility and extension layer
 - `Partial`: intentionally narrower than `codex-agent` because Cursor lacks a native primitive
 
-| Capability Area | `codex-agent` baseline | `curort-cli-agent` status | Notes |
+| Capability Area | `codex-agent` baseline | `cursor-cli-agent` status | Notes |
 |---|---|---|---|
 | Session discovery and summary | Implemented | Phase 1 | scan `~/.cursor/projects/*/agent-transcripts` |
 | Session detail and transcript read | Implemented | Phase 1 | transcript schema is simpler, but directly usable |
@@ -137,7 +137,7 @@ Phase 2 closes the highest-value parity gaps that remain entirely local and do n
 
 #### Search
 
-`codex-agent` can search rollout files with richer typed events. `curort-cli-agent` must search two layers:
+`codex-agent` can search rollout files with richer typed events. `cursor-cli-agent` must search two layers:
 
 1. SQLite session index for metadata filters
 2. transcript JSONL files for message-text matches
@@ -198,7 +198,7 @@ Phase 3 adds the next parity tier: advanced control surfaces and derived file in
 
 #### File Intelligence
 
-Unlike `codex-agent`, `curort-cli-agent` should not depend on tool call logs to infer file changes. The primary source should be:
+Unlike `codex-agent`, `cursor-cli-agent` should not depend on tool call logs to infer file changes. The primary source should be:
 
 - `ai_code_hashes` for touched files
 - `ai_deleted_files` for deletions
@@ -291,7 +291,7 @@ These should ship only when they can be backed by stable Cursor behavior rather 
 
 ### 1. Session index is an application responsibility
 
-`codex-agent` can lean on Codex rollouts plus state DB. `curort-cli-agent` must build and own an index.
+`codex-agent` can lean on Codex rollouts plus state DB. `cursor-cli-agent` must build and own an index.
 
 ### 2. Metadata capture must happen at execution time
 
@@ -322,7 +322,7 @@ This flexibility also applies to:
 
 ### 5. Search and file intelligence must be derived, not replayed
 
-`codex-agent` can search and index richer native rollout events. `curort-cli-agent` must derive those higher-level views from:
+`codex-agent` can search and index richer native rollout events. `cursor-cli-agent` must derive those higher-level views from:
 
 - transcript text
 - local session index

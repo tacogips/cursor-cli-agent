@@ -18,7 +18,7 @@ import { createEventStreamService } from "./event-streams";
 
 let testDir: string;
 let repo: SessionIndexRepository;
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
 
 function transcriptLine(role: "user" | "assistant", text: string): string {
   return JSON.stringify({
@@ -78,9 +78,9 @@ function delay(ms: number): Promise<void> {
 
 describe("event stream service", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-event-streams-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-event-streams-"));
     await mkdir(join(testDir, "data"), { recursive: true });
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
     await mkdir(join(testDir, "cursor", "projects"), { recursive: true });
     repo = new SessionIndexRepository(join(testDir, "data", "state.db"));
   });
@@ -88,9 +88,9 @@ describe("event stream service", () => {
   afterEach(async () => {
     repo.close();
     if (previousCursorHome === undefined) {
-      delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+      delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
     } else {
-      process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+      process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
     }
     await rm(testDir, { recursive: true, force: true });
   });

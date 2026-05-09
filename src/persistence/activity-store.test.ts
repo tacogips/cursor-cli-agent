@@ -10,7 +10,7 @@ let testDir: string;
 
 describe("activity signal store", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-activity-store-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-activity-store-"));
   });
 
   afterEach(async () => {

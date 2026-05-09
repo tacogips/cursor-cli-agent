@@ -17,7 +17,7 @@ import type { CursorSessionRecord } from "../types/session-record";
 import type { AiTrackingFileReader } from "../cursor/ai-tracking-reader";
 import type { FileIndexEntryInput } from "../persistence/file-intelligence-index";
 import {
-  FileIntelligenceIndex,
+  type FileIntelligenceIndex,
   normalizeIndexPath,
 } from "../persistence/file-intelligence-index";
 import type { SessionIndexRepository } from "../persistence/session-index";

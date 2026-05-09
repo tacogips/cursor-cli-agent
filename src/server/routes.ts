@@ -111,7 +111,7 @@ async function dispatchGet(
 
   if (pathname === "/api/version") {
     return jsonResponse({
-      packageName: "curort-cli-agent",
+      packageName: "cursor-cli-agent",
       packageVersion: context.config.packageVersion,
       apiVersion: API_VERSION,
     });

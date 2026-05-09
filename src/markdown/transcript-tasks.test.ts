@@ -22,7 +22,7 @@ function transcriptLine(role: string, text: string): string {
 
 describe("createTranscriptMarkdownTaskExtractor", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-cli-markdown-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-cli-markdown-"));
     await mkdir(join(testDir, "data"), { recursive: true });
     repo = new SessionIndexRepository(join(testDir, "data", "state.db"));
   });

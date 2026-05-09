@@ -1,10 +1,10 @@
 {
-  "name": "curort-cli-agent",
+  "name": "cursor-cli-agent",
   "version": "0.1.0",
-  "description": "curort-cli-agent",
+  "description": "CLI and TypeScript SDK for cursor-agent session data and automation",
   "type": "module",
   "bin": {
-    "curort-cli-agent": "dist/bin.js"
+    "cursor-cli-agent": "dist/bin.js"
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -43,7 +43,8 @@
     "test": "scripts/run-src-tests.sh",
     "test:watch": "scripts/run-src-tests.sh --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "bun run typecheck",
+    "lint": "bun run lint:biome && bun run format:check && bun run typecheck",
+    "lint:biome": "biome check . --diagnostic-level=warn",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "clean": "rm -rf dist"
@@ -56,6 +57,7 @@
   "license": "MIT",
   "trustedDependencies": [],
   "devDependencies": {
+    "@biomejs/biome": "2.3.15",
     "@types/bun": "1.1.14",
     "typescript": "5.7.2",
     "prettier": "3.4.2"

@@ -1,6 +1,6 @@
 # Activity Derivation
 
-This document defines the Phase 2 `P2-ACTIVITY` slice for deriving local Cursor session activity in `curort-cli-agent`.
+This document defines the Phase 2 `P2-ACTIVITY` slice for deriving local Cursor session activity in `cursor-cli-agent`.
 
 ## Overview
 
@@ -13,7 +13,7 @@ Included:
 - activity status and signal model
 - activity derivation service
 - optional local signal cache for stream/process observations
-- `curort-cli-agent activity` command
+- `cursor-cli-agent activity` command
 - tests for status derivation, fallback behavior, filtering, and JSON output
 
 Excluded:
@@ -88,7 +88,7 @@ Every returned record must carry enough signals for a caller to understand why a
 Top-level command:
 
 ```bash
-curort-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
+cursor-cli-agent activity [--session <id>] [--status <status>] [--limit <n>] [--json]
 ```
 
 Behavior:

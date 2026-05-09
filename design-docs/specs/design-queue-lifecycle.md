@@ -1,6 +1,6 @@
 # Advanced Queue Lifecycle Controls
 
-This document defines the `P3-QUEUE-LIFECYCLE` slice for Cursor-local queue pause, resume, delete, update, move, mode, stop, item state, paused-run guards, and progress output in `curort-cli-agent`.
+This document defines the `P3-QUEUE-LIFECYCLE` slice for Cursor-local queue pause, resume, delete, update, move, mode, stop, item state, paused-run guards, and progress output in `cursor-cli-agent`.
 
 ## Overview
 
@@ -134,13 +134,13 @@ Load rules:
 Commands:
 
 ```bash
-curort-cli-agent queue pause <name> [--json]
-curort-cli-agent queue resume <name> [--json]
-curort-cli-agent queue delete <name> [--force] [--json]
-curort-cli-agent queue update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
-curort-cli-agent queue move <name> --from <n> --to <n> [--json]
-curort-cli-agent queue mode <name> --item <id> --mode <auto|manual> [--json]
-curort-cli-agent queue stop <name> [--json]
+cursor-cli-agent queue pause <name> [--json]
+cursor-cli-agent queue resume <name> [--json]
+cursor-cli-agent queue delete <name> [--force] [--json]
+cursor-cli-agent queue update <name> --item <id> [--prompt <text>] [--status <pending|completed|failed|skipped>] [--json]
+cursor-cli-agent queue move <name> --from <n> --to <n> [--json]
+cursor-cli-agent queue mode <name> --item <id> --mode <auto|manual> [--json]
+cursor-cli-agent queue stop <name> [--json]
 ```
 
 Output rules:

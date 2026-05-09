@@ -21,7 +21,7 @@ function delay(ms: number): Promise<void> {
 
 describe("transcript tail", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-transcript-tail-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-transcript-tail-"));
   });
 
   afterEach(async () => {

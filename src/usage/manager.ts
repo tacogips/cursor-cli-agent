@@ -361,12 +361,13 @@ export function createUsageStatsManager(
           "activity manager unavailable; activity counts omitted",
         );
       } else {
+        const activityManager = managerOptions.activity;
         try {
           const activities = await Promise.all(
             scopedSessions.map((record) => {
               const id =
                 record.localSessionId ?? record.cursorChatId ?? record.recordId;
-              return managerOptions.activity!.getSessionActivity(id);
+              return activityManager.getSessionActivity(id);
             }),
           );
           for (const activity of activities) {

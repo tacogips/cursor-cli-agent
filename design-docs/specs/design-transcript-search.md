@@ -49,7 +49,7 @@ Intentional Cursor adaptation:
 The CLI command is:
 
 ```bash
-curort-cli-agent transcript search <query> [filters]
+cursor-cli-agent transcript search <query> [filters]
 ```
 
 Primary flags for this slice:

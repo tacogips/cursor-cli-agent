@@ -1,6 +1,6 @@
 # Advanced Group Lifecycle Controls
 
-This document defines the `P3-GROUP-LIFECYCLE` slice for Cursor-local group pause, resume, delete, and watch behavior in `curort-cli-agent`.
+This document defines the `P3-GROUP-LIFECYCLE` slice for Cursor-local group pause, resume, delete, and watch behavior in `cursor-cli-agent`.
 
 ## Overview
 
@@ -113,10 +113,10 @@ Load rules:
 Commands:
 
 ```bash
-curort-cli-agent group pause <name> [--json]
-curort-cli-agent group resume <name> [--json]
-curort-cli-agent group delete <name> [--force] [--json]
-curort-cli-agent group watch <name> [--interval <seconds>] [--once] [--json]
+cursor-cli-agent group pause <name> [--json]
+cursor-cli-agent group resume <name> [--json]
+cursor-cli-agent group delete <name> [--force] [--json]
+cursor-cli-agent group watch <name> [--interval <seconds>] [--once] [--json]
 ```
 
 Output rules:

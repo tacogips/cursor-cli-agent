@@ -10,34 +10,34 @@ import { SessionIndexRepository } from "../persistence/session-index";
 import { createHttpRouteHandler } from "./routes";
 import { resolveHttpServerConfig } from "./types";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
-const previousConfigDir = process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
-const previousCursorHome = process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
-const previousServerToken = process.env["CURORT_CLI_AGENT_SERVER_TOKEN"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
+const previousConfigDir = process.env["CURSOR_CLI_AGENT_CONFIG_DIR"];
+const previousCursorHome = process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
+const previousServerToken = process.env["CURSOR_CLI_AGENT_SERVER_TOKEN"];
 
 let testDir: string;
 let repo: SessionIndexRepository;
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
   if (previousConfigDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CONFIG_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_CONFIG_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
+    process.env["CURSOR_CLI_AGENT_CONFIG_DIR"] = previousConfigDir;
   }
   if (previousCursorHome === undefined) {
-    delete process.env["CURORT_CLI_AGENT_CURSOR_HOME"];
+    delete process.env["CURSOR_CLI_AGENT_CURSOR_HOME"];
   } else {
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = previousCursorHome;
   }
   if (previousServerToken === undefined) {
-    delete process.env["CURORT_CLI_AGENT_SERVER_TOKEN"];
+    delete process.env["CURSOR_CLI_AGENT_SERVER_TOKEN"];
   } else {
-    process.env["CURORT_CLI_AGENT_SERVER_TOKEN"] = previousServerToken;
+    process.env["CURSOR_CLI_AGENT_SERVER_TOKEN"] = previousServerToken;
   }
 }
 
@@ -62,12 +62,12 @@ function handler(token?: string): (request: Request) => Promise<Response> {
 
 describe("http server core", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-http-server-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-http-server-"));
     const dataDir = join(testDir, "data");
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = dataDir;
-    process.env["CURORT_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
-    process.env["CURORT_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
-    delete process.env["CURORT_CLI_AGENT_SERVER_TOKEN"];
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = dataDir;
+    process.env["CURSOR_CLI_AGENT_CONFIG_DIR"] = join(testDir, "config");
+    process.env["CURSOR_CLI_AGENT_CURSOR_HOME"] = join(testDir, "cursor");
+    delete process.env["CURSOR_CLI_AGENT_SERVER_TOKEN"];
     await mkdir(dataDir, { recursive: true });
     repo = new SessionIndexRepository(join(dataDir, "state.db"));
   });
@@ -110,7 +110,7 @@ describe("http server core", () => {
     const version = await route(new Request("http://server/api/version"));
     expect(version.status).toBe(200);
     const versionJson = await jsonFor(version);
-    expect(versionJson["packageName"]).toBe("curort-cli-agent");
+    expect(versionJson["packageName"]).toBe("cursor-cli-agent");
     expect(versionJson["apiVersion"]).toBe("v1");
   });
 

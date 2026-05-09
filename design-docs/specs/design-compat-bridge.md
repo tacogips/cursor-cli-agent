@@ -106,7 +106,7 @@ If final token-auth literals use wildcard families instead of read/write/run lit
 ## CLI Contract
 
 ```bash
-curort-cli-agent graphql <document|command> [--param <json|path>] [--variables <json|path>] [--json]
+cursor-cli-agent graphql <document|command> [--param <json|path>] [--variables <json|path>] [--json]
 ```
 
 Behavior:

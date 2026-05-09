@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
+import type { Stats } from "node:fs";
 import { lstat } from "node:fs/promises";
 import { isAbsolute, resolve, sep } from "node:path";
 
@@ -222,7 +223,7 @@ export async function validatePromptAttachments(
       }
     }
 
-    let st;
+    let st: Stats;
     try {
       st = await lstat(resolvedPath);
     } catch {

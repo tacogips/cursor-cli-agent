@@ -50,7 +50,7 @@ Intentional Cursor adaptation:
 The CLI command is:
 
 ```bash
-curort-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
+cursor-cli-agent markdown tasks --session <id> [--message <id>] [--checked <true|false>] [--json]
 ```
 
 Primary flags:

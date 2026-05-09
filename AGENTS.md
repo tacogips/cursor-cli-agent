@@ -129,18 +129,7 @@ feat: implement user authentication system
 
 ## Project Overview
 
-This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake development environment support.
-
-## Project-Specific Tacit Knowledge
-
-- Phase 1 implementation lives under `src/` (CLI in `src/cli/`, Cursor adapters in `src/cursor/`, persistence in `src/persistence/`). The architecture doc still describes long-term service boundaries; orchestration is currently colocated in the CLI module until those services are extracted.
-- For feature work, treat `design-docs/specs/*.md` and `impl-plans/active/*.md` as the primary source of truth, and use `/g/gits/tacogips/codex-agent` only as a structural reference.
-- The product boundary is local Cursor state on this machine. Prefer validating behavior against `~/.cursor/projects/*/agent-transcripts/*.jsonl`, `~/.cursor/projects/*/worker.log`, `~/.cursor/ai-tracking/ai-code-tracking.db`, and local skill directories instead of assuming undocumented APIs.
-- Keep Cursor-specific behavior isolated behind adapter modules. Domain and persistence layers should not depend directly on raw Cursor CLI payload shapes.
-- `~/.cursor/skills-cursor/` is Cursor-managed internal state. Read it for discovery only; never write to it. User-authored skills belong under `~/.cursor/skills/` or project `.cursor/skills/`.
-- Before implementing non-trivial features, confirm the corresponding design doc and active implementation plan exist and are aligned. If they drift, fix the documents first or explicitly note the mismatch.
-- Prefer project automation entry points over ad hoc commands: `task ci`, `task test`, `task typecheck`, and Bun package scripts. If you touch test infrastructure, align the repository on one test runner instead of mixing conventions further.
-- For implementation changes in this repository, default to the project-local `divedra` workflow `design-and-implement-review-loop` unless the user explicitly says not to use a workflow. This default applies to implementation fixes, behavior changes, feature additions, and bug fixes.
+This is cursor-cli-agent - a TypeScript project with Bun runtime and Nix flake development environment support.
 
 ## Development Environment
 - **Language**: TypeScript
@@ -155,16 +144,13 @@ This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 ├── flake.nix          # Nix flake configuration for TypeScript/Bun development
 ├── flake.lock         # Locked flake dependencies
 ├── package.json       # Package manifest
-├── bun.lock           # Bun lock file (text; `bun.lockb` is gitignored)
+├── bun.lockb          # Bun lock file
 ├── tsconfig.json      # TypeScript configuration (maximum strictness)
 ├── .envrc             # direnv configuration
 ├── src/               # Source code
-│   ├── main.ts        # Entry point (bin)
-│   ├── cli/           # Command dispatcher and session/group/queue/skill flows
-│   ├── cursor/        # Cursor CLI adapters (process, transcripts, stream, skills, ai-tracking)
-│   ├── persistence/   # SQLite session index, JSON group/queue stores
-│   ├── config/        # Paths and environment overrides
-│   └── types/         # Domain event and record types
+│   ├── main.ts        # Entry point
+│   ├── lib.ts         # Library code
+│   └── lib.test.ts    # Test files
 └── .gitignore         # Git ignore patterns
 ```
 
@@ -182,7 +168,11 @@ This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 1. **ts-coding agent** (`.agents/agents/ts-coding.md`): For writing, refactoring, and implementing TypeScript code
 2. **check-and-test-after-modify agent** (`.agents/agents/check-and-test-after-modify.md`): MUST be invoked automatically after ANY TypeScript file modifications
 
-**Coding Standards**: Refer to `.agents/skills/ts-coding-standards/` for TypeScript coding conventions, project layout, error handling, type safety, and async patterns.
+**Coding Standards**: Refer to `.agents/skills/ts-coding-standards/` for TypeScript coding conventions, project layout, error handling, type safety, async patterns, and Biome lint workflow.
+
+**Review Skill**: Use `.agents/skills/ts-review/SKILL.md` when reviewing TypeScript changes for standards compliance, Biome diagnostics, file size policy, and repository conventions.
+
+**Coding Policy**: Any touched TypeScript source file at **1000+ lines** must be split according to `.agents/skills/ts-coding-standards/SKILL.md` unless the user explicitly excludes that work.
 
 **TypeScript Configuration**: This project uses maximum TypeScript strictness. See `tsconfig.json` for the complete strict configuration.
 
@@ -200,10 +190,6 @@ This is curort-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 
 **IMPORTANT**: Implementation tasks MUST follow implementation plans. Implementation plans translate design documents into actionable specifications without code.
 
-**IMPORTANT**: For implementation fixes, feature additions, and bug fixes, you (the LLM model) MUST use the project-local `divedra` workflow unless the user explicitly instructs you not to use a workflow.
-
-**Workflow Reference**: Refer to `.agents/skills/divedra-impl-workflow/SKILL.md` for the default execution policy and invocation pattern.
-
 ### Implementation Workflow
 
 ```
@@ -212,18 +198,6 @@ Design Document --> Implementation Plan --> Implementation --> Completion
 design-docs/         impl-plans/            ts-coding        Progress
 specs/*.md          active/*.md              agent            Update
 ```
-
-### Default Implementation Execution Path
-
-For implementation changes, use the project-local workflow:
-
-```bash
-task divedra-design-implement -- --output json
-```
-
-The workflow id is `design-and-implement-review-loop` under `.divedra/workflows/`.
-
-Do not bypass this workflow for implementation fixes, behavior additions, or bug fixes unless the user explicitly requests non-workflow execution.
 
 ### Creating Implementation Plans
 

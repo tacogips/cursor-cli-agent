@@ -70,7 +70,10 @@ describe("session-replay-slice", () => {
   });
 
   test("empty transcript yields empty_slice error", async () => {
-    const emptyPath = join(dir!, "empty.jsonl");
+    if (dir === undefined) {
+      throw new Error("missing temp dir");
+    }
+    const emptyPath = join(dir, "empty.jsonl");
     await writeFile(emptyPath, "", "utf8");
     const scan = await scanReplayableTranscriptRows(emptyPath);
     expect(scan.rows.length).toBe(0);

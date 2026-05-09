@@ -10,7 +10,7 @@
 ## Goal
 
 Add a project-local `divedra` workflow that continuously selects the next ready
-parity slice for `curort-cli-agent` and delegates that slice into
+parity slice for `cursor-cli-agent` and delegates that slice into
 `design-and-implement-review-loop` until the ready backlog is exhausted.
 
 ## Scope

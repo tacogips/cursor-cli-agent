@@ -13,7 +13,7 @@
 
 ### Summary
 
-Implement `P4-HTTP-SERVER-CORE`: a local Bun REST server that exposes normalized Cursor health, version, session list/detail/messages, metadata search, and transcript search APIs, plus `curort-cli-agent server start`.
+Implement `P4-HTTP-SERVER-CORE`: a local Bun REST server that exposes normalized Cursor health, version, session list/detail/messages, metadata search, and transcript search APIs, plus `cursor-cli-agent server start`.
 
 ### Scope
 

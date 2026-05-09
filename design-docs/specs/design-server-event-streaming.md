@@ -1,6 +1,6 @@
 # Server Event Streaming
 
-This document defines feature `P4-SSE` for live server-sent event streaming in `curort-cli-agent`.
+This document defines feature `P4-SSE` for live server-sent event streaming in `cursor-cli-agent`.
 
 ## Overview
 

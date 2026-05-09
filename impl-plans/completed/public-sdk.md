@@ -339,10 +339,10 @@ bun run scripts/check-package-exports.ts
 Smoke commands:
 
 ```bash
-bun -e 'import("curort-cli-agent").then(() => console.log("import ok"))'
-bun -e 'import("curort-cli-agent/sdk/testing").then(() => console.log("testing ok"))'
-bun -e 'import("curort-cli-agent/server").then(() => console.log("server ok"))'
-bun -e 'import("curort-cli-agent/types").then(() => console.log("types ok"))'
+bun -e 'import("cursor-cli-agent").then(() => console.log("import ok"))'
+bun -e 'import("cursor-cli-agent/sdk/testing").then(() => console.log("testing ok"))'
+bun -e 'import("cursor-cli-agent/server").then(() => console.log("server ok"))'
+bun -e 'import("cursor-cli-agent/types").then(() => console.log("types ok"))'
 ```
 
 Verification focus:

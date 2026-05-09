@@ -79,11 +79,12 @@ export function createNodeProcessInspector(
         return false;
       }
       const environ = await readProc(metadata.pid, "environ");
-      return (
-        environ !== undefined &&
-        environ
-          .split("\0")
-          .includes(`CURORT_CLI_AGENT_DAEMON_MARKER=${metadata.marker}`)
+      if (environ === undefined) {
+        return false;
+      }
+      const entries = environ.split("\0");
+      return entries.includes(
+        `CURSOR_CLI_AGENT_DAEMON_MARKER=${metadata.marker}`,
       );
     },
     async terminate(

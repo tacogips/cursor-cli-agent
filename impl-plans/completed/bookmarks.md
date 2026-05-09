@@ -39,7 +39,7 @@ Implement backlog slice `P2-BOOKMARKS`: local bookmark CRUD and search for repos
 
 Reused concepts: target types `session`, `message`, and `range`; local JSON persistence; add/list/show/delete/search lifecycle; tag filtering; text search across bookmark metadata.
 
-Intentional divergences: `curort-cli-agent` uses `bookmark show` where `codex-agent` uses `get`; pending Cursor `chat_only` records accept only session bookmarks; message/range bookmarks must resolve against stable Cursor transcript IDs (`event-<offset>-<role>`); bookmark excerpts preserve both raw and display text.
+Intentional divergences: `cursor-cli-agent` uses `bookmark show` where `codex-agent` uses `get`; pending Cursor `chat_only` records accept only session bookmarks; message/range bookmarks must resolve against stable Cursor transcript IDs (`event-<offset>-<role>`); bookmark excerpts preserve both raw and display text.
 
 ---
 
@@ -136,7 +136,7 @@ export interface BookmarksStore {
 
 **Checklist**:
 
-- [x] Store bookmarks in repository-owned local state, expected path `~/.local/share/curort-cli-agent/bookmarks.json`.
+- [x] Store bookmarks in repository-owned local state, expected path `~/.local/share/cursor-cli-agent/bookmarks.json`.
 - [x] Use atomic JSON writes and tolerate a missing file as an empty store.
 - [x] Preserve deterministic ordering for list/search output.
 - [x] Search name, description, tags, session IDs, target IDs, and excerpts.
@@ -205,11 +205,11 @@ export interface BookmarkManager {
 **Status**: IMPLEMENTED
 
 ```text
-curort-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
-curort-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
-curort-cli-agent bookmark show <id> [--json]
-curort-cli-agent bookmark delete <id> [--json]
-curort-cli-agent bookmark search <query> [--limit <n>] [--json]
+cursor-cli-agent bookmark add --type <session|message|range> --session <id> --name <name> [--message <id>] [--from <id>] [--to <id>] [--tag <tag>] [--json]
+cursor-cli-agent bookmark list [--session <id>] [--type <type>] [--tag <tag>] [--json]
+cursor-cli-agent bookmark show <id> [--json]
+cursor-cli-agent bookmark delete <id> [--json]
+cursor-cli-agent bookmark search <query> [--limit <n>] [--json]
 ```
 
 **Checklist**:

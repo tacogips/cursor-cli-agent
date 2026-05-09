@@ -46,7 +46,7 @@ Intentional Cursor adaptation:
 The CLI command is:
 
 ```bash
-curort-cli-agent session search <query> [filters]
+cursor-cli-agent session search <query> [filters]
 ```
 
 Primary filters for this slice:

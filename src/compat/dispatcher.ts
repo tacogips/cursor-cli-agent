@@ -282,7 +282,7 @@ export function createCompatCommandDispatcher(
             return {
               kind: "single",
               value: {
-                packageName: "curort-cli-agent",
+                packageName: "cursor-cli-agent",
                 packageVersion: pkg.version,
                 capabilities: COMPAT_COMMAND_CAPABILITIES,
                 provenance: "compat-bridge",

@@ -1,6 +1,6 @@
 # Architecture Design
 
-This document defines the target architecture for `curort-cli-agent`.
+This document defines the target architecture for `cursor-cli-agent`.
 
 ## Goals
 
@@ -20,7 +20,7 @@ This document defines the target architecture for `curort-cli-agent`.
 
 ## Design Drivers
 
-`curort-cli-agent` differs from `codex-agent` in three structural ways:
+`cursor-cli-agent` differs from `codex-agent` in three structural ways:
 
 1. Cursor persists local transcripts under `~/.cursor/projects/<workspace-slug>/agent-transcripts/*.jsonl`, not under a date hierarchy.
 2. Local transcript files are minimal message logs, while richer machine-readable state appears on stdout in `--print --output-format stream-json`.
@@ -116,13 +116,13 @@ Owns durable metadata that Cursor does not provide natively.
 
 Primary storage:
 
-- `~/.config/curort-cli-agent/config.toml`
-- `~/.local/share/curort-cli-agent/state.db`
-- `~/.local/share/curort-cli-agent/groups.json`
-- `~/.local/share/curort-cli-agent/queues.json`
-- `~/.local/share/curort-cli-agent/bookmarks.json` (or SQLite tables in later phases)
-- `~/.local/share/curort-cli-agent/file-index.db` (later phase)
-- `~/.local/share/curort-cli-agent/tokens.db` (later phase)
+- `~/.config/cursor-cli-agent/config.toml`
+- `~/.local/share/cursor-cli-agent/state.db`
+- `~/.local/share/cursor-cli-agent/groups.json`
+- `~/.local/share/cursor-cli-agent/queues.json`
+- `~/.local/share/cursor-cli-agent/bookmarks.json` (or SQLite tables in later phases)
+- `~/.local/share/cursor-cli-agent/file-index.db` (later phase)
+- `~/.local/share/cursor-cli-agent/tokens.db` (later phase)
 
 ## Session Identity Model
 
@@ -182,7 +182,7 @@ Cursor project directories are stored under slugged paths such as:
 ~/.cursor/projects/g-gits-tacogips-cursor-cli-agent
 ```
 
-Transcript files do not contain the workspace path in the observed JSONL format, so `curort-cli-agent` must resolve workspace context using:
+Transcript files do not contain the workspace path in the observed JSONL format, so `cursor-cli-agent` must resolve workspace context using:
 
 1. `system.init.cwd` from headless `stream-json` when sessions are spawned by this tool
 2. the current workspace passed explicitly by the caller
@@ -212,7 +212,7 @@ Design position:
 
 ## Derived Search and File Intelligence Strategy
 
-`curort-cli-agent` must add two repository-owned derived views beyond the base session index.
+`cursor-cli-agent` must add two repository-owned derived views beyond the base session index.
 
 ### 1. Search Index
 
@@ -306,7 +306,7 @@ interface CursorSkillRecord {
 
 ### A. Foreign Session Discovery
 
-Used for sessions created outside `curort-cli-agent`.
+Used for sessions created outside `cursor-cli-agent`.
 
 1. Scan `~/.cursor/projects/*/agent-transcripts/*.jsonl`
 2. Infer `workspaceSlug` from the parent directory
@@ -316,7 +316,7 @@ Used for sessions created outside `curort-cli-agent`.
 
 ### B. Managed Headless Run
 
-Used when `curort-cli-agent` itself starts a run.
+Used when `cursor-cli-agent` itself starts a run.
 
 1. Spawn `cursor-agent --print --trust --output-format stream-json`
 2. Read `system.init` to capture `session_id`, `cwd`, `model`, `permissionMode`
@@ -327,7 +327,7 @@ Used when `curort-cli-agent` itself starts a run.
 
 ### C. Pre-Materialized Chat Creation
 
-Used when `curort-cli-agent` wraps `cursor-agent create-chat`.
+Used when `cursor-cli-agent` wraps `cursor-agent create-chat`.
 
 1. Invoke `cursor-agent create-chat`
 2. Persist a `chat_only` session record keyed by local `recordId`

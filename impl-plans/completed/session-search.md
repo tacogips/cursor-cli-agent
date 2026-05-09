@@ -109,7 +109,7 @@ searchSessions(options: SessionSearchOptions): SessionSearchResult;
 **Status**: COMPLETED
 
 ```typescript
-curort-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit <n>] [--offset <n>] [--json]
+cursor-cli-agent session search <query> [--workspace <path>] [--model <model>] [--mode <default|plan|ask>] [--status <pending|active|completed|failed|unknown>] [--limit <n>] [--offset <n>] [--json]
 ```
 
 **Checklist**:

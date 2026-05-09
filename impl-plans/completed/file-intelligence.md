@@ -400,5 +400,5 @@ bun run src/main.ts files find <path> --json
 **Tasks Completed**: TASK-001, TASK-002, TASK-003, TASK-004, TASK-005, TASK-006.
 **Tasks In Progress**: None.
 **Blockers**: None.
-**Verification**: `task typecheck`, `task test`, and `task ci` pass. Temporary local-state smoke checks ran `files rebuild --json` and `files find src/a.ts --json` with isolated `CURORT_CLI_AGENT_DATA_DIR` and `CURORT_CLI_AGENT_CURSOR_HOME` values.
+**Verification**: `task typecheck`, `task test`, and `task ci` pass. Temporary local-state smoke checks ran `files rebuild --json` and `files find src/a.ts --json` with isolated `CURSOR_CLI_AGENT_DATA_DIR` and `CURSOR_CLI_AGENT_CURSOR_HOME` values.
 **Notes**: Implemented local-only file intelligence from Cursor `ai-tracking` tables, repository-owned derived SQLite index, `files list/snapshots/deleted/find/rebuild` CLI commands, JSON/human provenance output, and focused reader/index/service/CLI tests. README and user-facing workflow-skill refresh remain for the dedicated post-implementation workflow step.

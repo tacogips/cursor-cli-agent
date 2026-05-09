@@ -32,7 +32,7 @@ describe("auth permission helpers", () => {
 
 describe("token manager", () => {
   beforeEach(async () => {
-    configDir = await mkdtemp(join(tmpdir(), "curort-token-manager-"));
+    configDir = await mkdtemp(join(tmpdir(), "cursor-token-manager-"));
   });
 
   afterEach(async () => {

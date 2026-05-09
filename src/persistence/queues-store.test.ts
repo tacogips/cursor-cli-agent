@@ -19,7 +19,7 @@ import {
   updateQueueRun,
 } from "./queues-store";
 
-const previousDataDir = process.env["CURORT_CLI_AGENT_DATA_DIR"];
+const previousDataDir = process.env["CURSOR_CLI_AGENT_DATA_DIR"];
 
 let testDir: string;
 
@@ -29,16 +29,16 @@ function queuesPath(): string {
 
 function restoreEnv(): void {
   if (previousDataDir === undefined) {
-    delete process.env["CURORT_CLI_AGENT_DATA_DIR"];
+    delete process.env["CURSOR_CLI_AGENT_DATA_DIR"];
   } else {
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = previousDataDir;
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = previousDataDir;
   }
 }
 
 describe("queues store lifecycle persistence", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-queues-store-"));
-    process.env["CURORT_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
+    testDir = await mkdtemp(join(tmpdir(), "cursor-queues-store-"));
+    process.env["CURSOR_CLI_AGENT_DATA_DIR"] = join(testDir, "data");
     await mkdir(join(testDir, "data"), { recursive: true });
   });
 

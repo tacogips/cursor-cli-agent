@@ -1,6 +1,6 @@
 # Cursor Repository Analytics
 
-This document defines the Phase 3 `P3-REPO-ANALYTICS` slice for best-effort repository and commit analytics in `curort-cli-agent`.
+This document defines the Phase 3 `P3-REPO-ANALYTICS` slice for best-effort repository and commit analytics in `cursor-cli-agent`.
 
 ## Overview
 

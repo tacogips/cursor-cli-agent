@@ -39,7 +39,7 @@ function transcriptLine(role: string, text: string): string {
 
 describe("bookmark manager", () => {
   test("creates session, message, and range bookmarks with excerpts", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-bookmark-manager-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-bookmark-manager-"));
     const repo = new SessionIndexRepository(join(dir, "state.db"));
     try {
       const transcriptPath = join(dir, "session.jsonl");
@@ -67,7 +67,10 @@ describe("bookmark manager", () => {
         now: () => new Date("2026-05-05T03:00:00.000Z"),
         createId: (() => {
           let id = 0;
-          return () => `bookmark-${(id += 1)}`;
+          return () => {
+            id += 1;
+            return `bookmark-${id}`;
+          };
         })(),
       });
 
@@ -103,7 +106,7 @@ describe("bookmark manager", () => {
   });
 
   test("rejects transcript targets for pending chat-only sessions", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "curort-bookmark-manager-"));
+    const dir = await mkdtemp(join(tmpdir(), "cursor-bookmark-manager-"));
     const repo = new SessionIndexRepository(join(dir, "state.db"));
     try {
       repo.upsert(

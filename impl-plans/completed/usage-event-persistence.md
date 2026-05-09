@@ -580,7 +580,7 @@ Refresh user-facing usage stats documentation and mark implementation progress a
 
 ### Session: 2026-05-08 SDK usage store DI + self-review
 
-**Tasks Completed**: Reviewed unstaged `git diff` for Phase 5 alignment: optional `usageEventStore` on `CursorAgentSdkOptions` and `ToolHelperSdkOptions`, passed through `createToolHelperSdk` to `createUsageStatsManager`, with `src/sdk/index.test.ts` coverage for repository-owned token totals. Added an exhaustive `default` branch on `sessionIdFromEvent` in `usage-persistence-chain.ts`. Re-exported `UsageEventStore` from `src/sdk/types.ts` so embedders can type injected stores from `curort-cli-agent/sdk` without reaching into `src/persistence/*`. Ran Prettier on `index.test.ts`; `task ci` green.
+**Tasks Completed**: Reviewed unstaged `git diff` for Phase 5 alignment: optional `usageEventStore` on `CursorAgentSdkOptions` and `ToolHelperSdkOptions`, passed through `createToolHelperSdk` to `createUsageStatsManager`, with `src/sdk/index.test.ts` coverage for repository-owned token totals. Added an exhaustive `default` branch on `sessionIdFromEvent` in `usage-persistence-chain.ts`. Re-exported `UsageEventStore` from `src/sdk/types.ts` so embedders can type injected stores from `cursor-cli-agent/sdk` without reaching into `src/persistence/*`. Ran Prettier on `index.test.ts`; `task ci` green.
 
 **Notes**: `usage-event-persistence` stays **Completed** in `PROGRESS.json`; TASK-006 scope treats SDK DI as incremental alignment beyond README. Optional wrapper JSONL CLI integration tests unchanged.
 

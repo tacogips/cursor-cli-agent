@@ -61,7 +61,7 @@ export function resolveHttpServerConfig(
 ): HttpServerConfig {
   const host = input.host ?? "127.0.0.1";
   const token =
-    input.token ?? process.env["CURORT_CLI_AGENT_SERVER_TOKEN"] ?? undefined;
+    input.token ?? process.env["CURSOR_CLI_AGENT_SERVER_TOKEN"] ?? undefined;
   if (!isLoopbackHost(host) && token === undefined) {
     throw new Error("server token is required for non-loopback hosts");
   }

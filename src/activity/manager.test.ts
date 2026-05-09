@@ -16,7 +16,7 @@ let repo: SessionIndexRepository;
 
 describe("activity manager", () => {
   beforeEach(async () => {
-    testDir = await mkdtemp(join(tmpdir(), "curort-activity-manager-"));
+    testDir = await mkdtemp(join(tmpdir(), "cursor-activity-manager-"));
     repo = new SessionIndexRepository(join(testDir, "state.db"));
   });
 

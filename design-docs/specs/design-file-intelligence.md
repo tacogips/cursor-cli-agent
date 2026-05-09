@@ -1,6 +1,6 @@
 # Cursor AI Tracking File Intelligence
 
-This document defines the Phase 3 `P3-FILE-INTELLIGENCE` slice for local file intelligence in `curort-cli-agent`.
+This document defines the Phase 3 `P3-FILE-INTELLIGENCE` slice for local file intelligence in `cursor-cli-agent`.
 
 ## Overview
 

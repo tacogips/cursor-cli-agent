@@ -4,7 +4,7 @@ This document defines the canonical `P4-HTTP-SERVER` design slice for a normaliz
 
 ## Overview
 
-The HTTP server exposes repository-owned Cursor session models through local REST routes. It is a phase-4 control-plane foundation, not a raw Cursor CLI proxy and not the daemon supervisor. The server runtime should be usable from `curort-cli-agent server start` and should reuse existing Cursor adapters, persistence repositories, metadata search, and transcript search services.
+The HTTP server exposes repository-owned Cursor session models through local REST routes. It is a phase-4 control-plane foundation, not a raw Cursor CLI proxy and not the daemon supervisor. The server runtime should be usable from `cursor-cli-agent server start` and should reuse existing Cursor adapters, persistence repositories, metadata search, and transcript search services.
 
 ## Source Issue Mapping
 
@@ -124,7 +124,7 @@ Errors must not include stack traces or raw filesystem payloads. Logs may includ
 
 ## CLI Behavior
 
-`curort-cli-agent server start` starts the foreground local server.
+`cursor-cli-agent server start` starts the foreground local server.
 
 Accepted flags for this slice:
 

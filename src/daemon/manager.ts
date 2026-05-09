@@ -193,7 +193,7 @@ export async function spawnCliServer(
     detached: true,
     env: {
       ...process.env,
-      CURORT_CLI_AGENT_DAEMON_MARKER: options.marker,
+      CURSOR_CLI_AGENT_DAEMON_MARKER: options.marker,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -280,7 +280,7 @@ export function createDaemonManager(
     if (options.checkReadiness !== false && metadata.state === "running") {
       const token =
         metadata.auth.mode === "required"
-          ? (options.token ?? process.env["CURORT_CLI_AGENT_SERVER_TOKEN"])
+          ? (options.token ?? process.env["CURSOR_CLI_AGENT_SERVER_TOKEN"])
           : undefined;
       const readiness = await readinessProbe.waitUntilReady({
         baseUrl: metadata.baseUrl,
@@ -355,7 +355,7 @@ export function createDaemonManager(
         ...(options.port !== undefined ? { port: options.port } : {}),
         ...(options.token !== undefined ? { token: options.token } : {}),
       });
-      const marker = `curort-cli-agent-daemon-${randomUUID()}`;
+      const marker = `cursor-cli-agent-daemon-${randomUUID()}`;
       const spawned = await spawnServer({
         host: config.host,
         port: config.port,

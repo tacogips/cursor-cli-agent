@@ -52,8 +52,7 @@ Delegated input references that were unavailable in this checkout:
 
 Intentional divergences:
 
-- Use `getConfigDir()` with `CURORT_CLI_AGENT_CONFIG_DIR` and legacy
-  `CURSOR_CLI_AGENT_CONFIG_DIR`, not the Codex config path.
+- Use `getConfigDir()` with optional `CURSOR_CLI_AGENT_CONFIG_DIR` override, not the Codex config path.
 - Include `files:*` and `server:admin` permissions from this repository's
   Phase 4 route model.
 - Enforce permissions against normalized server route metadata, not raw Cursor

@@ -61,9 +61,12 @@ describe("usage event extractor", () => {
     });
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
-    expect(first!.eventId).toBe(second!.eventId);
-    expect(first!.observedAt).toBe("2026-05-08T02:00:00.000Z");
-    expect(second!.observedAt).toBe("2026-05-08T02:00:01.500Z");
+    if (first === null || second === null) {
+      throw new Error("expected both usage events to be extracted");
+    }
+    expect(first.eventId).toBe(second.eventId);
+    expect(first.observedAt).toBe("2026-05-08T02:00:00.000Z");
+    expect(second.observedAt).toBe("2026-05-08T02:00:01.500Z");
   });
 
   test("builds normalized usage rows with stable ids for identical payloads", () => {
@@ -91,10 +94,13 @@ describe("usage event extractor", () => {
     const second = extractor.fromAgentEvent(ev, ctx);
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
-    expect(first!.eventId).toBe(second!.eventId);
-    expect(first!.totalTokens).toBe(10);
-    expect(first!.provenance).toBe("repository_usage_events");
-    expect(first!.source).toBe("stream_result");
+    if (first === null || second === null) {
+      throw new Error("expected both usage events to be extracted");
+    }
+    expect(first.eventId).toBe(second.eventId);
+    expect(first.totalTokens).toBe(10);
+    expect(first.provenance).toBe("repository_usage_events");
+    expect(first.source).toBe("stream_result");
   });
 
   test("prefers explicit totalTokens over summed component totals", () => {
@@ -204,6 +210,9 @@ describe("usage event extractor", () => {
     );
     expect(a).not.toBeNull();
     expect(b).not.toBeNull();
-    expect(a!.eventId).not.toBe(b!.eventId);
+    if (a === null || b === null) {
+      throw new Error("expected both usage events to be extracted");
+    }
+    expect(a.eventId).not.toBe(b.eventId);
   });
 });
