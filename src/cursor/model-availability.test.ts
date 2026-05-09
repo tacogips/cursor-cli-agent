@@ -60,7 +60,15 @@ describe("model availability", () => {
       commandRunner: runner,
     });
 
-    expect(calls[1]).toContain("--model");
+    const probeArgs = calls[1];
+    expect(probeArgs).toBeDefined();
+    expect(probeArgs).not.toContain("--prompt");
+    expect(probeArgs).toContain("--model");
+    expect(probeArgs?.indexOf("--model")).not.toBe(-1);
+    expect(probeArgs?.[probeArgs.indexOf("--model") + 1]).toBe("gpt-test");
+    const dash = probeArgs?.indexOf("--") ?? -1;
+    expect(dash).not.toBe(-1);
+    expect(probeArgs?.[dash + 1]).toBe("Reply with exactly OK.");
     expect(report.modelReachability).toEqual({
       status: "available",
       probed: true,

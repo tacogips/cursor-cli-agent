@@ -303,6 +303,14 @@ Completion criteria:
 
 **Fix**: `importTranscriptsFromFilesystem` used `existing?.recordId ?? randomUUID()`, which kept an empty `record_id` from the DB and could violate `NOT NULL` on upsert. Replaced with `stableRecordId()` so only non-empty strings are reused. `session run` / `session resume` / `session continue` now validate prompt, session id, and `--stream` before `openRepo()` and import, so invalid `--stream` returns usage without touching SQLite.
 
+### Session: 2026-05-08 (cursor-agent prompt and streaming compatibility)
+
+**Gap**: Manual smoke tests against `cursor-agent 2026.04.08-a41fba1` showed current Cursor Agent rejects `--prompt`; prompts must be passed positionally. The same smoke run showed `--stream-partial-output` can emit timestamped assistant chunks followed by a final full assistant payload.
+
+**Change**: Headless `session run`, `session resume`, and downstream group/queue/fork launch paths now keep the public wrapper `--prompt <text>` contract while invoking `cursor-agent --print` with all options first, then `-- <prompt>`. The `--` separator prevents optional-value flags such as `--worktree [name]` from consuming the prompt. Stream normalization now treats positive `timestamp_ms` assistant payloads as partial output, emits only newly observed deltas, and suppresses a repeated final full assistant payload while preserving `session.completed.result`.
+
+**Verification**: Added focused regression tests for process argv construction, prompt image/worktree ordering, resume-without-prompt, process cancel/interrupt, no-newline stdout tails, partial-stream dedupe, interleaved session partials, and final-payload fallback reset. Full suite passed with `286/286` tests, plus real smoke checks with `gpt-5.4-mini-low` and `gpt-5.3-codex-spark-preview-low` for `model check --probe` and `session run --stream text/json --stream-partial-output`.
+
 ### Session: 2026-03-23 (diff review fixes: text stream and workspace fallback)
 
 **Git/diff review**: Follow-up review found two user-visible issues in the current diff: text-mode headless streaming could print assistant output twice (`session.assistant_message` plus matching `session.completed.result`), and `session resume` / `session attach` ignored indexed `workspacePath` when the caller omitted `--workspace`.

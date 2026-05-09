@@ -65,7 +65,7 @@ async function runModelProbe(
       "text",
       "--model",
       model,
-      "--prompt",
+      "--",
       MODEL_PROBE_PROMPT,
     ],
     {

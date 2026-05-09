@@ -105,13 +105,7 @@ function appendWorktreeArgs(
 }
 
 function buildHeadlessArgs(opts: HeadlessRunOptions): string[] {
-  const args = [
-    "--print",
-    "--output-format",
-    "stream-json",
-    "--prompt",
-    opts.prompt,
-  ];
+  const args = ["--print", "--output-format", "stream-json"];
   if (opts.model !== undefined) {
     args.push("--model", opts.model);
   }
@@ -138,6 +132,7 @@ function buildHeadlessArgs(opts: HeadlessRunOptions): string[] {
   }
   appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
+  args.push("--", opts.prompt);
   return args;
 }
 
@@ -257,9 +252,6 @@ function buildResumeArgs(opts: ResumeRunOptions): string[] {
     "--resume",
     opts.sessionOrChatId,
   ];
-  if (opts.prompt !== undefined && opts.prompt.length > 0) {
-    args.push("--prompt", opts.prompt);
-  }
   if (opts.model !== undefined) {
     args.push("--model", opts.model);
   }
@@ -286,6 +278,9 @@ function buildResumeArgs(opts: ResumeRunOptions): string[] {
   }
   appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
+  if (opts.prompt !== undefined && opts.prompt.length > 0) {
+    args.push("--", opts.prompt);
+  }
   return args;
 }
 

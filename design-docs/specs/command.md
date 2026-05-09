@@ -84,6 +84,13 @@ Primary flags:
 - `--worktree [name]`
 - `--worktree-base <ref>`
 
+Behavior rules:
+
+- the wrapper accepts `--prompt <text>` as its public CLI contract, but forwards the prompt to current `cursor-agent --print` as a positional argument after `--`
+- prompt forwarding must keep all Cursor options, including optional-value options such as `--worktree [name]`, before the `--` separator so the prompt cannot be consumed as an option value
+- when `--stream-partial-output` is enabled, timestamped assistant payloads are normalized as incremental assistant deltas; the final full assistant payload must not be emitted again when it only repeats already streamed text
+- `session.completed.result` remains the authoritative final text and usage envelope for completion/event consumers
+
 ### `session create`
 
 Wrap `cursor-agent create-chat` and persist the returned `cursorChatId` as a pending chat-only session record.
@@ -102,6 +109,10 @@ Flags:
 - `--prompt <text>`
 - `--workspace <path>` (when omitted, use the indexed workspace for a known session if available; otherwise current working directory)
 - `--stream <text|json|events>`
+
+Resume prompt forwarding follows the same `cursor-agent --print ... -- <prompt>`
+rule as `session run`. A resume without a prompt must not add a trailing `--`
+separator.
 
 ### `session continue`
 
@@ -359,6 +370,9 @@ Rules:
   evidence; they do not call undocumented Cursor cloud APIs
 - `model check --probe` may run a bounded Cursor process and must report the
   result as probe-derived rather than as a durable authorization guarantee
+- `model check --probe` forwards its fixed probe prompt as a positional argument
+  after `--`, matching current `cursor-agent --print` syntax and avoiding the
+  removed/unsupported `--prompt` option
 - all JSON responses include provenance and degraded-state fields when optional
   local data sources are absent
 

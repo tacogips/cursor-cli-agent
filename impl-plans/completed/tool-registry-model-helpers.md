@@ -3,7 +3,7 @@
 **Status**: Completed
 **Design Reference**: `design-docs/specs/design-tool-registry-model-helpers.md`
 **Created**: 2026-05-06
-**Last Updated**: 2026-05-07
+**Last Updated**: 2026-05-08
 
 ---
 
@@ -436,3 +436,10 @@ bun run src/main.ts model check --model <known-model> --probe --json --timeout-m
 **Tasks In Progress**: None.
 **Blockers**: None for code; dirty `divedra` remains excluded from commit scope per prior note.
 **Notes**: Registered helper numeric fields now require positive integers before dispatch: `tool.versions.timeoutMs`, `model.check.timeoutMs`, and `usage.stats.recentDays`. Added CLI regression coverage for zero, negative, and fractional numeric JSON inputs returning usage exit with no JSON output.
+
+### Session: 2026-05-08 Model Probe Compatibility Follow-up
+
+**Tasks Completed**: Revalidated `model check --probe` against installed `cursor-agent 2026.04.08-a41fba1` and fixed the probe argv shape to use the current positional prompt form (`-- <probe prompt>`) instead of unsupported `--prompt <probe prompt>`.
+**Tasks In Progress**: None.
+**Blockers**: None.
+**Notes**: Added regression coverage asserting the bounded probe keeps `--model <id>` before the `--` separator and the fixed probe prompt after it. Real wrapper smoke passed for `gpt-5.4-mini-low` and `gpt-5.3-codex-spark-preview-low`; probe results remain explicitly probe-derived and may consume Cursor quota.

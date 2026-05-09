@@ -71,8 +71,31 @@ function messageFromStreamUserContent(
   return normalizeTextBlock(role, rawText);
 }
 
+/**
+ * `stream-json` partial lines may carry either cumulative snapshots or
+ * incremental suffix tokens. Merge into a running total and compute the new
+ * substring to surface to consumers.
+ */
+function extendPartialAssistantText(
+  accumulated: string,
+  chunk: string,
+): { readonly next: string; readonly delta: string } {
+  if (chunk.length === 0) {
+    return { next: accumulated, delta: "" };
+  }
+  if (accumulated.length > 0 && chunk.startsWith(accumulated)) {
+    return { next: chunk, delta: chunk.slice(accumulated.length) };
+  }
+  return { next: accumulated + chunk, delta: chunk };
+}
+
+function isStreamPartialTimestamp(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 export class StreamNormalizerState {
   private readonly lastAssistantBySession = new Map<string, string>();
+  private readonly partialAssistantTextBySession = new Map<string, string>();
 
   /**
    * Convert one `stream-json` line into normalized events.
@@ -127,6 +150,42 @@ export class StreamNormalizerState {
       if (nm === undefined) {
         return [];
       }
+      const tsMs = parsed["timestamp_ms"];
+      if (isStreamPartialTimestamp(tsMs)) {
+        const prevAcc = this.partialAssistantTextBySession.get(sessionId) ?? "";
+        const { next, delta } = extendPartialAssistantText(prevAcc, nm.rawText);
+        this.partialAssistantTextBySession.set(sessionId, next);
+        if (delta.length === 0) {
+          return [];
+        }
+        const deltaMsg = normalizeTextBlock("assistant", delta);
+        return [
+          { type: "session.assistant_message", sessionId, message: deltaMsg },
+        ];
+      }
+
+      const partialAcc = this.partialAssistantTextBySession.get(sessionId);
+      if (partialAcc !== undefined && partialAcc.length > 0) {
+        if (nm.rawText === partialAcc) {
+          this.partialAssistantTextBySession.delete(sessionId);
+          this.lastAssistantBySession.set(sessionId, nm.rawText);
+          return [];
+        }
+        if (nm.rawText.startsWith(partialAcc)) {
+          const tail = nm.rawText.slice(partialAcc.length);
+          this.partialAssistantTextBySession.delete(sessionId);
+          this.lastAssistantBySession.set(sessionId, nm.rawText);
+          if (tail.length === 0) {
+            return [];
+          }
+          const tailMsg = normalizeTextBlock("assistant", tail);
+          return [
+            { type: "session.assistant_message", sessionId, message: tailMsg },
+          ];
+        }
+        this.partialAssistantTextBySession.delete(sessionId);
+      }
+
       const prev = this.lastAssistantBySession.get(sessionId);
       if (prev === nm.rawText) {
         return [];
@@ -151,6 +210,7 @@ export class StreamNormalizerState {
       const isError = parsed["is_error"] === true;
       const usage = parseUsage(parsed["usage"]);
       this.lastAssistantBySession.delete(sessionId);
+      this.partialAssistantTextBySession.delete(sessionId);
       if (isError) {
         return [
           {

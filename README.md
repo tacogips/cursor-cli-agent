@@ -8,7 +8,7 @@ Current status:
 
 - Phase 1 local CLI implementation is active under `src/`
 - Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, the public SDK facade, tool/model availability helpers, usage statistics, and the optional GraphQL compatibility bridge have repository-owned implementations
-- Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23
+- Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23, with headless prompt/model probe compatibility revalidated against `cursor-agent 2026.04.08-a41fba1` on 2026-05-08
 
 ## Project Workflows
 
@@ -69,8 +69,9 @@ Implemented capabilities:
 - Local tool and model helpers: `tool list`, `tool show`, `tool run`, `tool versions`, `model check`, and `usage stats` expose a typed local helper registry, bounded version introspection, conservative Cursor model availability checks, and repository-owned session/activity statistics
 - Optional compatibility bridge: `graphql <document|command>` and opt-in `server start --compat-graphql` expose a Codex-agent-like JSON command field over local Cursor-normalized services, with explicit supported/degraded/unsupported capability metadata, Cursor limitation reporting, and server-side bearer permission gates
 - Headless run/resume orchestration via `cursor-agent --print`
+- Headless prompt forwarding uses the wrapper's `--prompt <text>` flag but invokes `cursor-agent` with a positional prompt after `--`, matching current Cursor Agent syntax and avoiding ambiguity with optional flags such as `--worktree [name]`
 - Experimental `session fork` for best-effort transcript replay into a new headless session (repository-owned provenance; not a native Cursor fork); supports `--dry-run`, stable `event-<n>-<role>` boundaries, and explicit limitation reporting
-- Live transcript watching and normalized event streaming
+- Live transcript watching and normalized event streaming, including `--stream-partial-output` normalization that emits assistant deltas without duplicating the final full assistant payload
 - Group and queue orchestration on top of Cursor Agent
 - Read-only skill catalog support for `~/.cursor/skills-cursor`, `~/.cursor/skills`, and project `.cursor/skills`
 
@@ -132,6 +133,7 @@ bun run src/main.ts tool run tool.versions --input '{"includeGit":true,"timeoutM
 bun run src/main.ts tool versions --include-git --include-bun --timeout-ms 1000 --json
 bun run src/main.ts model check --model test-model --json
 bun run src/main.ts model check --model test-model --probe --timeout-ms 30000 --json
+bun run src/main.ts model check --model gpt-5.3-codex-spark-preview-low --probe --timeout-ms 90000 --json
 bun run src/main.ts usage stats [--workspace <path>] [--session <id>] --recent-days 7 --json
 ```
 
@@ -142,7 +144,12 @@ object, and numeric fields such as `timeoutMs` and `recentDays` must be positive
 integers. `tool versions` reports package metadata and `cursor-agent` by
 default, while Bun and Git version probes are opt-in. `model check` is
 conservative by default: auth is `unknown` and reachability is `not_checked`
-unless `--probe` is supplied. `usage stats` merges the session and activity
+unless `--probe` is supplied. Probe mode runs a bounded `cursor-agent --print`
+process using the same positional prompt separator as headless sessions; it is
+therefore a live Cursor/quota check, not a stable account capability guarantee.
+Cheap model IDs smoke-tested locally include `gpt-5.4-mini-low` and
+`gpt-5.3-codex-spark-preview-low` (display names with spaces are not CLI model
+IDs). `usage stats` merges the session and activity
 indexes with a repository-owned usage event journal captured from wrapper-started
 `session run`, `session resume`, `session continue`, `session fork`, `group run`, and `queue run`
 streams; JSON output includes token totals, model buckets, daily usage slices,
