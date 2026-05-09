@@ -4,7 +4,7 @@ This document defines the planned CLI contract for `cursor-cli-agent`.
 
 ## Design Principles
 
-- Mirror `codex-agent` where it helps migration
+- Align with `codex-agent` patterns where useful for operators
 - Preserve Cursor-native concepts such as `plan`, `ask`, workspace trust, and worktrees
 - Prefer explicit workspace/session targeting over implicit global state
 
@@ -414,7 +414,7 @@ See `design-docs/specs/design-tool-registry-model-helpers.md`.
 | 5 | Workspace trust required |
 | 6 | Transcript parse error |
 
-## Compatibility Notes
+## CLI shape notes (vs Codex-style CLIs)
 
 - `fork` is intentionally absent in phase 1 because Cursor CLI does not expose a native equivalent.
 - `session create` and `session resume` are separate because Cursor uses a pre-materialized chat ID flow that Codex does not.
@@ -423,6 +423,6 @@ See `design-docs/specs/design-tool-registry-model-helpers.md`.
 - `transcript search` is separate from `session search` so metadata lookup can
   remain fast and pending chat-only records can remain searchable before
   transcript materialization.
-- phase-5 GraphQL and app-server-style compatibility commands are optional
-  bridges over normalized local services, not a raw Codex or Cursor protocol
+- phase-5 GraphQL and app-server-style bridge commands are optional
+  layers over normalized local services, not a raw Codex or Cursor protocol
   clone.

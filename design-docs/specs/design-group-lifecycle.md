@@ -9,7 +9,7 @@ Advanced group lifecycle controls extend the existing phase-1 group commands wit
 Included:
 
 - explicit group lifecycle state
-- backward-compatible `groups.json` loading for existing `{ name, workspaces }` records
+- `groups.json` accepts minimal `{ name, workspaces }` records (lifecycle defaults apply)
 - `group pause`, `group resume`, `group delete`, and `group watch`
 - paused-run guards before and during `group run`
 - JSON and human output for lifecycle commands
@@ -37,7 +37,7 @@ State transitions:
 
 | Command/Event | From | To | Notes |
 |---|---|---|---|
-| legacy load | missing state | `active` | Existing records remain valid. |
+| initial load | missing state | `active` | Minimal records remain valid. |
 | `group pause` | any existing state | `paused` | Idempotent; updates `updatedAt`. |
 | `group resume` | any existing state | `active` | Idempotent; clears the pause guard. |
 | `group run` start | `active`, `completed`, `failed` | `active` | Creates or replaces `lastRun` with `status: "running"`. |
@@ -50,7 +50,7 @@ State transitions:
 Current persisted groups contain:
 
 ```typescript
-interface LegacyGroupRecord {
+interface MinimalGroupRecord {
   readonly name: string;
   readonly workspaces: readonly string[];
 }

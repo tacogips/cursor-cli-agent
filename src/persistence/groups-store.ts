@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -116,7 +117,7 @@ function normalizeRun(
   const promptPreview = readString(raw["promptPreview"]);
   const completedAt = readString(raw["completedAt"]);
   return {
-    id: readString(raw["id"]) ?? `legacy-${now}`,
+    id: readString(raw["id"]) ?? randomUUID(),
     status: status as GroupRunStatus,
     ...(promptPreview !== undefined ? { promptPreview } : {}),
     startedAt: readString(raw["startedAt"]) ?? now,

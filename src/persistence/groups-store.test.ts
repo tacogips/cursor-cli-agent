@@ -44,16 +44,16 @@ describe("groups store lifecycle persistence", () => {
     await rm(testDir, { recursive: true, force: true });
   });
 
-  test("loads legacy groups as active canonical records", async () => {
+  test("loads minimal group records as active", async () => {
     await writeFile(
       groupsPath(),
       JSON.stringify({
-        groups: [{ name: "legacy", workspaces: ["/tmp/a"] }],
+        groups: [{ name: "minimal", workspaces: ["/tmp/a"] }],
       }),
       "utf8",
     );
 
-    const group = await getGroup("legacy");
+    const group = await getGroup("minimal");
 
     expect(group?.lifecycleState).toBe("active");
     expect(group?.workspaces).toEqual(["/tmp/a"]);

@@ -110,8 +110,7 @@ Cursor CLI payloads through auth decisions.
 Token config lives under this repository's config directory:
 
 - default: `~/.config/cursor-cli-agent/tokens.json`
-- override: `CURSOR_CLI_AGENT_CONFIG_DIR`
-- legacy fallback: `CURSOR_CLI_AGENT_CONFIG_DIR`
+- override via `CURSOR_CLI_AGENT_CONFIG_DIR`
 
 The token config shape is:
 
@@ -172,7 +171,7 @@ Intentional divergences:
 - Server enforcement targets normalized Cursor-derived route entities rather
   than raw Codex rollout/session payloads.
 - GraphQL token commands from the reference are not part of this slice unless a
-  later compatibility bridge requests them.
+  later optional GraphQL bridge adds them.
 
 ## Dependencies
 

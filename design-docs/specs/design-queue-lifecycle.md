@@ -9,7 +9,7 @@ Advanced queue lifecycle controls extend the existing phase-1 queue commands whi
 Included:
 
 - explicit queue lifecycle state and retained item execution state
-- backward-compatible `queues.json` loading for existing `{ name, workspace, items }` records
+- `queues.json` accepts minimal `{ name, workspace, items }` records (lifecycle defaults apply)
 - `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop`
 - paused-run and stop-request guards before scheduling each item
 - progress output for `queue show`, `queue list`, `queue run`, and JSON lifecycle commands
@@ -44,7 +44,7 @@ State transitions:
 
 | Command/Event | From | To | Notes |
 |---|---|---|---|
-| legacy load | missing state | `active` / `pending` | Existing queues and items remain valid. |
+| initial load | missing state | `active` / `pending` | Minimal queues and items remain valid. |
 | `queue pause` | any existing state | `paused` | Idempotent; blocks new item scheduling. |
 | `queue resume` | `paused`, `stopped`, `completed`, `failed` | `active` | Clears pause and stop request fields. |
 | `queue stop` | running or scheduled queue | `stopped` | Requests no further item scheduling after the current process exits. |
@@ -61,16 +61,16 @@ State transitions:
 Current persisted queues contain:
 
 ```typescript
-interface LegacyQueueItemRecord {
+interface MinimalQueueItemRecord {
   readonly id: string;
   readonly prompt: string;
   readonly createdAt: string;
 }
 
-interface LegacyQueueRecord {
+interface MinimalQueueRecord {
   readonly name: string;
   readonly workspace: string;
-  readonly items: readonly LegacyQueueItemRecord[];
+  readonly items: readonly MinimalQueueItemRecord[];
 }
 ```
 
@@ -124,7 +124,7 @@ interface QueueRecord {
 Load rules:
 
 1. Missing `lifecycleState` means `active`.
-2. Legacy items load as `status: "pending"` and `mode: "auto"`.
+2. Items without status/mode load as `status: "pending"` and `mode: "auto"`.
 3. Missing `createdAt` and `updatedAt` are tolerated and populated on the next write.
 4. Unknown queue lifecycle, item status, item mode, or run status values are normalized to safe defaults with tests covering corruption tolerance.
 5. Saves write canonical records through repository-owned `queues.json` only.

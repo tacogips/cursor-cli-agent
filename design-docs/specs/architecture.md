@@ -254,12 +254,12 @@ and batch implementation planning.
 | `P4-AUTH` | local token lifecycle and bearer checks | token repository and server auth middleware | loopback local mode can remain tokenless; non-loopback requires auth |
 | `P4-DAEMON` | `daemon start/stop/status` | daemon manager supervising the local HTTP/SSE server | supervision covers this wrapper's processes, not Cursor GUI state |
 | `P4-PUBLIC-SDK` | import-safe package facade | SDK barrels over domain types, runners, server helpers, testing mocks | raw Cursor transcript and stream payloads are not public contracts |
-| `P5-COMPAT-BRIDGE` | optional GraphQL/app-server-style command bridge | compatibility dispatcher over SDK/domain services | unsupported Codex-only commands report structured capability errors |
+| `P5-COMPAT-BRIDGE` | optional GraphQL/app-server-style command bridge | bridge dispatcher over SDK/domain services | unsupported Codex-only commands report structured capability errors |
 | `P5-TOOL-REGISTRY` | tool/model/version/usage helpers | local tool registry, bounded subprocess helpers, session/activity indexes | no undocumented Cursor cloud model catalog dependency |
 
 Implementation plans must keep these boundaries intact. Cursor adapters may
 decode raw Cursor files or process output, but domain, server, SDK, and
-compatibility modules consume normalized repository-owned contracts.
+bridge modules consume normalized repository-owned contracts.
 
 ### 2. File Intelligence Index
 
@@ -442,7 +442,7 @@ integration:
 1. Unit-test adapters and parsers with fixtures for transcript JSONL, stream
    events, sparse `ai-tracking` rows, malformed rows, and missing optional local
    files.
-2. Test persistence migrations and repositories with isolated temporary data
+2. Test persistence stores and repositories with isolated temporary data
    roots.
 3. Test CLI parsing and JSON output for each backlog item, including invalid
    usage and degraded-data cases.

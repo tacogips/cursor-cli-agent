@@ -136,7 +136,7 @@ function normalizeRun(raw: unknown, now: string): QueueRunRecord | undefined {
   const currentItemId = readString(raw["currentItemId"]);
   const stoppedAt = readString(raw["stoppedAt"]);
   return {
-    id: readString(raw["id"]) ?? `legacy-${now}`,
+    id: readString(raw["id"]) ?? randomUUID(),
     status: status as QueueRunStatus,
     startedAt: readString(raw["startedAt"]) ?? now,
     updatedAt: readString(raw["updatedAt"]) ?? now,

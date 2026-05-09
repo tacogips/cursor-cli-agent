@@ -47,13 +47,13 @@ describe("queues store lifecycle persistence", () => {
     await rm(testDir, { recursive: true, force: true });
   });
 
-  test("loads legacy queues as active pending auto records", async () => {
+  test("loads minimal queue records as active pending auto", async () => {
     await writeFile(
       queuesPath(),
       JSON.stringify({
         queues: [
           {
-            name: "legacy",
+            name: "minimal",
             workspace: "/tmp/a",
             items: [
               {
@@ -68,7 +68,7 @@ describe("queues store lifecycle persistence", () => {
       "utf8",
     );
 
-    const queue = await getQueue("legacy");
+    const queue = await getQueue("minimal");
 
     expect(queue?.lifecycleState).toBe("active");
     expect(queue?.items[0]?.status).toBe("pending");
