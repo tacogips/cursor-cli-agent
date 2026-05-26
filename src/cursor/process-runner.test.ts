@@ -114,6 +114,35 @@ describe("cursor process runner", () => {
     expect(args.includes("--stream-partial-output")).toBe(true);
   });
 
+  test("headless applies requested effort to effort-bearing model ids", async () => {
+    let spawnArgs: readonly string[] | undefined;
+    mock.module("node:child_process", () => ({
+      spawn: (_cmd: string, args: readonly string[]) => {
+        spawnArgs = args;
+        return mockSpawnProc((proc) => {
+          process.nextTick(() => {
+            proc.emit("close", 0, null);
+          });
+        })(_cmd, args);
+      },
+    }));
+    const { runHeadlessStreaming } = await import("./process-runner");
+    await runHeadlessStreaming(
+      {
+        workspace: "/tmp/workspace",
+        prompt: "hello world",
+        model: "gpt-5.3-codex-low-fast",
+        effort: "high",
+      },
+      () => {},
+    );
+
+    const args = spawnArgs as string[];
+    const modelIndex = args.indexOf("--model");
+    expect(modelIndex).toBeGreaterThan(-1);
+    expect(args[modelIndex + 1]).toBe("gpt-5.3-codex-high-fast");
+  });
+
   test("headless places promptImages and worktree options before -- and prompt after", async () => {
     let spawnArgs: readonly string[] | undefined;
     mock.module("node:child_process", () => ({
@@ -171,6 +200,7 @@ describe("cursor process runner", () => {
         sessionOrChatId: "sess-99",
         prompt: "continue please",
         model: "m2",
+        effort: "xhigh",
       },
       () => {},
     );
@@ -178,6 +208,9 @@ describe("cursor process runner", () => {
     expect(spawnArgs).toBeDefined();
     const args = spawnArgs as string[];
     expect(args.includes("--prompt")).toBe(false);
+    const modelIndex = args.indexOf("--model");
+    expect(modelIndex).toBeGreaterThan(-1);
+    expect(args[modelIndex + 1]).toBe("m2-xhigh");
     const resumeAt = args.indexOf("--resume");
     expect(resumeAt).toBeGreaterThan(-1);
     expect(args[resumeAt + 1]).toBe("sess-99");

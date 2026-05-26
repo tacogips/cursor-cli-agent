@@ -3,6 +3,7 @@ import {
   startHeadlessStreaming,
   startResumeStreaming,
   type CursorAgentStreamingProcess,
+  type CursorAgentEffort,
   type HeadlessRunOptions,
   type ResumeRunOptions,
 } from "../cursor/process-runner";
@@ -10,12 +11,14 @@ import { StreamNormalizerState } from "../cursor/stream-normalizer";
 import { sessionIdFromEvent, type AgentEvent } from "../types/agent-event";
 
 export type CursorAgentStreamMode = "event" | "normalized";
+export type { CursorAgentEffort };
 
 export interface CursorAgentRequest {
   readonly prompt?: string;
   readonly sessionId?: string;
   readonly cwd?: string;
   readonly model?: string;
+  readonly effort?: CursorAgentEffort;
   readonly mode?: "default" | "plan" | "ask";
   readonly streamMode?: CursorAgentStreamMode;
 }
@@ -220,6 +223,7 @@ export function createAgentRunnerFacade(
               ? { cursorBinary: options.cursorBinary }
               : {}),
             ...(request.model !== undefined ? { model: request.model } : {}),
+            ...(request.effort !== undefined ? { effort: request.effort } : {}),
             ...(request.mode !== undefined ? { mode: request.mode } : {}),
           },
           onLine,
@@ -241,6 +245,7 @@ export function createAgentRunnerFacade(
               ? { cursorBinary: options.cursorBinary }
               : {}),
             ...(request.model !== undefined ? { model: request.model } : {}),
+            ...(request.effort !== undefined ? { effort: request.effort } : {}),
             ...(request.mode !== undefined ? { mode: request.mode } : {}),
           },
           onLine,

@@ -4,6 +4,7 @@ import type { UsageEventStore } from "../persistence/usage-event-store";
 import type { ToolVersionCommandRunner } from "../types/tool-versions";
 import type {
   AgentRunnerFacade,
+  CursorAgentEffort,
   CursorAgentRequest,
   CursorAgentRunResult,
   CursorAgentStreamMode,
@@ -24,6 +25,7 @@ export type {
   ActivityFacade,
   ActivityListOptions,
   AgentRunnerFacade,
+  CursorAgentEffort,
   BookmarkFacade,
   CursorAgentRequest,
   CursorAgentRunResult,

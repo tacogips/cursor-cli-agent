@@ -40,6 +40,7 @@ export interface HeadlessRunOptions {
   readonly prompt: string;
   readonly cursorBinary?: string;
   readonly model?: string;
+  readonly effort?: CursorAgentEffort;
   readonly mode?: "default" | "plan" | "ask";
   readonly trust?: boolean;
   readonly force?: boolean;
@@ -55,6 +56,8 @@ export interface HeadlessRunOptions {
   /** Repeated `<flag> <path>` fragments appended before worktree passthrough tokens. */
   readonly promptImages?: PromptImageArgv;
 }
+
+export type CursorAgentEffort = "low" | "medium" | "high" | "xhigh";
 
 export type CursorAgentExit = {
   readonly code: number | null;
@@ -105,10 +108,55 @@ function appendWorktreeArgs(
   }
 }
 
+const CURSOR_EFFORT_TOKENS = new Set([
+  "none",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
+
+function toCursorEffortToken(effort: CursorAgentEffort): string {
+  return effort;
+}
+
+export function resolveModelForEffort(
+  model: string | undefined,
+  effort: CursorAgentEffort | undefined,
+): string | undefined {
+  if (model === undefined || effort === undefined) {
+    return model;
+  }
+
+  const requested = toCursorEffortToken(effort);
+  const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
+  const base =
+    fastSuffix.length > 0 ? model.slice(0, -fastSuffix.length) : model;
+  if (base.endsWith("-extra-high")) {
+    const prefix = base.slice(0, -"extra-high".length);
+    return `${prefix}${requested}${fastSuffix}`;
+  }
+
+  const tokens = base.split("-");
+  const last = tokens.at(-1);
+  if (last !== undefined && CURSOR_EFFORT_TOKENS.has(last)) {
+    tokens[tokens.length - 1] = requested;
+    return `${tokens.join("-")}${fastSuffix}`;
+  }
+
+  if (requested === "medium") {
+    return model;
+  }
+
+  return `${base}-${requested}${fastSuffix}`;
+}
+
 function buildHeadlessArgs(opts: HeadlessRunOptions): string[] {
   const args = ["--print", "--output-format", "stream-json"];
-  if (opts.model !== undefined) {
-    args.push("--model", opts.model);
+  const model = resolveModelForEffort(opts.model, opts.effort);
+  if (model !== undefined) {
+    args.push("--model", model);
   }
   if (opts.mode !== undefined && opts.mode !== "default") {
     args.push("--mode", opts.mode);
@@ -253,8 +301,9 @@ function buildResumeArgs(opts: ResumeRunOptions): string[] {
     "--resume",
     opts.sessionOrChatId,
   ];
-  if (opts.model !== undefined) {
-    args.push("--model", opts.model);
+  const model = resolveModelForEffort(opts.model, opts.effort);
+  if (model !== undefined) {
+    args.push("--model", model);
   }
   if (opts.mode !== undefined && opts.mode !== "default") {
     args.push("--mode", opts.mode);

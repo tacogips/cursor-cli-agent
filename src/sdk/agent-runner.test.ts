@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import { createAgentRunnerFacade } from "./agent-runner";
-import type { CursorAgentStreamingProcess } from "../cursor/process-runner";
+import type {
+  CursorAgentStreamingProcess,
+  HeadlessRunOptions,
+  ResumeRunOptions,
+} from "../cursor/process-runner";
 
 function fakeProcess(lines: readonly string[]): CursorAgentStreamingProcess {
   let cancelled = false;
@@ -66,5 +70,72 @@ describe("SDK agent runner facade", () => {
     ]);
     expect(result.sessionId).toBe("s1");
     expect(result.exitCode).toBe(0);
+  });
+
+  test("passes effort through to start and resume process options", async () => {
+    const starts: HeadlessRunOptions[] = [];
+    const resumes: ResumeRunOptions[] = [];
+    const runner = createAgentRunnerFacade({
+      startHeadless: (opts, onLine) => {
+        starts.push(opts);
+        onLine(
+          JSON.stringify({
+            type: "system",
+            subtype: "init",
+            cwd: opts.workspace,
+            session_id: "s1",
+          }),
+        );
+        return fakeProcess([]);
+      },
+      startResume: (opts, onLine) => {
+        resumes.push(opts);
+        onLine(
+          JSON.stringify({
+            type: "system",
+            subtype: "init",
+            cwd: opts.workspace,
+            session_id: opts.sessionOrChatId,
+          }),
+        );
+        return fakeProcess([]);
+      },
+    });
+
+    await runner
+      .start({
+        cwd: "/tmp/workspace",
+        prompt: "continue",
+        model: "gpt-5.3-codex",
+        effort: "high",
+      })
+      .waitForCompletion();
+    await runner
+      .resume({
+        cwd: "/tmp/workspace",
+        sessionId: "s1",
+        prompt: "again",
+        model: "gpt-5.3-codex-low",
+        effort: "xhigh",
+      })
+      .waitForCompletion();
+
+    expect(starts).toEqual([
+      {
+        workspace: "/tmp/workspace",
+        prompt: "continue",
+        model: "gpt-5.3-codex",
+        effort: "high",
+      },
+    ]);
+    expect(resumes).toEqual([
+      {
+        workspace: "/tmp/workspace",
+        sessionOrChatId: "s1",
+        prompt: "again",
+        model: "gpt-5.3-codex-low",
+        effort: "xhigh",
+      },
+    ]);
   });
 });
