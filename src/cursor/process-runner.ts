@@ -38,6 +38,7 @@ export interface PromptImageArgv {
 export interface HeadlessRunOptions {
   readonly workspace: string;
   readonly prompt: string;
+  readonly systemPrompt?: string;
   readonly cursorBinary?: string;
   readonly model?: string;
   readonly effort?: CursorAgentEffort;
@@ -181,8 +182,18 @@ function buildHeadlessArgs(opts: HeadlessRunOptions): string[] {
   }
   appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
-  args.push("--", opts.prompt);
+  args.push("--", buildPromptWithSystemPrompt(opts.prompt, opts.systemPrompt));
   return args;
+}
+
+function buildPromptWithSystemPrompt(
+  prompt: string,
+  systemPrompt: string | undefined,
+): string {
+  if (systemPrompt === undefined || systemPrompt.trim().length === 0) {
+    return prompt;
+  }
+  return `${systemPrompt}\n\n${prompt}`;
 }
 
 /**
@@ -329,7 +340,7 @@ function buildResumeArgs(opts: ResumeRunOptions): string[] {
   appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
   if (opts.prompt !== undefined && opts.prompt.length > 0) {
-    args.push("--", opts.prompt);
+    args.push("--", buildPromptWithSystemPrompt(opts.prompt, opts.systemPrompt));
   }
   return args;
 }

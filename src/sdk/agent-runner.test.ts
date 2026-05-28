@@ -106,6 +106,7 @@ describe("SDK agent runner facade", () => {
       .start({
         cwd: "/tmp/workspace",
         prompt: "continue",
+        systemPrompt: "system",
         model: "gpt-5.3-codex",
         effort: "high",
       })
@@ -115,6 +116,7 @@ describe("SDK agent runner facade", () => {
         cwd: "/tmp/workspace",
         sessionId: "s1",
         prompt: "again",
+        systemPrompt: "system",
         model: "gpt-5.3-codex-low",
         effort: "xhigh",
       })
@@ -124,6 +126,7 @@ describe("SDK agent runner facade", () => {
       {
         workspace: "/tmp/workspace",
         prompt: "continue",
+        systemPrompt: "system",
         model: "gpt-5.3-codex",
         effort: "high",
       },
@@ -133,6 +136,7 @@ describe("SDK agent runner facade", () => {
         workspace: "/tmp/workspace",
         sessionOrChatId: "s1",
         prompt: "again",
+        systemPrompt: "system",
         model: "gpt-5.3-codex-low",
         effort: "xhigh",
       },

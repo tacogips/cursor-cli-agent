@@ -93,6 +93,7 @@ describe("cursor process runner", () => {
       {
         workspace: "/tmp/workspace",
         prompt: "hello world",
+        systemPrompt: "system",
         model: "m1",
         streamPartialOutput: true,
       },
@@ -104,7 +105,7 @@ describe("cursor process runner", () => {
     expect(args.includes("--prompt")).toBe(false);
     const dash = args.indexOf("--");
     expect(dash).toBeGreaterThan(-1);
-    expect(args[dash + 1]).toBe("hello world");
+    expect(args[dash + 1]).toBe("system\n\nhello world");
     expect(args.lastIndexOf("--")).toBe(dash);
     expect(args).toContain("--print");
     expect(args).toContain("--output-format");
@@ -199,6 +200,7 @@ describe("cursor process runner", () => {
         workspace: "/tmp/workspace",
         sessionOrChatId: "sess-99",
         prompt: "continue please",
+        systemPrompt: "system",
         model: "m2",
         effort: "xhigh",
       },
@@ -216,7 +218,7 @@ describe("cursor process runner", () => {
     expect(args[resumeAt + 1]).toBe("sess-99");
     const dash = args.indexOf("--");
     expect(dash).toBeGreaterThan(resumeAt);
-    expect(args[dash + 1]).toBe("continue please");
+    expect(args[dash + 1]).toBe("system\n\ncontinue please");
   });
 
   test("resume without prompt does not add a trailing -- terminator", async () => {

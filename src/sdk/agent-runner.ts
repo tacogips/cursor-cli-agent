@@ -15,6 +15,7 @@ export type { CursorAgentEffort };
 
 export interface CursorAgentRequest {
   readonly prompt?: string;
+  readonly systemPrompt?: string;
   readonly sessionId?: string;
   readonly cwd?: string;
   readonly model?: string;
@@ -219,6 +220,9 @@ export function createAgentRunnerFacade(
           {
             workspace,
             prompt,
+            ...(request.systemPrompt !== undefined
+              ? { systemPrompt: request.systemPrompt }
+              : {}),
             ...(options.cursorBinary !== undefined
               ? { cursorBinary: options.cursorBinary }
               : {}),
@@ -241,6 +245,9 @@ export function createAgentRunnerFacade(
             workspace,
             sessionOrChatId: request.sessionId,
             ...(request.prompt !== undefined ? { prompt: request.prompt } : {}),
+            ...(request.systemPrompt !== undefined
+              ? { systemPrompt: request.systemPrompt }
+              : {}),
             ...(options.cursorBinary !== undefined
               ? { cursorBinary: options.cursorBinary }
               : {}),
