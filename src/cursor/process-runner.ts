@@ -1,8 +1,22 @@
-import { spawn } from "node:child_process";
+import { spawn as nodeSpawn } from "node:child_process";
 import { once } from "node:events";
 
+type CursorAgentSpawn = typeof nodeSpawn;
+
+let cursorAgentSpawn: CursorAgentSpawn = nodeSpawn;
+
+export function setCursorAgentSpawnForTesting(
+  spawn: CursorAgentSpawn,
+): () => void {
+  const previous = cursorAgentSpawn;
+  cursorAgentSpawn = spawn;
+  return () => {
+    cursorAgentSpawn = previous;
+  };
+}
+
 function streamLines(
-  proc: ReturnType<typeof spawn>,
+  proc: ReturnType<typeof nodeSpawn>,
   onLine: (line: string) => void,
   onStdoutChunk?: (chunk: string) => void,
 ): Promise<void> {
@@ -118,8 +132,26 @@ const CURSOR_EFFORT_TOKENS = new Set([
   "max",
 ]);
 
+const EXTRA_HIGH_EFFORT_MODEL_PREFIXES = ["gpt-5.5"];
+
 function toCursorEffortToken(effort: CursorAgentEffort): string {
   return effort;
+}
+
+function usesExtraHighEffortToken(modelBase: string): boolean {
+  return EXTRA_HIGH_EFFORT_MODEL_PREFIXES.some(
+    (prefix) => modelBase === prefix || modelBase.startsWith(`${prefix}-`),
+  );
+}
+
+function formatCursorEffortToken(
+  modelBase: string,
+  effort: CursorAgentEffort,
+): string {
+  if (effort === "xhigh" && usesExtraHighEffortToken(modelBase)) {
+    return "extra-high";
+  }
+  return toCursorEffortToken(effort);
 }
 
 export function resolveModelForEffort(
@@ -130,10 +162,10 @@ export function resolveModelForEffort(
     return model;
   }
 
-  const requested = toCursorEffortToken(effort);
   const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
   const base =
     fastSuffix.length > 0 ? model.slice(0, -fastSuffix.length) : model;
+  const requested = formatCursorEffortToken(base, effort);
   if (base.endsWith("-extra-high")) {
     const prefix = base.slice(0, -"extra-high".length);
     return `${prefix}${requested}${fastSuffix}`;
@@ -202,7 +234,7 @@ function buildPromptWithSystemPrompt(
 export async function createChat(
   workspace: string,
 ): Promise<{ chatId: string; stderr: string }> {
-  const proc = spawn("cursor-agent", ["create-chat"], {
+  const proc = cursorAgentSpawn("cursor-agent", ["create-chat"], {
     cwd: workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -249,7 +281,7 @@ export async function runHeadlessStreaming(
 }
 
 function controlledProcess(
-  proc: ReturnType<typeof spawn>,
+  proc: ReturnType<typeof nodeSpawn>,
   done: Promise<CursorAgentExit>,
 ): CursorAgentStreamingProcess {
   const control: CursorAgentStreamingProcess = {
@@ -276,7 +308,7 @@ export function startHeadlessStreaming(
   onLine: (line: string) => void,
 ): CursorAgentStreamingProcess {
   const args = buildHeadlessArgs(opts);
-  const proc = spawn(opts.cursorBinary ?? "cursor-agent", args, {
+  const proc = cursorAgentSpawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -340,7 +372,10 @@ function buildResumeArgs(opts: ResumeRunOptions): string[] {
   appendPromptImageArgs(args, opts);
   appendWorktreeArgs(args, opts);
   if (opts.prompt !== undefined && opts.prompt.length > 0) {
-    args.push("--", buildPromptWithSystemPrompt(opts.prompt, opts.systemPrompt));
+    args.push(
+      "--",
+      buildPromptWithSystemPrompt(opts.prompt, opts.systemPrompt),
+    );
   }
   return args;
 }
@@ -357,7 +392,7 @@ export function startResumeStreaming(
   onLine: (line: string) => void,
 ): CursorAgentStreamingProcess {
   const args = buildResumeArgs(opts);
-  const proc = spawn(opts.cursorBinary ?? "cursor-agent", args, {
+  const proc = cursorAgentSpawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
   });
