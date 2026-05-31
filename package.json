@@ -16,24 +16,24 @@
       "default": "./dist/index.js"
     },
     "./sdk": {
-      "types": "./dist/sdk/index.d.ts",
-      "import": "./dist/sdk/index.js",
-      "default": "./dist/sdk/index.js"
+      "types": "./src/sdk/index.ts",
+      "import": "./src/sdk/index.ts",
+      "default": "./src/sdk/index.ts"
     },
     "./sdk/testing": {
-      "types": "./dist/sdk/testing.d.ts",
-      "import": "./dist/sdk/testing.js",
-      "default": "./dist/sdk/testing.js"
+      "types": "./src/sdk/testing.ts",
+      "import": "./src/sdk/testing.ts",
+      "default": "./src/sdk/testing.ts"
     },
     "./server": {
-      "types": "./dist/sdk/server.d.ts",
-      "import": "./dist/sdk/server.js",
-      "default": "./dist/sdk/server.js"
+      "types": "./src/sdk/server.ts",
+      "import": "./src/sdk/server.ts",
+      "default": "./src/sdk/server.ts"
     },
     "./types": {
-      "types": "./dist/sdk/types.d.ts",
-      "import": "./dist/sdk/types.js",
-      "default": "./dist/sdk/types.js"
+      "types": "./src/sdk/types.ts",
+      "import": "./src/sdk/types.ts",
+      "default": "./src/sdk/types.ts"
     }
   },
   "scripts": {
