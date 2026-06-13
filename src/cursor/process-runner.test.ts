@@ -172,6 +172,13 @@ describe("cursor process runner", () => {
     );
   });
 
+  test("does not append effort suffixes to composer model ids", () => {
+    expect(resolveModelForEffort("composer-2.5", "high")).toBe("composer-2.5");
+    expect(resolveModelForEffort("composer-2.5-fast", "high")).toBe(
+      "composer-2.5-fast",
+    );
+  });
+
   test("headless preserves extra-high effort token for GPT-5.5 model ids", async () => {
     let spawnArgs: readonly string[] | undefined;
     useMockSpawn((_cmd: string, args: readonly string[]) => {

@@ -133,6 +133,16 @@ const CURSOR_EFFORT_TOKENS = new Set([
 ]);
 
 const EXTRA_HIGH_EFFORT_MODEL_PREFIXES = ["gpt-5.5"];
+const EFFORT_SUFFIX_EXEMPT_MODEL_PREFIXES = ["composer-"];
+
+function modelSupportsEffortSuffix(model: string): boolean {
+  const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
+  const base =
+    fastSuffix.length > 0 ? model.slice(0, -fastSuffix.length) : model;
+  return !EFFORT_SUFFIX_EXEMPT_MODEL_PREFIXES.some(
+    (prefix) => base === prefix || base.startsWith(prefix),
+  );
+}
 
 function toCursorEffortToken(effort: CursorAgentEffort): string {
   return effort;
@@ -159,6 +169,9 @@ export function resolveModelForEffort(
   effort: CursorAgentEffort | undefined,
 ): string | undefined {
   if (model === undefined || effort === undefined) {
+    return model;
+  }
+  if (!modelSupportsEffortSuffix(model)) {
     return model;
   }
 
