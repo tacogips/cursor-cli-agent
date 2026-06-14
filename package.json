@@ -1,6 +1,6 @@
 {
   "name": "cursor-cli-agent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI and TypeScript SDK for cursor-agent session data and automation",
   "type": "module",
   "bin": {

@@ -100,6 +100,12 @@ spawn Cursor, start the daemon, or write state by itself. CLI execution remains
 behind `src/bin.ts` and the published `cursor-cli-agent` binary, while
 `src/main.ts` exposes callable CLI entrypoints for programmatic use.
 
+SDK agent runs accept the same unattended execution controls as the headless CLI:
+`trust`, `force`, `yolo`, `sandbox`, and `approveMcps`. These options are
+forwarded to `cursor-agent --print` for both new and resumed sessions, so
+automation wrappers can opt into Cursor's run-everything behavior without
+shelling out directly.
+
 Bookmark command examples:
 
 ```bash

@@ -22,6 +22,11 @@ export interface CursorAgentRequest {
   readonly effort?: CursorAgentEffort;
   readonly mode?: "default" | "plan" | "ask";
   readonly streamMode?: CursorAgentStreamMode;
+  readonly trust?: boolean;
+  readonly force?: boolean;
+  readonly yolo?: boolean;
+  readonly sandbox?: "enabled" | "disabled";
+  readonly approveMcps?: boolean;
 }
 
 export interface CursorAgentRunResult {
@@ -229,6 +234,15 @@ export function createAgentRunnerFacade(
             ...(request.model !== undefined ? { model: request.model } : {}),
             ...(request.effort !== undefined ? { effort: request.effort } : {}),
             ...(request.mode !== undefined ? { mode: request.mode } : {}),
+            ...(request.trust !== undefined ? { trust: request.trust } : {}),
+            ...(request.force !== undefined ? { force: request.force } : {}),
+            ...(request.yolo !== undefined ? { yolo: request.yolo } : {}),
+            ...(request.sandbox !== undefined
+              ? { sandbox: request.sandbox }
+              : {}),
+            ...(request.approveMcps !== undefined
+              ? { approveMcps: request.approveMcps }
+              : {}),
           },
           onLine,
         ),
@@ -254,6 +268,15 @@ export function createAgentRunnerFacade(
             ...(request.model !== undefined ? { model: request.model } : {}),
             ...(request.effort !== undefined ? { effort: request.effort } : {}),
             ...(request.mode !== undefined ? { mode: request.mode } : {}),
+            ...(request.trust !== undefined ? { trust: request.trust } : {}),
+            ...(request.force !== undefined ? { force: request.force } : {}),
+            ...(request.yolo !== undefined ? { yolo: request.yolo } : {}),
+            ...(request.sandbox !== undefined
+              ? { sandbox: request.sandbox }
+              : {}),
+            ...(request.approveMcps !== undefined
+              ? { approveMcps: request.approveMcps }
+              : {}),
           },
           onLine,
         ),

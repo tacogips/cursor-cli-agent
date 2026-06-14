@@ -72,6 +72,75 @@ describe("SDK agent runner facade", () => {
     expect(result.exitCode).toBe(0);
   });
 
+  test("passes permission flags through to start and resume process options", async () => {
+    const starts: HeadlessRunOptions[] = [];
+    const resumes: ResumeRunOptions[] = [];
+    const runner = createAgentRunnerFacade({
+      startHeadless: (opts, onLine) => {
+        starts.push(opts);
+        onLine(
+          JSON.stringify({
+            type: "system",
+            subtype: "init",
+            cwd: opts.workspace,
+            session_id: "s-perm",
+          }),
+        );
+        return fakeProcess([]);
+      },
+      startResume: (opts, onLine) => {
+        resumes.push(opts);
+        onLine(
+          JSON.stringify({
+            type: "system",
+            subtype: "init",
+            cwd: opts.workspace,
+            session_id: opts.sessionOrChatId,
+          }),
+        );
+        return fakeProcess([]);
+      },
+    });
+
+    await runner
+      .start({
+        cwd: "/tmp/workspace",
+        prompt: "go",
+        trust: true,
+        force: true,
+        yolo: true,
+        sandbox: "disabled",
+        approveMcps: true,
+      })
+      .waitForCompletion();
+    await runner
+      .resume({
+        cwd: "/tmp/workspace",
+        sessionId: "s-perm",
+        trust: false,
+        force: false,
+        yolo: false,
+        sandbox: "enabled",
+        approveMcps: false,
+      })
+      .waitForCompletion();
+
+    expect(starts[0]).toMatchObject({
+      trust: true,
+      force: true,
+      yolo: true,
+      sandbox: "disabled",
+      approveMcps: true,
+    });
+    expect(resumes[0]).toMatchObject({
+      trust: false,
+      force: false,
+      yolo: false,
+      sandbox: "enabled",
+      approveMcps: false,
+    });
+  });
+
   test("passes effort through to start and resume process options", async () => {
     const starts: HeadlessRunOptions[] = [];
     const resumes: ResumeRunOptions[] = [];
