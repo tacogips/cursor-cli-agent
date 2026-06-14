@@ -62,6 +62,12 @@ var CURSOR_EFFORT_TOKENS = new Set([
   "max"
 ]);
 var EXTRA_HIGH_EFFORT_MODEL_PREFIXES = ["gpt-5.5"];
+var EFFORT_SUFFIX_EXEMPT_MODEL_PREFIXES = ["composer-"];
+function modelSupportsEffortSuffix(model) {
+  const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
+  const base = fastSuffix.length > 0 ? model.slice(0, -fastSuffix.length) : model;
+  return !EFFORT_SUFFIX_EXEMPT_MODEL_PREFIXES.some((prefix) => base === prefix || base.startsWith(prefix));
+}
 function toCursorEffortToken(effort) {
   return effort;
 }
@@ -76,6 +82,9 @@ function formatCursorEffortToken(modelBase, effort) {
 }
 function resolveModelForEffort(model, effort) {
   if (model === undefined || effort === undefined) {
+    return model;
+  }
+  if (!modelSupportsEffortSuffix(model)) {
     return model;
   }
   const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
@@ -637,7 +646,12 @@ function createAgentRunnerFacade(options = {}) {
         ...options.cursorBinary !== undefined ? { cursorBinary: options.cursorBinary } : {},
         ...request.model !== undefined ? { model: request.model } : {},
         ...request.effort !== undefined ? { effort: request.effort } : {},
-        ...request.mode !== undefined ? { mode: request.mode } : {}
+        ...request.mode !== undefined ? { mode: request.mode } : {},
+        ...request.trust !== undefined ? { trust: request.trust } : {},
+        ...request.force !== undefined ? { force: request.force } : {},
+        ...request.yolo !== undefined ? { yolo: request.yolo } : {},
+        ...request.sandbox !== undefined ? { sandbox: request.sandbox } : {},
+        ...request.approveMcps !== undefined ? { approveMcps: request.approveMcps } : {}
       }, onLine));
     },
     resume(request) {
@@ -650,7 +664,12 @@ function createAgentRunnerFacade(options = {}) {
         ...options.cursorBinary !== undefined ? { cursorBinary: options.cursorBinary } : {},
         ...request.model !== undefined ? { model: request.model } : {},
         ...request.effort !== undefined ? { effort: request.effort } : {},
-        ...request.mode !== undefined ? { mode: request.mode } : {}
+        ...request.mode !== undefined ? { mode: request.mode } : {},
+        ...request.trust !== undefined ? { trust: request.trust } : {},
+        ...request.force !== undefined ? { force: request.force } : {},
+        ...request.yolo !== undefined ? { yolo: request.yolo } : {},
+        ...request.sandbox !== undefined ? { sandbox: request.sandbox } : {},
+        ...request.approveMcps !== undefined ? { approveMcps: request.approveMcps } : {}
       }, onLine));
     }
   };
@@ -3767,7 +3786,7 @@ import { spawn } from "child_process";
 // package.json
 var package_default = {
   name: "cursor-cli-agent",
-  version: "0.1.0",
+  version: "0.1.2",
   description: "CLI and TypeScript SDK for cursor-agent session data and automation",
   type: "module",
   bin: {

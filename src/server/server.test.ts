@@ -105,7 +105,7 @@ describe("http server core", () => {
     expect(health.status).toBe(200);
     const healthJson = await jsonFor(health);
     expect(healthJson["status"]).toBe("ok");
-    expect(healthJson["version"]).toBe("0.1.0");
+    expect(healthJson["version"]).toBe("0.1.2");
 
     const version = await route(new Request("http://server/api/version"));
     expect(version.status).toBe(200);

@@ -19,7 +19,7 @@ describe("tool version helpers", () => {
       now: () => new Date("2026-05-07T00:00:00.000Z"),
     });
 
-    expect(report.packageVersion).toBe("0.1.0");
+    expect(report.packageVersion).toBe("0.1.2");
     expect(report.tools).toEqual([
       {
         name: "cursor-agent",

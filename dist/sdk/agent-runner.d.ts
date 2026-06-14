@@ -11,6 +11,11 @@ export interface CursorAgentRequest {
     readonly effort?: CursorAgentEffort;
     readonly mode?: "default" | "plan" | "ask";
     readonly streamMode?: CursorAgentStreamMode;
+    readonly trust?: boolean;
+    readonly force?: boolean;
+    readonly yolo?: boolean;
+    readonly sandbox?: "enabled" | "disabled";
+    readonly approveMcps?: boolean;
 }
 export interface CursorAgentRunResult {
     readonly sessionId: string;
