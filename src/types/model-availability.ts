@@ -33,4 +33,7 @@ export interface ModelAvailabilityOptions {
   readonly workspace?: string;
   readonly now?: () => Date;
   readonly commandRunner?: ToolVersionCommandRunner;
+  readonly cursorApiKey?: string;
+  readonly cursorAuthToken?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }

@@ -45,6 +45,21 @@ function failureMessage(result: ToolCommandRunResult): string {
     : `version command failed (${reason}): ${details}`;
 }
 
+function resolveSpawnEnv(
+  provided: Readonly<Record<string, string | undefined>> | undefined,
+): NodeJS.ProcessEnv {
+  if (provided === undefined) {
+    return { ...process.env };
+  }
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const [k, v] of Object.entries(provided)) {
+    if (v !== undefined) {
+      env[k] = v;
+    }
+  }
+  return env;
+}
+
 export async function defaultToolCommandRunner(
   command: string,
   args: readonly string[],
@@ -55,7 +70,7 @@ export async function defaultToolCommandRunner(
       cwd: options.cwd,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
-      env: { ...process.env },
+      env: resolveSpawnEnv(options.env),
     });
     let stdout = "";
     let stderr = "";

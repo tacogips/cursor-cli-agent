@@ -26,6 +26,9 @@ export interface HeadlessRunOptions {
     readonly skipWorktreeSetup?: boolean;
     /** Repeated `<flag> <path>` fragments appended before worktree passthrough tokens. */
     readonly promptImages?: PromptImageArgv;
+    readonly cursorApiKey?: string;
+    readonly cursorAuthToken?: string;
+    readonly env?: Readonly<Record<string, string | undefined>>;
 }
 export type CursorAgentEffort = "low" | "medium" | "high" | "xhigh";
 export type CursorAgentExit = {
@@ -41,10 +44,15 @@ export interface CursorAgentStreamingProcess {
     interrupt(): Promise<void>;
 }
 export declare function resolveModelForEffort(model: string | undefined, effort: CursorAgentEffort | undefined): string | undefined;
+export interface CreateChatOptions {
+    readonly cursorApiKey?: string;
+    readonly cursorAuthToken?: string;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+}
 /**
  * Run `cursor-agent create-chat` and return the chat id from stdout.
  */
-export declare function createChat(workspace: string): Promise<{
+export declare function createChat(workspace: string, opts?: CreateChatOptions): Promise<{
     chatId: string;
     stderr: string;
 }>;

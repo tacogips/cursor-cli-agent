@@ -297,6 +297,156 @@ describe("cursor process runner", () => {
     expect(spawnArgs as string[]).not.toContain("--");
   });
 
+  test("startHeadlessStreaming passes CURSOR_API_KEY via env and not as a spawn arg", async () => {
+    let capturedEnv: NodeJS.ProcessEnv | undefined;
+    restoreSpawn = setCursorAgentSpawnForTesting(((
+      _cmd: string,
+      _args: readonly string[],
+      spawnOpts: { env?: NodeJS.ProcessEnv },
+    ) => {
+      capturedEnv = spawnOpts.env;
+      return mockSpawnProc((proc) => {
+        process.nextTick(() => proc.emit("close", 0, null));
+      })(_cmd, _args);
+    }) as SpawnMock);
+    await runHeadlessStreaming(
+      {
+        workspace: "/tmp/workspace",
+        prompt: "go",
+        cursorApiKey: "test-api-key-headless",
+      },
+      () => {},
+    );
+    expect(capturedEnv?.["CURSOR_API_KEY"]).toBe("test-api-key-headless");
+  });
+
+  test("startResumeStreaming passes CURSOR_API_KEY via env and not as a spawn arg", async () => {
+    let capturedEnv: NodeJS.ProcessEnv | undefined;
+    let capturedArgs: readonly string[] | undefined;
+    restoreSpawn = setCursorAgentSpawnForTesting(((
+      _cmd: string,
+      args: readonly string[],
+      spawnOpts: { env?: NodeJS.ProcessEnv },
+    ) => {
+      capturedEnv = spawnOpts.env;
+      capturedArgs = args;
+      return mockSpawnProc((proc) => {
+        process.nextTick(() => proc.emit("close", 0, null));
+      })(_cmd, args);
+    }) as SpawnMock);
+    await resumeStreaming(
+      {
+        workspace: "/tmp/workspace",
+        sessionOrChatId: "sess-1",
+        cursorApiKey: "test-api-key-resume",
+      },
+      () => {},
+    );
+    expect(capturedEnv?.["CURSOR_API_KEY"]).toBe("test-api-key-resume");
+    expect(capturedArgs?.includes("test-api-key-resume")).toBe(false);
+  });
+
+  test("buildSpawnEnv overlays env option and skips undefined values", async () => {
+    let capturedEnv: NodeJS.ProcessEnv | undefined;
+    restoreSpawn = setCursorAgentSpawnForTesting(((
+      _cmd: string,
+      _args: readonly string[],
+      spawnOpts: { env?: NodeJS.ProcessEnv },
+    ) => {
+      capturedEnv = spawnOpts.env;
+      return mockSpawnProc((proc) => {
+        process.nextTick(() => proc.emit("close", 0, null));
+      })(_cmd, _args);
+    }) as SpawnMock);
+    await runHeadlessStreaming(
+      {
+        workspace: "/tmp/workspace",
+        prompt: "go",
+        env: { MY_CUSTOM_VAR: "hello", SKIP_ME: undefined },
+      },
+      () => {},
+    );
+    expect(capturedEnv?.["MY_CUSTOM_VAR"]).toBe("hello");
+    expect("SKIP_ME" in (capturedEnv ?? {})).toBe(false);
+  });
+
+  test("startHeadlessStreaming passes CURSOR_AUTH_TOKEN via env and not as a spawn arg", async () => {
+    let capturedEnv: NodeJS.ProcessEnv | undefined;
+    let capturedArgs: readonly string[] | undefined;
+    restoreSpawn = setCursorAgentSpawnForTesting(((
+      _cmd: string,
+      args: readonly string[],
+      spawnOpts: { env?: NodeJS.ProcessEnv },
+    ) => {
+      capturedEnv = spawnOpts.env;
+      capturedArgs = args;
+      return mockSpawnProc((proc) => {
+        process.nextTick(() => proc.emit("close", 0, null));
+      })(_cmd, args);
+    }) as SpawnMock);
+    await runHeadlessStreaming(
+      {
+        workspace: "/tmp/workspace",
+        prompt: "go",
+        cursorAuthToken: "test-auth-token-headless",
+      },
+      () => {},
+    );
+    expect(capturedEnv?.["CURSOR_AUTH_TOKEN"]).toBe("test-auth-token-headless");
+    expect(capturedArgs?.includes("test-auth-token-headless")).toBe(false);
+  });
+
+  test("startHeadlessStreaming sets both CURSOR_API_KEY and CURSOR_AUTH_TOKEN when both provided", async () => {
+    let capturedEnv: NodeJS.ProcessEnv | undefined;
+    restoreSpawn = setCursorAgentSpawnForTesting(((
+      _cmd: string,
+      _args: readonly string[],
+      spawnOpts: { env?: NodeJS.ProcessEnv },
+    ) => {
+      capturedEnv = spawnOpts.env;
+      return mockSpawnProc((proc) => {
+        process.nextTick(() => proc.emit("close", 0, null));
+      })(_cmd, _args);
+    }) as SpawnMock);
+    await runHeadlessStreaming(
+      {
+        workspace: "/tmp/workspace",
+        prompt: "go",
+        cursorApiKey: "my-api-key",
+        cursorAuthToken: "my-auth-token",
+      },
+      () => {},
+    );
+    expect(capturedEnv?.["CURSOR_API_KEY"]).toBe("my-api-key");
+    expect(capturedEnv?.["CURSOR_AUTH_TOKEN"]).toBe("my-auth-token");
+  });
+
+  test("startResumeStreaming passes CURSOR_AUTH_TOKEN via env", async () => {
+    let capturedEnv: NodeJS.ProcessEnv | undefined;
+    let capturedArgs: readonly string[] | undefined;
+    restoreSpawn = setCursorAgentSpawnForTesting(((
+      _cmd: string,
+      args: readonly string[],
+      spawnOpts: { env?: NodeJS.ProcessEnv },
+    ) => {
+      capturedEnv = spawnOpts.env;
+      capturedArgs = args;
+      return mockSpawnProc((proc) => {
+        process.nextTick(() => proc.emit("close", 0, null));
+      })(_cmd, args);
+    }) as SpawnMock);
+    await resumeStreaming(
+      {
+        workspace: "/tmp/workspace",
+        sessionOrChatId: "sess-2",
+        cursorAuthToken: "test-auth-token-resume",
+      },
+      () => {},
+    );
+    expect(capturedEnv?.["CURSOR_AUTH_TOKEN"]).toBe("test-auth-token-resume");
+    expect(capturedArgs?.includes("test-auth-token-resume")).toBe(false);
+  });
+
   test("startHeadlessStreaming cancel invokes kill with SIGTERM", async () => {
     const killSpy = mock((_signal?: NodeJS.Signals) => true);
     let hooked: MockChildProc | undefined;

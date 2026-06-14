@@ -70,6 +70,9 @@ export interface HeadlessRunOptions {
   readonly skipWorktreeSetup?: boolean;
   /** Repeated `<flag> <path>` fragments appended before worktree passthrough tokens. */
   readonly promptImages?: PromptImageArgv;
+  readonly cursorApiKey?: string;
+  readonly cursorAuthToken?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
 export type CursorAgentEffort = "low" | "medium" | "high" | "xhigh";
@@ -198,6 +201,26 @@ export function resolveModelForEffort(
   return `${base}-${requested}${fastSuffix}`;
 }
 
+function buildSpawnEnv(
+  opts: Pick<HeadlessRunOptions, "cursorApiKey" | "cursorAuthToken" | "env">,
+): NodeJS.ProcessEnv {
+  const env: Record<string, string | undefined> = { ...process.env };
+  if (opts.env !== undefined) {
+    for (const [k, v] of Object.entries(opts.env)) {
+      if (v !== undefined) {
+        env[k] = v;
+      }
+    }
+  }
+  if (opts.cursorApiKey !== undefined && opts.cursorApiKey.length > 0) {
+    env["CURSOR_API_KEY"] = opts.cursorApiKey;
+  }
+  if (opts.cursorAuthToken !== undefined && opts.cursorAuthToken.length > 0) {
+    env["CURSOR_AUTH_TOKEN"] = opts.cursorAuthToken;
+  }
+  return env;
+}
+
 function buildHeadlessArgs(opts: HeadlessRunOptions): string[] {
   const args = ["--print", "--output-format", "stream-json"];
   const model = resolveModelForEffort(opts.model, opts.effort);
@@ -241,15 +264,23 @@ function buildPromptWithSystemPrompt(
   return `${systemPrompt}\n\n${prompt}`;
 }
 
+export interface CreateChatOptions {
+  readonly cursorApiKey?: string;
+  readonly cursorAuthToken?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
+}
+
 /**
  * Run `cursor-agent create-chat` and return the chat id from stdout.
  */
 export async function createChat(
   workspace: string,
+  opts?: CreateChatOptions,
 ): Promise<{ chatId: string; stderr: string }> {
   const proc = cursorAgentSpawn("cursor-agent", ["create-chat"], {
     cwd: workspace,
     stdio: ["ignore", "pipe", "pipe"],
+    env: buildSpawnEnv(opts ?? {}),
   });
   let stderr = "";
   proc.stderr?.on("data", (d: Buffer) => {
@@ -324,6 +355,7 @@ export function startHeadlessStreaming(
   const proc = cursorAgentSpawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
+    env: buildSpawnEnv(opts),
   });
   let stdout = "";
   let stderr = "";
@@ -408,6 +440,7 @@ export function startResumeStreaming(
   const proc = cursorAgentSpawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
     stdio: ["ignore", "pipe", "pipe"],
+    env: buildSpawnEnv(opts),
   });
   let stdout = "";
   let stderr = "";

@@ -42,5 +42,8 @@ export interface CursorAgentSdkOptions {
     readonly activityManager?: ActivityManager;
     readonly usageEventStore?: UsageEventStore;
     readonly commandRunner?: ToolVersionCommandRunner;
+    readonly cursorApiKey?: string;
+    readonly cursorAuthToken?: string;
+    readonly cursorAgentEnv?: Readonly<Record<string, string | undefined>>;
 }
 //# sourceMappingURL=types.d.ts.map

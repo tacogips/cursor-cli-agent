@@ -10,6 +10,16 @@ export {
   createToolRegistry,
   tool,
 } from "./tool-registry";
+export {
+  CursorAuthKeepAlive,
+  type CursorAuthKeepAliveOptions,
+  type CursorAuthKeepAliveStatus,
+} from "../cursor/auth-keepalive";
+export {
+  resolveCursorAuthEnv,
+  type CursorAuthEnvInput,
+  type CursorAuthEnvResult,
+} from "../cursor/auth-env";
 
 export function createCursorAgentSdk(
   options: CursorAgentSdkOptions = {},
@@ -20,6 +30,12 @@ export function createCursorAgentSdk(
     runner: createAgentRunnerFacade({
       ...(options.cursorBinary !== undefined
         ? { cursorBinary: options.cursorBinary }
+        : {}),
+      ...(options.cursorApiKey !== undefined
+        ? { cursorApiKey: options.cursorApiKey }
+        : {}),
+      ...(options.cursorAgentEnv !== undefined
+        ? { cursorAgentEnv: options.cursorAgentEnv }
         : {}),
     }),
     tools: createToolHelperSdk(options),

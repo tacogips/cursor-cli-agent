@@ -24,6 +24,11 @@ import {
 } from "../auth";
 import { createActivityManager } from "../activity/manager";
 import { checkModelAvailability } from "../cursor/model-availability";
+import {
+  CursorAuthKeepAlive,
+  type CursorAuthKeepAliveOptions,
+} from "../cursor/auth-keepalive";
+import { resolveCursorAuthEnv } from "../cursor/auth-env";
 import { getToolVersions } from "../cursor/tool-versions";
 import { deriveGroupProgressSnapshot } from "../group/progress";
 import { deriveQueueProgressSnapshot } from "../queue/progress";
@@ -1877,6 +1882,7 @@ export async function runCli(argv: string[]): Promise<number> {
   cursor-cli-agent daemon start [--host <host>] [--port <port>] [--token <token>] [--timeout-ms N] [--json]
   cursor-cli-agent daemon stop [--timeout-ms N] [--json]
   cursor-cli-agent daemon status [--token <token>] [--json]
+  cursor-cli-agent auth keepalive --model <model> [--interval-ms N] [--timeout-ms N] [--once]
 `);
     return EXIT.USAGE;
   }
@@ -1936,6 +1942,9 @@ export async function runCli(argv: string[]): Promise<number> {
   }
   if (cmd === "skill") {
     return runSkill(tail);
+  }
+  if (cmd === "auth") {
+    return runAuth(tail);
   }
   if (cmd === "graphql") {
     const { flags } = parseFlags(tail);
@@ -4815,4 +4824,97 @@ async function runSkill(argv: string[]): Promise<number> {
 
   console.error(`Unknown skill subcommand: ${sub}`);
   return EXIT.USAGE;
+}
+
+interface AuthKeepaliveCommandArgs {
+  readonly model: string;
+  readonly once: boolean;
+  readonly intervalMs?: number;
+  readonly timeoutMs?: number;
+}
+
+function parseAuthKeepaliveCommandArgs(
+  flags: ParsedCliFlags,
+): { args: AuthKeepaliveCommandArgs } | { error: string } {
+  const model = flags["model"];
+  if (typeof model !== "string" || model.trim().length === 0) {
+    return { error: "auth keepalive: --model is required" };
+  }
+  const intervalMs = parseOptionalPositiveIntegerFlag(flags, "interval-ms");
+  if (intervalMs === null) {
+    return {
+      error: "auth keepalive: --interval-ms must be a positive integer",
+    };
+  }
+  const timeoutMs = parseOptionalPositiveIntegerFlag(flags, "timeout-ms");
+  if (timeoutMs === null) {
+    return { error: "auth keepalive: --timeout-ms must be a positive integer" };
+  }
+  return {
+    args: {
+      model: model.trim(),
+      once: flags["once"] === true,
+      ...(intervalMs !== undefined ? { intervalMs } : {}),
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    },
+  };
+}
+
+async function runAuth(argv: string[]): Promise<number> {
+  const [sub, ...rest] = argv;
+  if (sub !== "keepalive") {
+    console.error(
+      sub === undefined
+        ? "auth: missing subcommand"
+        : `Unknown auth subcommand: ${sub}`,
+    );
+    return EXIT.USAGE;
+  }
+  const { rest: pos, flags } = parseFlags(rest);
+  if (pos.length > 0) {
+    console.error("auth keepalive: unexpected positional arguments");
+    return EXIT.USAGE;
+  }
+  const parsed = parseAuthKeepaliveCommandArgs(flags);
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    return EXIT.USAGE;
+  }
+  const { model, once, intervalMs, timeoutMs } = parsed.args;
+
+  const auth = resolveCursorAuthEnv();
+
+  const keepaliveOptions: CursorAuthKeepAliveOptions = {
+    model,
+    ...auth,
+    ...(intervalMs !== undefined ? { intervalMs } : {}),
+    ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    workspace: process.cwd(),
+  };
+
+  if (once) {
+    const keepalive = new CursorAuthKeepAlive(keepaliveOptions);
+    await keepalive.probeNow();
+    const s = keepalive.status();
+    if (s.lastSuccessAt !== undefined) {
+      console.log(`ok model=${model} at=${s.lastSuccessAt}`);
+      return EXIT.OK;
+    }
+    console.error(
+      `probe failed model=${model} reason=${s.lastFailureMessage ?? "unknown"}`,
+    );
+    return EXIT.CURSOR;
+  }
+
+  const keepalive = new CursorAuthKeepAlive(keepaliveOptions);
+  console.log(`auth keepalive started model=${model}`);
+  keepalive.start();
+
+  await waitForTerminationSignal();
+  keepalive.stop();
+  const s = keepalive.status();
+  console.log(
+    `auth keepalive stopped probes=${s.probeCount} lastSuccess=${s.lastSuccessAt ?? "none"} lastFailure=${s.lastFailureAt ?? "none"}`,
+  );
+  return EXIT.OK;
 }

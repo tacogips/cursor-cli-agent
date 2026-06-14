@@ -50,6 +50,36 @@ function classifyFailure(message: string): string {
   return message;
 }
 
+function buildProbeEnv(
+  options: ModelAvailabilityOptions,
+): Readonly<Record<string, string | undefined>> | undefined {
+  if (
+    options.cursorApiKey === undefined &&
+    options.cursorAuthToken === undefined &&
+    options.env === undefined
+  ) {
+    return undefined;
+  }
+  const env: Record<string, string | undefined> = { ...process.env };
+  if (options.env !== undefined) {
+    for (const [k, v] of Object.entries(options.env)) {
+      if (v !== undefined) {
+        env[k] = v;
+      }
+    }
+  }
+  if (options.cursorApiKey !== undefined && options.cursorApiKey.length > 0) {
+    env["CURSOR_API_KEY"] = options.cursorApiKey;
+  }
+  if (
+    options.cursorAuthToken !== undefined &&
+    options.cursorAuthToken.length > 0
+  ) {
+    env["CURSOR_AUTH_TOKEN"] = options.cursorAuthToken;
+  }
+  return env;
+}
+
 async function runModelProbe(
   model: string,
   binary: string,
@@ -57,6 +87,7 @@ async function runModelProbe(
   options: ModelAvailabilityOptions,
 ): Promise<ModelReachabilityInfo> {
   const timeoutMs = normalizeTimeout(options.timeoutMs);
+  const probeEnv = buildProbeEnv(options);
   const result = await runner(
     binary,
     [
@@ -71,6 +102,7 @@ async function runModelProbe(
     {
       timeoutMs,
       ...(options.workspace !== undefined ? { cwd: options.workspace } : {}),
+      ...(probeEnv !== undefined ? { env: probeEnv } : {}),
     },
   );
   if (result.exitCode === 0 && !result.timedOut && result.error === undefined) {

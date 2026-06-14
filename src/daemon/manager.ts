@@ -159,9 +159,7 @@ async function waitForServerStdout(
             resolveReady(parsed);
             return;
           }
-        } catch {
-          continue;
-        }
+        } catch {}
       }
     };
     const onStderr = (chunk: Buffer): void => {

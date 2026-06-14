@@ -11,6 +11,9 @@ export interface CursorAgentRequest {
     readonly effort?: CursorAgentEffort;
     readonly mode?: "default" | "plan" | "ask";
     readonly streamMode?: CursorAgentStreamMode;
+    readonly cursorApiKey?: string;
+    readonly cursorAuthToken?: string;
+    readonly cursorAgentEnv?: Readonly<Record<string, string | undefined>>;
 }
 export interface CursorAgentRunResult {
     readonly sessionId: string;
@@ -39,6 +42,9 @@ interface AgentRunnerFactoryOptions {
     readonly cursorBinary?: string;
     readonly startHeadless?: HeadlessStarter;
     readonly startResume?: ResumeStarter;
+    readonly cursorApiKey?: string;
+    readonly cursorAuthToken?: string;
+    readonly cursorAgentEnv?: Readonly<Record<string, string | undefined>>;
 }
 export declare function createAgentRunnerFacade(options?: AgentRunnerFactoryOptions): AgentRunnerFacade;
 //# sourceMappingURL=agent-runner.d.ts.map

@@ -33,6 +33,7 @@ export interface ToolVersionOptions {
 export interface ToolCommandRunOptions {
   readonly timeoutMs: number;
   readonly cwd?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
 export interface ToolCommandRunResult {

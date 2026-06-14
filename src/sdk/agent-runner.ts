@@ -22,6 +22,9 @@ export interface CursorAgentRequest {
   readonly effort?: CursorAgentEffort;
   readonly mode?: "default" | "plan" | "ask";
   readonly streamMode?: CursorAgentStreamMode;
+  readonly cursorApiKey?: string;
+  readonly cursorAuthToken?: string;
+  readonly cursorAgentEnv?: Readonly<Record<string, string | undefined>>;
 }
 
 export interface CursorAgentRunResult {
@@ -62,6 +65,9 @@ interface AgentRunnerFactoryOptions {
   readonly cursorBinary?: string;
   readonly startHeadless?: HeadlessStarter;
   readonly startResume?: ResumeStarter;
+  readonly cursorApiKey?: string;
+  readonly cursorAuthToken?: string;
+  readonly cursorAgentEnv?: Readonly<Record<string, string | undefined>>;
 }
 
 interface QueueReader<T> {
@@ -198,6 +204,16 @@ function createRunningAgent(
   return new RunningAgent(initialSessionId, queue, process, completion);
 }
 
+function mergeOptionalEnv(
+  base: Readonly<Record<string, string | undefined>> | undefined,
+  overlay: Readonly<Record<string, string | undefined>> | undefined,
+): Readonly<Record<string, string | undefined>> | undefined {
+  if (base === undefined && overlay === undefined) {
+    return undefined;
+  }
+  return { ...base, ...overlay };
+}
+
 function requirePrompt(request: CursorAgentRequest): string {
   const prompt = request.prompt?.trim();
   if (prompt === undefined || prompt.length === 0) {
@@ -215,6 +231,13 @@ export function createAgentRunnerFacade(
     start(request: CursorAgentRequest): CursorRunningAgent {
       const workspace = request.cwd ?? process.cwd();
       const prompt = requirePrompt(request);
+      const resolvedApiKey = request.cursorApiKey ?? options.cursorApiKey;
+      const resolvedAuthToken =
+        request.cursorAuthToken ?? options.cursorAuthToken;
+      const resolvedEnv = mergeOptionalEnv(
+        options.cursorAgentEnv,
+        request.cursorAgentEnv,
+      );
       return createRunningAgent(request.sessionId ?? "pending", (onLine) =>
         startHeadless(
           {
@@ -229,6 +252,13 @@ export function createAgentRunnerFacade(
             ...(request.model !== undefined ? { model: request.model } : {}),
             ...(request.effort !== undefined ? { effort: request.effort } : {}),
             ...(request.mode !== undefined ? { mode: request.mode } : {}),
+            ...(resolvedApiKey !== undefined
+              ? { cursorApiKey: resolvedApiKey }
+              : {}),
+            ...(resolvedAuthToken !== undefined
+              ? { cursorAuthToken: resolvedAuthToken }
+              : {}),
+            ...(resolvedEnv !== undefined ? { env: resolvedEnv } : {}),
           },
           onLine,
         ),
@@ -239,6 +269,13 @@ export function createAgentRunnerFacade(
       request: CursorAgentRequest & { readonly sessionId: string },
     ): CursorRunningAgent {
       const workspace = request.cwd ?? process.cwd();
+      const resolvedApiKey = request.cursorApiKey ?? options.cursorApiKey;
+      const resolvedAuthToken =
+        request.cursorAuthToken ?? options.cursorAuthToken;
+      const resolvedEnv = mergeOptionalEnv(
+        options.cursorAgentEnv,
+        request.cursorAgentEnv,
+      );
       return createRunningAgent(request.sessionId, (onLine) =>
         startResume(
           {
@@ -254,6 +291,13 @@ export function createAgentRunnerFacade(
             ...(request.model !== undefined ? { model: request.model } : {}),
             ...(request.effort !== undefined ? { effort: request.effort } : {}),
             ...(request.mode !== undefined ? { mode: request.mode } : {}),
+            ...(resolvedApiKey !== undefined
+              ? { cursorApiKey: resolvedApiKey }
+              : {}),
+            ...(resolvedAuthToken !== undefined
+              ? { cursorAuthToken: resolvedAuthToken }
+              : {}),
+            ...(resolvedEnv !== undefined ? { env: resolvedEnv } : {}),
           },
           onLine,
         ),

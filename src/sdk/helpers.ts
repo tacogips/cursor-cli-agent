@@ -46,6 +46,9 @@ export interface ToolHelperSdkOptions {
   readonly activityManager?: ActivityManager;
   readonly usageEventStore?: UsageEventStore;
   readonly commandRunner?: ToolVersionCommandRunner;
+  readonly cursorApiKey?: string;
+  readonly cursorAuthToken?: string;
+  readonly cursorAgentEnv?: Readonly<Record<string, string | undefined>>;
 }
 
 function dataPath(stateRoot: string, name: string): string {
@@ -80,6 +83,15 @@ export function createToolHelperSdk(
         ...(options.now !== undefined ? { now: options.now } : {}),
         ...(options.commandRunner !== undefined
           ? { commandRunner: options.commandRunner }
+          : {}),
+        ...(options.cursorApiKey !== undefined
+          ? { cursorApiKey: options.cursorApiKey }
+          : {}),
+        ...(options.cursorAuthToken !== undefined
+          ? { cursorAuthToken: options.cursorAuthToken }
+          : {}),
+        ...(options.cursorAgentEnv !== undefined
+          ? { env: options.cursorAgentEnv }
           : {}),
         ...modelOptions,
       });

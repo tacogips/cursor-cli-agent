@@ -62,6 +62,12 @@ var CURSOR_EFFORT_TOKENS = new Set([
   "max"
 ]);
 var EXTRA_HIGH_EFFORT_MODEL_PREFIXES = ["gpt-5.5"];
+var EFFORT_SUFFIX_EXEMPT_MODEL_PREFIXES = ["composer-"];
+function modelSupportsEffortSuffix(model) {
+  const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
+  const base = fastSuffix.length > 0 ? model.slice(0, -fastSuffix.length) : model;
+  return !EFFORT_SUFFIX_EXEMPT_MODEL_PREFIXES.some((prefix) => base === prefix || base.startsWith(prefix));
+}
 function toCursorEffortToken(effort) {
   return effort;
 }
@@ -76,6 +82,9 @@ function formatCursorEffortToken(modelBase, effort) {
 }
 function resolveModelForEffort(model, effort) {
   if (model === undefined || effort === undefined) {
+    return model;
+  }
+  if (!modelSupportsEffortSuffix(model)) {
     return model;
   }
   const fastSuffix = model.endsWith("-fast") ? "-fast" : "";
@@ -95,6 +104,23 @@ function resolveModelForEffort(model, effort) {
     return model;
   }
   return `${base}-${requested}${fastSuffix}`;
+}
+function buildSpawnEnv(opts) {
+  const env = { ...process.env };
+  if (opts.env !== undefined) {
+    for (const [k, v] of Object.entries(opts.env)) {
+      if (v !== undefined) {
+        env[k] = v;
+      }
+    }
+  }
+  if (opts.cursorApiKey !== undefined && opts.cursorApiKey.length > 0) {
+    env["CURSOR_API_KEY"] = opts.cursorApiKey;
+  }
+  if (opts.cursorAuthToken !== undefined && opts.cursorAuthToken.length > 0) {
+    env["CURSOR_AUTH_TOKEN"] = opts.cursorAuthToken;
+  }
+  return env;
 }
 function buildHeadlessArgs(opts) {
   const args = ["--print", "--output-format", "stream-json"];
@@ -136,10 +162,11 @@ function buildPromptWithSystemPrompt(prompt, systemPrompt) {
 
 ${prompt}`;
 }
-async function createChat(workspace) {
+async function createChat(workspace, opts) {
   const proc = cursorAgentSpawn("cursor-agent", ["create-chat"], {
     cwd: workspace,
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    env: buildSpawnEnv(opts ?? {})
   });
   let stderr = "";
   proc.stderr?.on("data", (d) => {
@@ -190,7 +217,8 @@ function startHeadlessStreaming(opts, onLine) {
   const args = buildHeadlessArgs(opts);
   const proc = cursorAgentSpawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    env: buildSpawnEnv(opts)
   });
   let stdout = "";
   let stderr = "";
@@ -254,7 +282,8 @@ function startResumeStreaming(opts, onLine) {
   const args = buildResumeArgs(opts);
   const proc = cursorAgentSpawn(opts.cursorBinary ?? "cursor-agent", args, {
     cwd: opts.workspace,
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    env: buildSpawnEnv(opts)
   });
   let stdout = "";
   let stderr = "";
@@ -616,6 +645,12 @@ function createRunningAgent(initialSessionId, start) {
   });
   return new RunningAgent(initialSessionId, queue, process2, completion);
 }
+function mergeOptionalEnv(base, overlay) {
+  if (base === undefined && overlay === undefined) {
+    return;
+  }
+  return { ...base, ...overlay };
+}
 function requirePrompt(request) {
   const prompt = request.prompt?.trim();
   if (prompt === undefined || prompt.length === 0) {
@@ -630,6 +665,9 @@ function createAgentRunnerFacade(options = {}) {
     start(request) {
       const workspace = request.cwd ?? process.cwd();
       const prompt = requirePrompt(request);
+      const resolvedApiKey = request.cursorApiKey ?? options.cursorApiKey;
+      const resolvedAuthToken = request.cursorAuthToken ?? options.cursorAuthToken;
+      const resolvedEnv = mergeOptionalEnv(options.cursorAgentEnv, request.cursorAgentEnv);
       return createRunningAgent(request.sessionId ?? "pending", (onLine) => startHeadless({
         workspace,
         prompt,
@@ -637,11 +675,17 @@ function createAgentRunnerFacade(options = {}) {
         ...options.cursorBinary !== undefined ? { cursorBinary: options.cursorBinary } : {},
         ...request.model !== undefined ? { model: request.model } : {},
         ...request.effort !== undefined ? { effort: request.effort } : {},
-        ...request.mode !== undefined ? { mode: request.mode } : {}
+        ...request.mode !== undefined ? { mode: request.mode } : {},
+        ...resolvedApiKey !== undefined ? { cursorApiKey: resolvedApiKey } : {},
+        ...resolvedAuthToken !== undefined ? { cursorAuthToken: resolvedAuthToken } : {},
+        ...resolvedEnv !== undefined ? { env: resolvedEnv } : {}
       }, onLine));
     },
     resume(request) {
       const workspace = request.cwd ?? process.cwd();
+      const resolvedApiKey = request.cursorApiKey ?? options.cursorApiKey;
+      const resolvedAuthToken = request.cursorAuthToken ?? options.cursorAuthToken;
+      const resolvedEnv = mergeOptionalEnv(options.cursorAgentEnv, request.cursorAgentEnv);
       return createRunningAgent(request.sessionId, (onLine) => startResume({
         workspace,
         sessionOrChatId: request.sessionId,
@@ -650,7 +694,10 @@ function createAgentRunnerFacade(options = {}) {
         ...options.cursorBinary !== undefined ? { cursorBinary: options.cursorBinary } : {},
         ...request.model !== undefined ? { model: request.model } : {},
         ...request.effort !== undefined ? { effort: request.effort } : {},
-        ...request.mode !== undefined ? { mode: request.mode } : {}
+        ...request.mode !== undefined ? { mode: request.mode } : {},
+        ...resolvedApiKey !== undefined ? { cursorApiKey: resolvedApiKey } : {},
+        ...resolvedAuthToken !== undefined ? { cursorAuthToken: resolvedAuthToken } : {},
+        ...resolvedEnv !== undefined ? { env: resolvedEnv } : {}
       }, onLine));
     }
   };
@@ -3862,13 +3909,25 @@ function failureMessage(result) {
   const details = firstLine(result.stderr) ?? firstLine(result.stdout);
   return details === null ? `version command failed (${reason})` : `version command failed (${reason}): ${details}`;
 }
+function resolveSpawnEnv(provided) {
+  if (provided === undefined) {
+    return { ...process.env };
+  }
+  const env = { ...process.env };
+  for (const [k, v] of Object.entries(provided)) {
+    if (v !== undefined) {
+      env[k] = v;
+    }
+  }
+  return env;
+}
 async function defaultToolCommandRunner(command, args, options) {
   return await new Promise((resolve4) => {
     const child = spawn(command, [...args], {
       cwd: options.cwd,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
-      env: { ...process.env }
+      env: resolveSpawnEnv(options.env)
     });
     let stdout = "";
     let stderr = "";
@@ -4001,8 +4060,29 @@ function classifyFailure(message) {
   }
   return message;
 }
+function buildProbeEnv(options) {
+  if (options.cursorApiKey === undefined && options.cursorAuthToken === undefined && options.env === undefined) {
+    return;
+  }
+  const env = { ...process.env };
+  if (options.env !== undefined) {
+    for (const [k, v] of Object.entries(options.env)) {
+      if (v !== undefined) {
+        env[k] = v;
+      }
+    }
+  }
+  if (options.cursorApiKey !== undefined && options.cursorApiKey.length > 0) {
+    env["CURSOR_API_KEY"] = options.cursorApiKey;
+  }
+  if (options.cursorAuthToken !== undefined && options.cursorAuthToken.length > 0) {
+    env["CURSOR_AUTH_TOKEN"] = options.cursorAuthToken;
+  }
+  return env;
+}
 async function runModelProbe(model, binary, runner, options) {
   const timeoutMs = normalizeTimeout2(options.timeoutMs);
+  const probeEnv = buildProbeEnv(options);
   const result = await runner(binary, [
     "--print",
     "--output-format",
@@ -4013,7 +4093,8 @@ async function runModelProbe(model, binary, runner, options) {
     MODEL_PROBE_PROMPT
   ], {
     timeoutMs,
-    ...options.workspace !== undefined ? { cwd: options.workspace } : {}
+    ...options.workspace !== undefined ? { cwd: options.workspace } : {},
+    ...probeEnv !== undefined ? { env: probeEnv } : {}
   });
   if (result.exitCode === 0 && !result.timedOut && result.error === undefined) {
     const output = firstLine2(result.stdout);
@@ -4537,6 +4618,9 @@ function createToolHelperSdk(options = {}) {
         ...options.cursorBinary !== undefined ? { cursorAgentBinary: options.cursorBinary } : {},
         ...options.now !== undefined ? { now: options.now } : {},
         ...options.commandRunner !== undefined ? { commandRunner: options.commandRunner } : {},
+        ...options.cursorApiKey !== undefined ? { cursorApiKey: options.cursorApiKey } : {},
+        ...options.cursorAuthToken !== undefined ? { cursorAuthToken: options.cursorAuthToken } : {},
+        ...options.cursorAgentEnv !== undefined ? { env: options.cursorAgentEnv } : {},
         ...modelOptions
       });
     },
@@ -4568,6 +4652,92 @@ function createToolHelperSdk(options = {}) {
     }
   };
 }
+// src/cursor/auth-keepalive.ts
+var DEFAULT_KEEPALIVE_INTERVAL_MS = 20 * 60 * 1000;
+var MIN_KEEPALIVE_INTERVAL_MS = 60 * 1000;
+function clampIntervalMs(value) {
+  const v = value ?? DEFAULT_KEEPALIVE_INTERVAL_MS;
+  if (!Number.isFinite(v) || v < MIN_KEEPALIVE_INTERVAL_MS) {
+    return MIN_KEEPALIVE_INTERVAL_MS;
+  }
+  return Math.floor(v);
+}
+
+class CursorAuthKeepAlive {
+  options;
+  timer;
+  _status;
+  constructor(options) {
+    this.options = options;
+    this._status = { running: false, probeCount: 0 };
+  }
+  start() {
+    if (this._status.running) {
+      return;
+    }
+    this._status = { ...this._status, running: true };
+    const intervalMs = clampIntervalMs(this.options.intervalMs);
+    const setIntervalFn = this.options.setInterval ?? globalThis.setInterval.bind(globalThis);
+    this.timer = setIntervalFn(() => {
+      this.probeNow();
+    }, intervalMs);
+  }
+  stop() {
+    if (!this._status.running) {
+      return;
+    }
+    this._status = { ...this._status, running: false };
+    const clearIntervalFn = this.options.clearInterval ?? globalThis.clearInterval.bind(globalThis);
+    if (this.timer !== undefined) {
+      clearIntervalFn(this.timer);
+      this.timer = undefined;
+    }
+  }
+  async probeNow() {
+    const now = this.options.now ?? (() => new Date);
+    try {
+      const result = await checkModelAvailability({
+        model: this.options.model,
+        probe: true,
+        ...this.options.cursorAgentBinary !== undefined ? { cursorAgentBinary: this.options.cursorAgentBinary } : {},
+        ...this.options.cursorApiKey !== undefined ? { cursorApiKey: this.options.cursorApiKey } : {},
+        ...this.options.cursorAuthToken !== undefined ? { cursorAuthToken: this.options.cursorAuthToken } : {},
+        ...this.options.env !== undefined ? { env: this.options.env } : {},
+        ...this.options.workspace !== undefined ? { workspace: this.options.workspace } : {},
+        ...this.options.timeoutMs !== undefined ? { timeoutMs: this.options.timeoutMs } : {},
+        now,
+        ...this.options.commandRunner !== undefined ? { commandRunner: this.options.commandRunner } : {}
+      });
+      if (result.modelReachability.status === "unavailable") {
+        throw new Error(result.modelReachability.error ?? "model probe returned unavailable");
+      }
+      this._status = {
+        ...this._status,
+        lastSuccessAt: now().toISOString(),
+        probeCount: this._status.probeCount + 1
+      };
+    } catch (err) {
+      this._status = {
+        ...this._status,
+        lastFailureAt: now().toISOString(),
+        lastFailureMessage: err instanceof Error ? err.message : String(err),
+        probeCount: this._status.probeCount + 1
+      };
+    }
+  }
+  status() {
+    return { ...this._status };
+  }
+}
+// src/cursor/auth-env.ts
+function resolveCursorAuthEnv(options = {}) {
+  const apiKey = options.cursorApiKey !== undefined && options.cursorApiKey.length > 0 ? options.cursorApiKey : typeof process.env["CURSOR_API_KEY"] === "string" && process.env["CURSOR_API_KEY"].length > 0 ? process.env["CURSOR_API_KEY"] : undefined;
+  const authToken = options.cursorAuthToken !== undefined && options.cursorAuthToken.length > 0 ? options.cursorAuthToken : typeof process.env["CURSOR_AUTH_TOKEN"] === "string" && process.env["CURSOR_AUTH_TOKEN"].length > 0 ? process.env["CURSOR_AUTH_TOKEN"] : undefined;
+  return {
+    ...apiKey !== undefined ? { cursorApiKey: apiKey } : {},
+    ...authToken !== undefined ? { cursorAuthToken: authToken } : {}
+  };
+}
 
 // src/sdk/index.ts
 function createCursorAgentSdk(options = {}) {
@@ -4575,15 +4745,19 @@ function createCursorAgentSdk(options = {}) {
   return {
     ...facades,
     runner: createAgentRunnerFacade({
-      ...options.cursorBinary !== undefined ? { cursorBinary: options.cursorBinary } : {}
+      ...options.cursorBinary !== undefined ? { cursorBinary: options.cursorBinary } : {},
+      ...options.cursorApiKey !== undefined ? { cursorApiKey: options.cursorApiKey } : {},
+      ...options.cursorAgentEnv !== undefined ? { cursorAgentEnv: options.cursorAgentEnv } : {}
     }),
     tools: createToolHelperSdk(options)
   };
 }
 export {
   tool,
+  resolveCursorAuthEnv,
   createToolRegistry,
   createCursorAgentSdk,
   ToolRegistryError,
-  ToolRegistry
+  ToolRegistry,
+  CursorAuthKeepAlive
 };
