@@ -134,9 +134,9 @@ This is cursor-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 ## Development Environment
 - **Language**: TypeScript
 - **Runtime**: Bun
-- **Build Tool**: Bun (with go-task for automation)
+- **Build Tool**: Bun (with mise for automation)
 - **Environment Manager**: Nix flakes + direnv
-- **Development Shell**: Run `nix develop` or use direnv to activate
+- **Development Shell**: Run `mise install` or use direnv to activate
 
 ## Project Structure
 ```
@@ -159,7 +159,7 @@ This is cursor-cli-agent - a TypeScript project with Bun runtime and Nix flake d
 - `tsc` - TypeScript compiler
 - `typescript-language-server` - TypeScript language server (LSP)
 - `prettier` - Code formatter
-- `task` - Task runner (go-task)
+- `task` - Task runner (mise)
 
 ## TypeScript Code Development
 
@@ -259,7 +259,7 @@ When implementing from a plan:
 
 ## Task Management
 - Use `task` command for build automation
-- Define tasks in `Taskfile.yml` (to be created as needed)
+- Define tasks in `mise.toml` (to be created as needed)
 
 ## Git Workflow
 - Create meaningful commit messages
