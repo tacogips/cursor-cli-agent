@@ -38,13 +38,13 @@ This repository also ships project-local `divedra` workflows under
 Run them from this repository root with:
 
 ```bash
-task divedra-workflows
-task divedra-design-loop-validate
-task divedra-parity-backlog-validate
-task divedra-global-parity-validate
-task divedra-codex-concurrent-validate
-task divedra-recent-change-validate
-task divedra -- workflow inspect design-and-implement-review-loop --output json
+mise run divedra-workflows
+mise run divedra-design-loop-validate
+mise run divedra-parity-backlog-validate
+mise run divedra-global-parity-validate
+mise run divedra-codex-concurrent-validate
+mise run divedra-recent-change-validate
+mise run divedra -- workflow inspect design-and-implement-review-loop --output json
 ```
 
 Additional usage examples live in [`.divedra/README.md`](.divedra/README.md).
