@@ -1,0 +1,212 @@
+min_version = "2026.8.3"
+
+[[hooks.enter]]
+shell = "bash"
+script = '''
+if command -v kinko >/dev/null 2>&1 && kinko hook --help >/dev/null 2>&1; then
+  eval "$(kinko --path "$MISE_PROJECT_ROOT" hook enter bash)"
+fi
+'''
+
+[[hooks.leave]]
+shell = "bash"
+script = '''
+if command -v kinko >/dev/null 2>&1 && kinko hook --help >/dev/null 2>&1; then
+  eval "$(kinko hook leave bash)"
+fi
+'''
+
+[tools]
+bun = "latest"
+biome = "latest"
+gitleaks = "latest"
+pre-commit = "latest"
+
+[tasks."default"]
+description = "Show available tasks"
+run = '''
+mise tasks ls
+'''
+
+[tasks."install"]
+description = "Install dependencies"
+run = '''
+bun install
+'''
+
+[tasks."dev"]
+description = "Run in development mode with watch"
+run = '''
+bun run dev
+'''
+
+[tasks."build"]
+description = "Build the project"
+run = '''
+bun run build
+'''
+
+[tasks."start"]
+description = "Run the application"
+run = '''
+bun run start
+'''
+
+[tasks."test"]
+description = "Run tests with Bun"
+run = '''
+bun run test
+'''
+
+[tasks."test-watch"]
+description = "Run tests in watch mode with Bun"
+run = '''
+bun run test:watch
+'''
+
+[tasks."test-verbose"]
+description = "Run tests with verbose output"
+run = '''
+scripts/run-src-tests.sh --verbose
+'''
+
+[tasks."typecheck"]
+description = "Run TypeScript type checking"
+run = '''
+bun run typecheck
+'''
+
+[tasks."fmt"]
+description = "Format code with prettier"
+run = '''
+bun run format
+'''
+
+[tasks."fmt-check"]
+description = "Check code formatting"
+run = '''
+bun run format:check
+'''
+
+[tasks."lint"]
+description = "Run all lints (Biome + format check + typecheck)"
+run = '''
+biome check . --diagnostic-level=warn
+mise run fmt-check
+mise run typecheck
+'''
+
+[tasks."gitleaks"]
+description = "Scan staged changes for secrets before commit"
+run = '''
+gitleaks git --pre-commit --redact --staged --verbose
+'''
+
+[tasks."install-git-hooks"]
+description = "Install the mise-managed pre-commit hook configuration"
+run = '''
+pre-commit install --install-hooks
+'''
+
+[tasks."clean"]
+description = "Clean build artifacts"
+run = '''
+bun run clean
+'''
+
+[tasks."ci"]
+description = "Run all CI checks"
+run = '''
+biome check . --diagnostic-level=warn
+mise run fmt-check
+mise run typecheck
+mise run test
+mise run build
+'''
+
+[tasks."checkout-divedra"]
+description = "Initialize the divedra submodule without overwriting local submodule work"
+run = '''
+if [ -e divedra/.git ] && [ -d .git/modules/divedra ]; then
+  exit 0
+fi
+git submodule update --init divedra
+
+'''
+
+[tasks."divedra"]
+description = "Run divedra from the local submodule (pass args after --)"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts "$@"
+'''
+
+[tasks."divedra-workflows"]
+description = "List project-local divedra workflows from .divedra/workflows"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow list
+'''
+
+[tasks."divedra-design-loop-validate"]
+description = "Validate the design-and-implement review workflow bundle"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow validate design-and-implement-review-loop
+'''
+
+[tasks."divedra-design-implement"]
+description = "Run the design-and-implement workflow from the project catalog (pass workflow args after --)"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow run design-and-implement-review-loop "$@"
+'''
+
+[tasks."divedra-recent-change-validate"]
+description = "Validate the recent-change quality workflow bundle"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow validate recent-change-quality-loop
+'''
+
+[tasks."divedra-parity-backlog-validate"]
+description = "Validate the parity backlog design-and-implement workflow bundle"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow validate parity-backlog-design-implement-loop
+'''
+
+[tasks."divedra-parity-backlog"]
+description = "Run the parity backlog design-and-implement workflow from the project catalog (pass workflow args after --)"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow run parity-backlog-design-implement-loop "$@"
+'''
+
+[tasks."divedra-global-parity-validate"]
+description = "Validate the global parity design-plan-implement workflow bundle"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow validate parity-global-design-plan-implement-loop
+'''
+
+[tasks."divedra-global-parity"]
+description = "Run the global parity design-plan-implement workflow from the project catalog (pass workflow args after --)"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow run parity-global-design-plan-implement-loop "$@"
+'''
+
+[tasks."divedra-codex-concurrent-validate"]
+description = "Validate the codex-agent concurrent design-plan-implement workflow bundle"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow validate codex-agent-concurrent-design-implement-loop
+'''
+
+[tasks."divedra-codex-concurrent"]
+description = "Run the codex-agent concurrent design-plan-implement workflow from the project catalog (pass workflow args after --)"
+depends = ["checkout-divedra"]
+run = '''
+bun --cwd divedra run src/main.ts workflow run codex-agent-concurrent-design-implement-loop "$@"
+'''
