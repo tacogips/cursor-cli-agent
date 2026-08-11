@@ -30,13 +30,13 @@ Use the project-local workflow bundle:
 Preferred entry point from the repository root:
 
 ```bash
-task divedra-design-implement -- --output json
+mise run divedra-design-implement -- --output json
 ```
 
 Equivalent direct command:
 
 ```bash
-nix run ./divedra -- workflow run design-and-implement-review-loop --output json
+bun --cwd divedra run src/main.ts workflow run design-and-implement-review-loop --output json
 ```
 
 ## Runtime Inputs

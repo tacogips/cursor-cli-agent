@@ -11,7 +11,7 @@ Use this skill when work in this repository indicates that `divedra` itself may 
 
 - Treat `./divedra` as the authoritative `divedra` checkout for this repository.
 - Do not use `github:tacogips/divedra` or a globally installed `divedra` to diagnose or fix behavior unless comparing versions is necessary.
-- Prefer `task divedra -- <args>` from the parent repository, or `bun run src/main.ts <args>` from `./divedra` when editing the submodule directly.
+- Prefer `mise run divedra -- <args>` from the parent repository, or `bun run src/main.ts <args>` from `./divedra` when editing the submodule directly.
 
 ## Triage
 
@@ -30,7 +30,7 @@ gh issue create --repo tacogips/divedra --title "<concise bug title>" --body-fil
 
 The issue body should include:
 
-- Reproduction steps using `./divedra` or `task divedra --`.
+- Reproduction steps using `./divedra` or `mise run divedra --`.
 - Expected behavior and actual behavior.
 - Environment details that affect execution, such as Bun, Nix, OS, workflow root, and relevant command flags.
 - Links or paths to affected workflow fixtures when they are safe to reference.
