@@ -1,0 +1,15 @@
+{
+  "id": "step10-commit-push",
+  "nodeType": "command",
+  "variables": {},
+  "command": {
+    "scriptPath": "scripts/commit-and-push.sh",
+    "envTemplate": {
+      "COMMIT_MESSAGE": "{{inbox.latest.output.payload.commitMessage}}",
+      "WORKFLOW_MODE": "{{inbox.latest.output.payload.workflowMode}}"
+    }
+  },
+  "output": {
+    "description": "Return JSON with the commit hash, pushed remote and branch, push status, and the commit message used."
+  }
+}

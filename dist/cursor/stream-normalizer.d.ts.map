@@ -1,0 +1,1 @@
+{"version":3,"file":"stream-normalizer.d.ts","sourceRoot":"","sources":["../../src/cursor/stream-normalizer.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EACV,UAAU,EAGX,MAAM,sBAAsB,CAAC;AA2F9B,qBAAa,qBAAqB;IAChC,OAAO,CAAC,QAAQ,CAAC,sBAAsB,CAA6B;IACpE,OAAO,CAAC,QAAQ,CAAC,6BAA6B,CAA6B;IAE3E;;OAEG;IACH,WAAW,CAAC,IAAI,EAAE,MAAM,GAAG,SAAS,UAAU,EAAE;CAqIjD"}
