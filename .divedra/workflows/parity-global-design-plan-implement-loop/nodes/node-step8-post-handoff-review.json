@@ -1,0 +1,11 @@
+{
+  "id": "step8-post-handoff-review",
+  "description": "Review the delegated implementation result before continuing to the next ready plan.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step8-post-handoff-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_revision true only when the delegated result needs another implementation pass."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "step3-handoff",
+  "description": "Prepare a delegated issue-resolution handoff for the next parity backlog item.",
+  "nodeType": "command",
+  "variables": {},
+  "command": {
+    "scriptPath": "scripts/build-step3-handoff.sh"
+  },
+  "output": {
+    "description": "Return JSON with the delegated workflow input, the selected backlog item, dependency context, and the handoff summary."
+  }
+}

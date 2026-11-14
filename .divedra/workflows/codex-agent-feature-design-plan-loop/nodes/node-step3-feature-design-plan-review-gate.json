@@ -1,0 +1,12 @@
+{
+  "id": "step3-feature-design-plan-review-gate",
+  "description": "Normalize feature-local review output into deterministic transition flags.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/review-gate.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with top-level when.needs_design_revision and when.needs_revision derived from the latest review payload."
+  }
+}

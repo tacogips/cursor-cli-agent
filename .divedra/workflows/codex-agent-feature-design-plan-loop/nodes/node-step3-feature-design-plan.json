@@ -1,0 +1,11 @@
+{
+  "id": "step3-feature-design-plan",
+  "description": "Create or revise one codex-agent-derived feature design document and implementation plan.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step3-feature-design-plan.md",
+  "variables": {},
+  "output": {
+    "description": "Return JSON with feature id, design document paths, implementation-plan paths, codex-agent references, dependencies, verification, and addressed feedback."
+  }
+}

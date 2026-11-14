@@ -1,0 +1,407 @@
+# cursor-cli-agent
+
+`cursor-cli-agent` is a Bun + TypeScript CLI/library for managing `cursor-agent` CLI session data and automation workflows.
+
+This repository is the Cursor-oriented counterpart to `/g/gits/tacogips/codex-agent`.
+
+Current status:
+
+- Phase 1 local CLI implementation is active under `src/`
+- Session discovery, metadata search, transcript full-text search, bookmark lifecycle, derived activity, file intelligence, repository analytics, group and queue orchestration, skill catalog commands, local API token management, the local REST HTTP server, live server event streaming, daemon lifecycle commands, the public SDK facade, tool/model availability helpers, usage statistics, and the optional GraphQL compatibility bridge have repository-owned implementations
+- Design is based on local inspection of `cursor-agent` in this environment on 2026-03-23, with headless prompt/model probe compatibility revalidated against `cursor-agent 2026.04.08-a41fba1` on 2026-05-08
+
+## Project Workflows
+
+This repository also ships project-local `divedra` workflows under
+`.divedra/workflows`.
+
+- `design-and-implement-review-loop` supports issue intake, design updates,
+  self-review plus independent review gates for design, planning, and
+  implementation, README and user-facing workflow-skill refresh, and final
+  commit/push.
+- `codex-agent-concurrent-design-implement-loop` decomposes codex-agent
+  functionality, reviews the feature breakdown, fans out feature-local design
+  docs and implementation plans at concurrency 10, reviews the full design/plan
+  batch, delegates ready plans through `design-and-implement-review-loop`, and
+  finishes with an overall review.
+- `parity-backlog-design-implement-loop` derives the remaining parity backlog
+  from repository design and plan state, selects one ready item at a time, and
+  delegates each slice into `design-and-implement-review-loop`.
+- `parity-global-design-plan-implement-loop` first updates the global parity
+  design, reviews it, creates the full implementation-plan batch, reviews that
+  batch, and only then delegates ready plans one at a time into
+  `design-and-implement-review-loop`.
+- `recent-change-quality-loop` reviews recent committed and uncommitted changes,
+  delegates blocking findings into `design-and-implement-review-loop`, and then
+  re-reviews until the change set is clean.
+
+Run them from this repository root with:
+
+```bash
+task divedra-workflows
+task divedra-design-loop-validate
+task divedra-parity-backlog-validate
+task divedra-global-parity-validate
+task divedra-codex-concurrent-validate
+task divedra-recent-change-validate
+task divedra -- workflow inspect design-and-implement-review-loop --output json
+```
+
+Additional usage examples live in [`.divedra/README.md`](.divedra/README.md).
+
+Implemented capabilities:
+
+- Session discovery from `~/.cursor/projects/*/agent-transcripts/*.jsonl`
+- Metadata enrichment from `~/.cursor/ai-tracking/ai-code-tracking.db` when available
+- Metadata-only `session search <query>` over the repository-owned session index
+- Read-only `transcript search <query>` over local Cursor transcript JSONL files with role filters, session narrowing, pagination, scan budgets, transcript provenance, stable synthetic message IDs, and JSON output
+- Local `bookmark add/list/show/delete/search` lifecycle for session, message, and transcript range bookmarks with local JSON persistence, tag filtering, deterministic search, and raw/display excerpts for transcript-backed targets
+- Derived `activity` records from the session index, transcript mtimes, wrapper-recorded stream/process signals, and stderr/stdout wait patterns, with explicit `provenance: "derived"` signal details
+- Local file intelligence from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db`: `files list`, `files snapshots`, `files deleted`, `files find`, and `files rebuild` with explicit provenance, degraded-state reporting, sparse snapshot content opt-in, and a repository-owned rebuildable path index
+- Local repository analytics from Cursor `~/.cursor/ai-tracking/ai-code-tracking.db` `scored_commits` plus file-intelligence attribution: `repo analytics summary`, `repo analytics commits`, `repo analytics sessions`, `repo analytics files`, and `repo analytics rebuild` with explicit provenance, completeness notes, repository-owned derived indexes, valid `0%` AI preservation, TEXT numeric column handling, and degraded-state reporting
+- Cursor-local group lifecycle controls: `group pause`, `group resume`, `group delete`, and `group watch` with canonical `groups.json` lifecycle/run metadata, paused-run guards, JSON output, and activity-derived watch summaries
+- Cursor-local queue lifecycle controls: `queue pause`, `queue resume`, `queue delete`, `queue update`, `queue move`, `queue mode`, and `queue stop` with canonical `queues.json` lifecycle/item/run metadata, paused/stopped run guards, retained completed items, manual-mode skips, JSON output, and progress summaries
+- Local API token management: `token create`, `token list`, `token revoke`, and `token rotate` persist repository-owned token metadata under the config directory, store only secret hashes, return raw secrets exactly once, support default `session:read` plus route-facing permissions, and expose metadata-only JSON/human output
+- Local REST HTTP server: `server start` exposes health/version, normalized session list/detail/messages, metadata search, transcript search, normalized REST resource routes for groups, queues, bookmarks, files, activity, and repository analytics (see design `design-http-resource-apis.md`), and live Server-Sent Events routes over repository-owned Cursor adapters, with managed bearer-token verification, route permission checks, and shared JSON error envelopes
+- Live server event streaming: `GET /api/events/sessions/:id`, `GET /api/events/activity`, `GET /api/events/activity/:id`, `GET /api/events/groups/:name`, and `GET /api/events/queues/:name` emit normalized SSE envelopes with replay controls, `Last-Event-ID` resume support, heartbeat events, transcript tailing, derived activity snapshots, and group/queue progress snapshots
+- Local daemon lifecycle: `daemon start`, `daemon status`, and `daemon stop` supervise the local HTTP/SSE server in a repository-owned background process, persist PID metadata under the config directory, write JSONL lifecycle diagnostics under the data directory, refuse foreign PID termination, and expose stable human/JSON output without raw token values
+- Public SDK facade: root package, `./sdk`, `./sdk/testing`, `./server`, and `./types` package exports are import-safe and expose normalized Cursor-domain contracts for sessions, search, groups, queues, bookmarks, files, activity, runner events, server helpers, local tool helpers, and deterministic test mocks
+- Local tool and model helpers: `tool list`, `tool show`, `tool run`, `tool versions`, `model check`, and `usage stats` expose a typed local helper registry, bounded version introspection, conservative Cursor model availability checks, and repository-owned session/activity statistics
+- Optional bridge: `graphql <document|command>` and opt-in `server start --compat-graphql` expose a Codex-agent-like JSON command field over local Cursor-normalized services, with explicit supported/degraded/unsupported capability metadata, Cursor limitation reporting, and server-side bearer permission gates
+- Headless run/resume orchestration via `cursor-agent --print`
+- Headless prompt forwarding uses the wrapper's `--prompt <text>` flag but invokes `cursor-agent` with a positional prompt after `--`, matching current Cursor Agent syntax and avoiding ambiguity with optional flags such as `--worktree [name]`
+- Experimental `session fork` for best-effort transcript replay into a new headless session (repository-owned provenance; not a native Cursor fork); supports `--dry-run`, stable `event-<n>-<role>` boundaries, and explicit limitation reporting
+- Live transcript watching and normalized event streaming, including `--stream-partial-output` normalization that emits assistant deltas without duplicating the final full assistant payload
+- Group and queue orchestration on top of Cursor Agent
+- Read-only skill catalog support for `~/.cursor/skills-cursor`, `~/.cursor/skills`, and project `.cursor/skills`
+
+Planned capabilities:
+
+- Markdown/task extraction from transcript content
+
+Public SDK examples:
+
+```ts
+import { createCursorAgentSdk } from "cursor-cli-agent";
+import type { CursorAgentSdk } from "cursor-cli-agent/types";
+import { createResourceHandlers } from "cursor-cli-agent/server";
+import { createMockCursorAgentSdk } from "cursor-cli-agent/sdk/testing";
+
+const sdk: CursorAgentSdk = createCursorAgentSdk();
+const sessions = await sdk.sessions.list({ limit: 20 });
+const tools = sdk.tools.registry.list();
+const versions = await sdk.tools.versions();
+const stats = await sdk.tools.usageStats({ recentDays: 7 });
+const handlers = createResourceHandlers(createMockCursorAgentSdk());
+```
+
+Importing `cursor-cli-agent` or any SDK subpath does not parse CLI arguments,
+spawn Cursor, start the daemon, or write state by itself. CLI execution remains
+behind `src/bin.ts` and the published `cursor-cli-agent` binary, while
+`src/main.ts` exposes callable CLI entrypoints for programmatic use.
+
+SDK agent runs accept the same unattended execution controls as the headless CLI:
+`trust`, `force`, `yolo`, `sandbox`, and `approveMcps`. These options are
+forwarded to `cursor-agent --print` for both new and resumed sessions, so
+automation wrappers can opt into Cursor's run-everything behavior without
+shelling out directly.
+
+Bookmark command examples:
+
+```bash
+bun run src/main.ts bookmark add --type session --session <id> --name <name> --json
+bun run src/main.ts bookmark add --type message --session <id> --message event-0-user --name <name> --json
+bun run src/main.ts bookmark list --session <id> --json
+bun run src/main.ts bookmark show <bookmark-id> --json
+bun run src/main.ts bookmark search <query> --limit 5 --json
+bun run src/main.ts bookmark delete <bookmark-id> --json
+```
+
+Activity command examples:
+
+```bash
+bun run src/main.ts activity --json
+bun run src/main.ts activity --session <id> --json
+bun run src/main.ts activity --status running --limit 3 --json
+```
+
+`activity` supports `idle`, `running`, `waiting_trust`, `waiting_input`,
+`completed`, and `failed` statuses. Output is derived from local Cursor evidence
+only; optional cached stream/process signals are best-effort and fall back to
+index/transcript-derived state when unavailable.
+
+Tool, model, and usage helper examples:
+
+```bash
+bun run src/main.ts tool list --json
+bun run src/main.ts tool show tool.versions --json
+bun run src/main.ts tool run tool.versions --input '{"includeGit":true,"timeoutMs":1000}' --json
+bun run src/main.ts tool versions --include-git --include-bun --timeout-ms 1000 --json
+bun run src/main.ts model check --model test-model --json
+bun run src/main.ts model check --model test-model --probe --timeout-ms 30000 --json
+bun run src/main.ts model check --model gpt-5.3-codex-spark-preview-low --probe --timeout-ms 90000 --json
+bun run src/main.ts usage stats [--workspace <path>] [--session <id>] --recent-days 7 --json
+```
+
+`tool list`, `tool show`, and `tool run` use the repository-owned helper
+registry, not Cursor MCP discovery. The registered helpers are `tool.versions`,
+`model.check`, and `usage.stats`; structured `tool run` input must be a JSON
+object, and numeric fields such as `timeoutMs` and `recentDays` must be positive
+integers. `tool versions` reports package metadata and `cursor-agent` by
+default, while Bun and Git version probes are opt-in. `model check` is
+conservative by default: auth is `unknown` and reachability is `not_checked`
+unless `--probe` is supplied. Probe mode runs a bounded `cursor-agent --print`
+process using the same positional prompt separator as headless sessions; it is
+therefore a live Cursor/quota check, not a stable account capability guarantee.
+Cheap model IDs smoke-tested locally include `gpt-5.4-mini-low` and
+`gpt-5.3-codex-spark-preview-low` (display names with spaces are not CLI model
+IDs). `usage stats` merges the session and activity
+indexes with a repository-owned usage event journal captured from wrapper-started
+`session run`, `session resume`, `session continue`, `session fork`, `group run`, and `queue run`
+streams; JSON output includes token totals, model buckets, daily usage slices,
+explicit coverage counts, and `usageProvenance` set to `repository_usage_events`
+when a usage event store is wired (or `unavailable` when it is not).
+Callers that construct `createUsageStatsManager` without a `usageEvents` store
+still receive zeroed usage totals plus a completeness note instead of implying
+global zero-token truth.
+
+File intelligence command examples:
+
+```bash
+bun run src/main.ts files list <session-id> --json
+bun run src/main.ts files snapshots <session-id> --json
+bun run src/main.ts files snapshots <session-id> --json --include-content
+bun run src/main.ts files deleted <session-id> --json
+bun run src/main.ts files rebuild --json
+bun run src/main.ts files find <path> --json
+```
+
+`files list`, `files snapshots`, and `files deleted` resolve known Cursor
+sessions through the local session index and read Cursor `ai-tracking` data
+without mutating Cursor-owned files or databases. `files rebuild` writes only
+repository-owned derived index rows, and `files find` reports whether a stale or
+missing index requires another rebuild. Snapshot content is included only when
+`--include-content` is supplied.
+
+Repository analytics command examples:
+
+```bash
+bun run src/main.ts repo analytics rebuild --json
+bun run src/main.ts repo analytics summary --json
+bun run src/main.ts repo analytics commits --json --limit 5
+bun run src/main.ts repo analytics sessions --json --limit 5
+bun run src/main.ts repo analytics files --json --limit 5
+```
+
+`repo analytics rebuild` refreshes/imports local Cursor sessions, reads
+`scored_commits` through the read-only Cursor ai-tracking adapter, joins
+session/file attribution through the file-intelligence layer, and writes only
+repository-owned derived analytics. `summary`, `commits`, `sessions`, and
+`files` report provenance and completeness notes so missing Cursor databases,
+missing scored commits, missing file intelligence, and sparse rows are distinct
+from valid zero-valued analytics.
+
+Group lifecycle command examples:
+
+```bash
+bun run src/main.ts group pause <name> --json
+bun run src/main.ts group resume <name> --json
+bun run src/main.ts group delete <name> --force --json
+bun run src/main.ts group watch <name> --once --json
+```
+
+`group run` refuses paused groups before launching Cursor and re-reads group
+lifecycle before each workspace so a mid-run pause stops additional scheduling.
+`group watch` derives latest-run workspace totals from repository-owned group
+state plus `activity` signals and reports `provenance: "group-store+activity"`.
+
+Queue lifecycle command examples:
+
+```bash
+bun run src/main.ts queue pause <name> --json
+bun run src/main.ts queue resume <name> --json
+bun run src/main.ts queue update <name> --item <id> --status pending --json
+bun run src/main.ts queue move <name> --from 0 --to 1 --json
+bun run src/main.ts queue mode <name> --item <id> --mode manual --json
+bun run src/main.ts queue stop <name> --json
+bun run src/main.ts queue delete <name> --force --json
+```
+
+`queue run` refuses paused or stopped queues before launching Cursor, re-reads
+queue lifecycle before each item, retains completed and failed items with result
+metadata, and skips manual-mode items by default. Queue progress derives item
+totals from repository-owned queue state plus optional `activity` signals and
+reports `provenance: "queue-store+activity"`.
+
+Token command examples:
+
+```bash
+bun run src/main.ts token create --name local-admin --permissions session:read,server:admin --json
+bun run src/main.ts token list --json
+bun run src/main.ts token revoke <token-id> --json
+bun run src/main.ts token rotate <token-id> --json
+```
+
+`token create` defaults to `session:read` when `--permissions` is omitted and
+prints or returns the raw bearer token exactly once. Token records are stored in
+repository-owned config at `~/.config/cursor-cli-agent/tokens.json`, or under
+`CURSOR_CLI_AGENT_CONFIG_DIR` when set; raw token secrets are never persisted.
+Supported permissions are `session:create`, `session:read`, `session:cancel`,
+`group:*`, `queue:*`, `bookmark:*`, `files:*`, `server:read`, and `server:admin`.
+
+HTTP server command examples:
+
+```bash
+bun run src/main.ts token create --name local-reader --json
+bun run src/main.ts server start --host 127.0.0.1 --port 0 --json
+curl http://127.0.0.1:<port>/api/health
+curl http://127.0.0.1:<port>/api/version
+curl http://127.0.0.1:<port>/api/sessions?limit=20
+curl http://127.0.0.1:<port>/api/sessions/<session-id>
+curl http://127.0.0.1:<port>/api/sessions/<session-id>/messages
+curl http://127.0.0.1:<port>/api/search/sessions?q=<query>
+curl http://127.0.0.1:<port>/api/search/transcripts?q=<query>
+curl http://127.0.0.1:<port>/api/groups
+curl http://127.0.0.1:<port>/api/repository/analytics
+curl -N http://127.0.0.1:<port>/api/events/sessions/<session-id>
+curl -N http://127.0.0.1:<port>/api/events/activity
+curl -N http://127.0.0.1:<port>/api/events/activity/<session-id>
+curl -N http://127.0.0.1:<port>/api/events/groups/<group-name>
+curl -N http://127.0.0.1:<port>/api/events/queues/<queue-name>
+curl -H "Authorization: Bearer <token-create-output>" http://127.0.0.1:<port>/api/sessions
+```
+
+`server start` runs a foreground Bun HTTP server until SIGINT or SIGTERM. The
+default host is `127.0.0.1` and the default port is `0`, which asks the runtime
+to allocate an available port. Loopback hosts may run without a token;
+non-loopback hosts require `--token <token>` or
+`CURSOR_CLI_AGENT_SERVER_TOKEN`.
+When startup auth is configured, requests must include `Authorization: Bearer
+<token>` using a raw token returned by `token create` or `token rotate`; the
+startup token only enables required auth mode and is not the request credential.
+Known API routes enforce route-facing permissions before reading local state:
+health/version and `/api/admin/*` require `server:admin`, `/api/repository/analytics`
+requires `server:read` (also granted by `server:admin` tokens), session/search/SSE
+session routes require session permissions, `/api/activity` shares `session:read`,
+group list/mutation routes require `group:*`, queue list/mutation routes require
+`queue:*`, group and queue event routes require their wildcard families, bookmark
+routes require `bookmark:*`, and file routes require `files:*`. Unmapped paths fall
+through to the normal `404` route. Long-running `group run` and `queue run` are not
+implemented over HTTP; use the CLI for those flows.
+Errors use a shared JSON envelope with `code`, `message`, and `requestId`,
+without stack traces or raw Cursor filesystem details.
+Event routes return `text/event-stream` frames with `id`, `event`, and JSON
+`data` fields. Supported query controls are `replay=latest|none`,
+`heartbeatMs=<positive-ms>`, `startOffset=<non-negative-byte-offset>`, and
+`lastEventId=<event-id>`; the standard `Last-Event-ID` request header takes
+precedence over the query fallback.
+
+GraphQL compatibility examples:
+
+```bash
+bun run src/bin.ts graphql 'query { ping }'
+bun run src/bin.ts graphql session.list --param '{"limit":1}' --json
+bun run src/bin.ts graphql 'mutation ($param: JSON) { command(name: "group.create", params: $param) }' --variables '{"param":{"name":"demo","workspaces":[]}}' --json
+bun run src/bin.ts server start --host 127.0.0.1 --port 0 --compat-graphql --json
+curl -X POST http://127.0.0.1:<port>/api/graphql -H 'content-type: application/json' -d '{"query":"query { ping }"}'
+curl http://127.0.0.1:<port>/api/compat/app-server
+```
+
+The compatibility bridge is intentionally local and opt-in. Shorthand command
+names are inferred from the registry, `--param` binds GraphQL variable `param`,
+and `--variables` supplies the full variable object; JSON may be passed inline
+or as `@path`. Unsupported Codex-only commands such as `session.fork`,
+`files.patches`, and token lifecycle commands return structured compatibility
+errors instead of proxying raw Cursor state. When compatibility routes are
+enabled on a token-protected server, `/api/graphql` command execution uses the
+same route-facing permission literals as the REST and SSE APIs, and
+`/api/compat/app-server` returns auth-gated `compat-local` metadata with the
+same capability and limitation matrix.
+
+Daemon command examples:
+
+```bash
+bun run src/main.ts daemon start --port 0 --json
+bun run src/main.ts daemon status --json
+bun run src/main.ts daemon status --token <token-create-output> --json
+bun run src/main.ts daemon stop --json
+```
+
+`daemon start` launches the same local HTTP/SSE server as `server start` in a
+repository-owned background process. It defaults to host `127.0.0.1` and port
+`0`, records the actual bound URL in `~/.config/cursor-cli-agent/daemon.json`
+or `CURSOR_CLI_AGENT_CONFIG_DIR`, writes JSONL lifecycle entries to
+`~/.local/share/cursor-cli-agent/daemon.log` or `CURSOR_CLI_AGENT_DATA_DIR`,
+resolves the executable server entrypoint as an absolute `src/bin.ts` or
+`dist/bin.js` path so daemon startup does not depend on the caller's current
+working directory, and waits for `GET /api/health` before reporting success.
+`daemon status`
+reports `stopped`, `running`, `stale`, or failure states without exposing raw
+token values; when auth is required, pass `--token <token>` or set
+`CURSOR_CLI_AGENT_SERVER_TOKEN` so the status health probe can authenticate.
+`daemon stop` removes metadata after owned shutdown and refuses foreign or
+PID-reused processes; ownership requires the daemon process environment to match
+the metadata marker. `daemon stop --force` is intentionally outside this slice.
+
+## Design Documents
+
+- `design-docs/specs/architecture.md`
+- `design-docs/specs/command.md`
+- `design-docs/specs/design-cursor-session-management.md`
+- `design-docs/specs/design-codex-agent-parity-gap.md`
+- `design-docs/specs/design-bookmarks.md`
+- `design-docs/specs/design-activity.md`
+- `design-docs/specs/design-group-lifecycle.md`
+- `design-docs/specs/design-queue-lifecycle.md`
+- `design-docs/specs/design-file-intelligence.md`
+- `design-docs/specs/design-repository-analytics.md`
+- `design-docs/specs/design-http-server-core.md`
+- `design-docs/specs/design-token-auth.md`
+- `design-docs/specs/design-server-event-streaming.md`
+- `design-docs/specs/design-daemon-lifecycle.md`
+- `design-docs/specs/design-public-sdk.md`
+- `design-docs/specs/design-compat-bridge.md`
+- `design-docs/specs/design-tool-registry-model-helpers.md`
+
+## Implementation Plan
+
+- `impl-plans/completed/phase1-core-foundation.md`
+- `impl-plans/active/parity-backlog-workflow.md`
+- `impl-plans/completed/parity-global-design-plan-workflow.md`
+- `impl-plans/active/session-search.md`
+- `impl-plans/active/transcript-search.md`
+- `impl-plans/active/bookmarks.md`
+- `impl-plans/active/activity.md`
+- `impl-plans/completed/group-lifecycle.md`
+- `impl-plans/active/queue-lifecycle.md`
+- `impl-plans/completed/file-intelligence.md`
+- `impl-plans/active/repository-analytics.md`
+- `impl-plans/completed/http-resource-apis.md`
+- `impl-plans/completed/http-server-core.md`
+- `impl-plans/completed/token-auth.md`
+- `impl-plans/active/server-event-streaming.md`
+- `impl-plans/completed/daemon-lifecycle.md`
+- `impl-plans/completed/prompt-attachments.md`
+- `impl-plans/completed/session-replay-fork.md`
+- `impl-plans/active/public-sdk.md`
+- `impl-plans/active/compat-bridge.md`
+- `impl-plans/active/tool-registry-model-helpers.md`
+
+## Reference Project
+
+Primary reference:
+
+- `/g/gits/tacogips/codex-agent`
+
+Important difference:
+
+- `codex-agent` is built around Codex rollout files plus a SQLite state DB
+- `cursor-cli-agent` must treat `cursor-agent` transcripts and headless JSON streams as the source of truth
+
+## Cursor Agent Notes
+
+- `~/.cursor/projects/*/agent-transcripts/*.jsonl` can be used as the primary local conversation log source
+- `~/.cursor/ai-tracking/ai-code-tracking.db` can enrich sessions with file-touch and deleted-file data keyed by `conversationId`, and can provide repository-scoped `scored_commits` commit scoring that is not reliably conversation-keyed
+- `~/.cursor/skills-cursor/` exists locally and contains built-in Cursor-managed skills
+- those built-in skills are useful as discoverable metadata
+- they should not be treated as a stable public API or as a writable location for user skills
