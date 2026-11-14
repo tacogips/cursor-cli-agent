@@ -1,0 +1,11 @@
+{
+  "id": "step1-decompose-codex-features",
+  "description": "Decompose codex-agent functionality into feature-local work items.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step1-decompose-codex-features.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with payload.featureItems for concurrent design and planning."
+  }
+}

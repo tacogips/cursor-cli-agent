@@ -1,0 +1,12 @@
+{
+  "id": "step5-commit-plan-batch",
+  "description": "Commit accepted workflow, design-doc, and implementation-plan artifacts before serial implementation starts.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/commit-plan-batch.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return JSON with commit status, commit hash when created, staged path scopes, and residual risks."
+  }
+}

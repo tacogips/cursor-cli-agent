@@ -1,0 +1,65 @@
+{
+  "name": "cursor-cli-agent",
+  "version": "0.1.0",
+  "description": "CLI and TypeScript SDK for cursor-agent session data and automation",
+  "type": "module",
+  "bin": {
+    "cursor-cli-agent": "dist/bin.js"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./sdk": {
+      "types": "./dist/sdk/index.d.ts",
+      "import": "./dist/sdk/index.js",
+      "default": "./dist/sdk/index.js"
+    },
+    "./sdk/testing": {
+      "types": "./dist/sdk/testing.d.ts",
+      "import": "./dist/sdk/testing.js",
+      "default": "./dist/sdk/testing.js"
+    },
+    "./server": {
+      "types": "./dist/sdk/server.d.ts",
+      "import": "./dist/sdk/server.js",
+      "default": "./dist/sdk/server.js"
+    },
+    "./types": {
+      "types": "./dist/sdk/types.d.ts",
+      "import": "./dist/sdk/types.js",
+      "default": "./dist/sdk/types.js"
+    }
+  },
+  "scripts": {
+    "dev": "bun run --watch src/bin.ts",
+    "build": "rm -rf dist && tsc --emitDeclarationOnly && bun build src/index.ts src/bin.ts src/sdk/index.ts src/sdk/testing.ts src/sdk/server.ts src/sdk/types.ts --outdir dist --target bun",
+    "start": "bun run src/bin.ts",
+    "test": "scripts/run-src-tests.sh",
+    "test:watch": "scripts/run-src-tests.sh --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run lint:biome && bun run format:check && bun run typecheck",
+    "lint:biome": "biome check . --diagnostic-level=warn",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "clean": "rm -rf dist"
+  },
+  "homepage": "https://github.com/tacogips/cursor-cli-agent",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tacogips/cursor-cli-agent.git"
+  },
+  "license": "MIT",
+  "trustedDependencies": [],
+  "devDependencies": {
+    "@biomejs/biome": "2.3.15",
+    "@types/bun": "1.1.14",
+    "typescript": "5.7.2",
+    "prettier": "3.4.2"
+  }
+}

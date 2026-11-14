@@ -1,0 +1,77 @@
+{
+  "workflowId": "codex-agent-feature-design-plan-loop",
+  "description": "Callable feature-local workflow that creates and reviews one codex-agent-derived design document and implementation plan.",
+  "defaults": {
+    "maxLoopIterations": 6,
+    "nodeTimeoutMs": 3600000
+  },
+  "prompts": {
+    "workerSystemPromptTemplate": "Return concise business JSON only. Keep feature ids, codex-agent references, design-doc paths, implementation-plan paths, review findings, and revision flags explicit."
+  },
+  "entryStepId": "step3-feature-design-plan",
+  "nodes": [
+    {
+      "id": "step3-feature-design-plan",
+      "nodeFile": "nodes/node-step3-feature-design-plan.json"
+    },
+    {
+      "id": "step3-feature-design-plan-review",
+      "nodeFile": "nodes/node-step3-feature-design-plan-review.json"
+    },
+    {
+      "id": "step3-feature-design-plan-review-gate",
+      "nodeFile": "nodes/node-step3-feature-design-plan-review-gate.json"
+    },
+    {
+      "id": "workflow-output",
+      "kind": "output",
+      "nodeFile": "nodes/node-workflow-output.json"
+    }
+  ],
+  "steps": [
+    {
+      "id": "step3-feature-design-plan",
+      "nodeId": "step3-feature-design-plan",
+      "description": "Create or revise one feature-local design document and implementation plan.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step3-feature-design-plan-review"
+        }
+      ]
+    },
+    {
+      "id": "step3-feature-design-plan-review",
+      "nodeId": "step3-feature-design-plan-review",
+      "description": "Review one feature-local design and implementation-plan pair.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step3-feature-design-plan-review-gate"
+        }
+      ]
+    },
+    {
+      "id": "step3-feature-design-plan-review-gate",
+      "nodeId": "step3-feature-design-plan-review-gate",
+      "description": "Normalize the branch review decision into deterministic transition flags.",
+      "role": "worker",
+      "transitions": [
+        {
+          "toStepId": "step3-feature-design-plan",
+          "label": "needs_revision || needs_design_revision"
+        },
+        {
+          "toStepId": "workflow-output",
+          "label": "!(needs_revision || needs_design_revision)"
+        }
+      ]
+    },
+    {
+      "id": "workflow-output",
+      "nodeId": "workflow-output",
+      "description": "Publish the accepted feature-local design and implementation-plan handoff.",
+      "role": "worker"
+    }
+  ]
+}

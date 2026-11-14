@@ -1,0 +1,11 @@
+{
+  "id": "step2-decomposition-review",
+  "description": "Review the codex-agent feature decomposition.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step2-decomposition-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_revision and when.has_feature_items."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "workflow-output",
+  "description": "Summarize the accepted parity backlog orchestration result after the ready set is exhausted or the run limit is reached.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/workflow-output.md",
+  "variables": {},
+  "output": {
+    "description": "Return the final backlog-run summary, including completed items, remaining ready items, blocked items, delegated workflow evidence, verification, and operator notes."
+  }
+}

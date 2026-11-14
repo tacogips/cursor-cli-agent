@@ -1,0 +1,11 @@
+{
+  "id": "step3-feature-design-plan-review",
+  "description": "Review one feature-local design document and implementation-plan pair.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step3-feature-design-plan-review.md",
+  "variables": {},
+  "output": {
+    "description": "Return adapter JSON with when.needs_design_revision or when.needs_revision true only when blocking findings remain."
+  }
+}
