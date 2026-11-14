@@ -1,0 +1,11 @@
+{
+  "id": "step8-docs-refresh",
+  "description": "Update README and the user-facing workflow skill description so public workflow guidance matches the accepted implementation.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step8-docs-refresh.md",
+  "variables": {},
+  "output": {
+    "description": "Return JSON with documentation files updated, user-facing workflow-skill updates, summary of doc changes, and any residual documentation risks."
+  }
+}

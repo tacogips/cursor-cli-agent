@@ -1,0 +1,11 @@
+{
+  "id": "step3-batch-impl-plans",
+  "description": "Create implementation plans for every selected parity backlog item before implementation starts.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/step3-batch-impl-plans.md",
+  "variables": {},
+  "output": {
+    "description": "Return JSON with every implementation-plan path, backlog id mapping, dependencies, parallelization groups, verification expectations, and risks."
+  }
+}
