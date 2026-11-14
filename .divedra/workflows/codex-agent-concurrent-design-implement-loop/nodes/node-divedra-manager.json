@@ -1,0 +1,11 @@
+{
+  "id": "divedra-manager",
+  "description": "Coordinate the codex-agent concurrent design and implementation workflow.",
+  "executionBackend": "codex-agent",
+  "model": "gpt-5.5",
+  "promptTemplateFile": "prompts/divedra-manager.md",
+  "variables": {},
+  "output": {
+    "description": "Coordinate the workflow and return concise manager status JSON."
+  }
+}
