@@ -1,0 +1,12 @@
+{
+  "id": "step4-join-feature-plans",
+  "description": "Deterministically join concurrent feature-local design and implementation-plan outputs.",
+  "nodeType": "command",
+  "command": {
+    "scriptPath": "scripts/join-feature-plans.sh"
+  },
+  "variables": {},
+  "output": {
+    "description": "Return JSON with plannedItems, designDocPaths, implPlanPaths, dependency graph, readyImplementationPlans, and blockedImplementationPlans."
+  }
+}
